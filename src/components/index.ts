@@ -2,5 +2,8 @@ export * from './atoms';
 export * from './Auth/AuthButton';
 export * from './Auth/RecoveryErrorToast';
 export * from './Form/Form';
+export * from './SeasonAccordion/SeasonAccordion';
+export * from './ShowOverview/ShowOverview';
+export * from './ShowTabs/ShowTabs';
 export * from './Toaster/Toaster';
 export * from './TvShowCard/TvShowCard';

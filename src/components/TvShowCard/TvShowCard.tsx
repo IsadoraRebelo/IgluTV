@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from 'next/link';
 
 import type { TvShow } from '@/types';
 
@@ -6,7 +7,7 @@ export function TvShowCard({ show }: { show: TvShow }) {
   const year = show.firstAirDate ? show.firstAirDate.slice(0, 4) : '—';
 
   return (
-    <div className="flex flex-col gap-2">
+    <Link href={`/show/${show.id}`} className="flex flex-col gap-2">
       <div className="relative aspect-[2/3] w-full overflow-hidden rounded-lg bg-zinc-200 dark:bg-zinc-800">
         {show.posterUrl ? (
           <Image
@@ -31,6 +32,6 @@ export function TvShowCard({ show }: { show: TvShow }) {
         </h3>
         <p className="text-xs text-zinc-500 dark:text-zinc-400">{year}</p>
       </div>
-    </div>
+    </Link>
   );
 }
