@@ -236,3 +236,35 @@ async function autoUpdateStatus(
     if (error) throw new ServiceError(error.message, error.code);
   }
 }
+
+export async function unmarkEpisodeWatched(
+  showId: number,
+  season: number,
+  episode: number
+): Promise<void> {
+  const supabase = await createClient();
+  const userId = await requireUserId(supabase);
+
+  const { error } = await supabase
+    .from('episode_watches')
+    .delete()
+    .eq('user_id', userId)
+    .eq('tmdb_show_id', showId)
+    .eq('season_number', season)
+    .eq('episode_number', episode);
+
+  if (error) throw new ServiceError(error.message, error.code);
+}
+
+export async function deleteWatch(watchId: number): Promise<void> {
+  const supabase = await createClient();
+  const userId = await requireUserId(supabase);
+
+  const { error } = await supabase
+    .from('episode_watches')
+    .delete()
+    .eq('id', watchId)
+    .eq('user_id', userId);
+
+  if (error) throw new ServiceError(error.message, error.code);
+}
