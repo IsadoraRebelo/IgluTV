@@ -4,6 +4,7 @@ import { createClient } from '@/supabase/server';
 import type { EpisodeWatch, ShowStatus, ShowTracking } from '@/types';
 
 import { ServiceError } from './errors';
+import { getTmdbShowFullDetails } from './tv-shows';
 
 export async function getShowTracking(
   showId: number
@@ -135,4 +136,103 @@ export async function toggleFavourite(
   });
 
   if (error) throw new ServiceError(error.message, error.code);
+}
+
+export async function markEpisodeWatched(
+  showId: number,
+  season: number,
+  episode: number,
+  watchedOn?: string
+): Promise<void> {
+  const supabase = await createClient();
+  const userId = await requireUserId(supabase);
+
+  const insertRow: {
+    user_id: string;
+    tmdb_show_id: number;
+    season_number: number;
+    episode_number: number;
+    watched_on?: string;
+  } = {
+    user_id: userId,
+    tmdb_show_id: showId,
+    season_number: season,
+    episode_number: episode,
+  };
+  if (watchedOn) insertRow.watched_on = watchedOn;
+
+  const { error } = await supabase.from('episode_watches').insert(insertRow);
+  if (error) throw new ServiceError(error.message, error.code);
+
+  await autoUpdateStatus(supabase, userId, showId);
+}
+
+async function autoUpdateStatus(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  showId: number
+): Promise<void> {
+  const { data: tracking, error: trackingError } = await supabase
+    .from('show_tracking')
+    .select('status')
+    .eq('user_id', userId)
+    .eq('tmdb_show_id', showId)
+    .maybeSingle();
+
+  if (trackingError) {
+    throw new ServiceError(trackingError.message, trackingError.code);
+  }
+
+  // Auto-`watching` never overrides a manual status — only an untracked
+  // show is auto-set to `watching`.
+  if (!tracking) {
+    const { error } = await supabase
+      .from('show_tracking')
+      .insert({ user_id: userId, tmdb_show_id: showId, status: 'watching' });
+
+    if (error) throw new ServiceError(error.message, error.code);
+  }
+
+  const full = await getTmdbShowFullDetails(showId);
+  if (!full) return;
+
+  const regularEpisodeCount = full.meta.seasons
+    .filter((season) => season.seasonNumber > 0)
+    .reduce(
+      (total, season) =>
+        total + (season.episodeCount ?? season.episodes.length),
+      0
+    );
+
+  if (regularEpisodeCount === 0) return;
+
+  const { data: watchedRows, error: watchedError } = await supabase
+    .from('episode_watches')
+    .select('season_number, episode_number')
+    .eq('user_id', userId)
+    .eq('tmdb_show_id', showId)
+    .gt('season_number', 0);
+
+  if (watchedError) {
+    throw new ServiceError(watchedError.message, watchedError.code);
+  }
+
+  const distinctWatched = new Set(
+    (watchedRows ?? []).map(
+      (row) => `${row.season_number}-${row.episode_number}`
+    )
+  );
+
+  // Auto-`completed` applies unconditionally when the counts match — even
+  // overriding a manual paused/dropped/watch_later status. Reversing a
+  // completion is not auto-handled (see design spec's "Decisions / Defaults").
+  if (distinctWatched.size >= regularEpisodeCount) {
+    const { error } = await supabase
+      .from('show_tracking')
+      .update({ status: 'completed' })
+      .eq('user_id', userId)
+      .eq('tmdb_show_id', showId);
+
+    if (error) throw new ServiceError(error.message, error.code);
+  }
 }
