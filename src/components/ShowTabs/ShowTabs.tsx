@@ -23,13 +23,13 @@ export function ShowTabs({
 
   return (
     <div>
-      <div className="flex gap-6 border-b border-white/10">
+      <div className="flex border-b border-white/10 sm:gap-6">
         {TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`-mb-px border-b-2 px-1 pb-3 text-sm font-medium transition-colors ${
+            className={`-mb-px flex-1 border-b-2 px-1 py-3 text-center text-base font-medium transition-colors sm:flex-none sm:py-0 sm:pb-3 sm:text-sm ${
               activeTab === tab.id
                 ? 'border-main text-white'
                 : 'border-transparent text-[#678] hover:text-[#9ab0bf]'
@@ -39,7 +39,7 @@ export function ShowTabs({
           </button>
         ))}
       </div>
-      <div className="pt-6">
+      <div className="pt-5 md:pt-6">
         {activeTab === 'home' ? home : null}
         {activeTab === 'cast' ? cast : null}
         {activeTab === 'similar' ? similar : null}

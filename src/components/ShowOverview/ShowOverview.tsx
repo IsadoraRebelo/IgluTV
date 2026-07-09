@@ -18,7 +18,7 @@ export function ShowOverview({ text }: { text: string }) {
       <p
         ref={paragraphRef}
         className={`mt-2 max-w-[65ch] text-[15px] leading-relaxed text-[#c2d0dd] ${
-          expanded ? '' : 'line-clamp-5'
+          expanded ? '' : 'line-clamp-2 md:line-clamp-5'
         }`}
       >
         {text}

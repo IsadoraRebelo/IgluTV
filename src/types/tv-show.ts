@@ -22,9 +22,7 @@ export type CastMember = {
   imageUrl: string | null;
 };
 
-// Shared shape both the TVDB lookup and the TMDB-fallback lookup map into,
-// so the detail page renders one consistent layout regardless of which
-// source actually supplied the data.
+// Show detail fields, all sourced from TMDB.
 export type ShowDetails = {
   name: string;
   overview: string;
@@ -38,11 +36,17 @@ export type ShowDetails = {
   averageRuntime: number | null;
   originalLanguage: string | null;
   originalCountry: string | null;
+  contentRating: string | null;
+  premiereDate: string | null;
+  lastAiredDate: string | null;
+  nextEpisodeDate: string | null;
 };
 
 export type SeasonEpisode = {
   episodeNumber: number;
   name: string;
+  overview: string;
+  runtime: number | null;
   airDate: string | null;
   imageUrl: string | null;
 };
@@ -58,6 +62,7 @@ export type Season = {
 
 export type LatestEpisode = {
   name: string;
+  overview: string;
   seasonNumber: number;
   episodeNumber: number;
   airDate: string | null;
@@ -74,86 +79,19 @@ export type SimilarShow = {
   matchPercentage: number | null;
 };
 
-// Page metadata that always comes from TMDB regardless of which source
-// supplied the name/overview/images/genres/cast/status/etc above — TMDB
-// already returns seasons, episodes, and similar shows in a ready-to-render
-// shape, while assembling the same from TVDB's raw episode list would need
-// extra per-show aggregation for no benefit.
+// Additional show metadata (seasons, latest episode, recommendations),
+// all sourced from TMDB.
 export type ShowMeta = {
-  contentRating: string | null;
   numberOfSeasons: number | null;
   numberOfEpisodes: number | null;
-  premiereDate: string | null;
-  lastAiredDate: string | null;
-  nextEpisodeDate: string | null;
   seasons: Season[];
   latestEpisode: LatestEpisode | null;
   similar: SimilarShow[];
 };
 
-export type TVDBLoginRaw = {
-  data?: { token?: string };
-};
-
-export type TVDBSearchResultRaw = {
-  id: string; // e.g. "series-81189"
-  name: string;
-};
-
-export type TVDBArtworkRaw = {
-  image: string;
-  type: number;
-  score: number;
-};
-
-export type TVDBGenreRaw = {
-  name: string;
-};
-
-export type TVDBCompanyRaw = {
-  name: string;
-};
-
-export type TVDBCharacterRaw = {
-  name: string; // character name
-  personName: string; // actor name
-  // The actor's photo is usually here, not personImgURL — TVDB frequently
-  // leaves personImgURL null even when `image` is populated.
-  image: string | null;
-  personImgURL: string | null;
-  peopleType: string; // "Actor" for cast members
-  sort: number;
-};
-
-export type TVDBTranslationEntry = {
-  language: string;
-  name?: string;
-  overview?: string;
-};
-
-export type TVDBTranslationsRaw = {
-  nameTranslations?: TVDBTranslationEntry[];
-  overviewTranslations?: TVDBTranslationEntry[];
-};
-
-export type TVDBSeriesExtendedRaw = {
-  name: string;
-  overview: string | null;
-  year: string | null;
-  image: string | null;
-  artworks?: TVDBArtworkRaw[];
-  genres?: TVDBGenreRaw[];
-  originalNetwork?: TVDBCompanyRaw | null;
-  characters?: TVDBCharacterRaw[];
-  translations?: TVDBTranslationsRaw;
-  status?: { name: string } | null;
-  averageRuntime?: number | null;
-  originalLanguage?: string | null;
-  originalCountry?: string | null;
-};
-
 export type TMDBEpisodeRaw = {
   name: string;
+  overview: string;
   season_number: number;
   episode_number: number;
   air_date: string | null;
@@ -172,6 +110,8 @@ export type TMDBSeasonRaw = {
 export type TMDBSeasonEpisodeRaw = {
   name: string;
   episode_number: number;
+  overview: string;
+  runtime: number | null;
   air_date: string | null;
   still_path: string | null;
 };

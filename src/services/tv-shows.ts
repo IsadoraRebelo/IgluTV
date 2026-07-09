@@ -5,6 +5,7 @@ import { unstable_cache } from 'next/cache';
 import {
   TMDB_API_BASE_URL,
   TMDB_BACKDROP_BASE_URL,
+  TMDB_BACKDROP_LARGE_BASE_URL,
   TMDB_IMAGE_BASE_URL,
 } from '@/consts';
 import type {
@@ -86,10 +87,19 @@ async function fetchTmdbSeasonEpisodes(
 
     return (json.episodes ?? []).map((episode) => ({
       episodeNumber: episode.episode_number,
-      name: episode.name,
+      // TMDB auto-fills untitled episodes with "Episode N" rather than
+      // leaving the name blank — normalize that placeholder to "TBA".
+      name:
+        episode.name === `Episode ${episode.episode_number}`
+          ? 'TBA'
+          : episode.name,
+      overview: episode.overview,
+      runtime: episode.runtime,
       airDate: episode.air_date,
+      // Episode stills are wide (backdrop-shaped), not poster-shaped — use
+      // the larger backdrop size, same as the show banner.
       imageUrl: episode.still_path
-        ? `${TMDB_IMAGE_BASE_URL}${episode.still_path}`
+        ? `${TMDB_BACKDROP_BASE_URL}${episode.still_path}`
         : null,
     }));
   } catch (err) {
@@ -104,11 +114,11 @@ export const getTmdbSeasonEpisodes = unstable_cache(
   { revalidate: 3600, tags: ['tmdb-season-episodes'] }
 );
 
-// Fetched unconditionally for every show detail page (not just when TVDB
-// has no match): `details` is used as a fallback for name/overview/images/
-// genres/cast/network when TVDB misses, while `meta` (seasons, latest
-// episode, similar shows, status, ratings) always comes from here, since
-// TMDB already returns it in a ready-to-render shape.
+// Fetched unconditionally for every show detail page: `details` covers
+// name/overview/images/genres/cast/network/status/etc, while `meta`
+// (season summaries with their episodes, latest episode, recommendations)
+// comes from here too, since TMDB returns it all in a ready-to-render
+// shape.
 async function fetchTmdbShowFullDetails(
   id: number
 ): Promise<{ details: ShowDetails; meta: ShowMeta } | null> {
@@ -136,14 +146,14 @@ async function fetchTmdbShowFullDetails(
       overview: json.overview,
       year: json.first_air_date ? json.first_air_date.slice(0, 4) : null,
       bannerUrl: json.backdrop_path
-        ? `${TMDB_BACKDROP_BASE_URL}${json.backdrop_path}`
+        ? `${TMDB_BACKDROP_LARGE_BASE_URL}${json.backdrop_path}`
         : null,
       posterUrl: json.poster_path
         ? `${TMDB_IMAGE_BASE_URL}${json.poster_path}`
         : null,
       genres: (json.genres ?? []).map((genre) => genre.name),
       network: json.networks?.[0]?.name ?? null,
-      cast: (json.credits?.cast ?? []).slice(0, 8).map((member) => ({
+      cast: (json.credits?.cast ?? []).map((member) => ({
         actorName: member.name,
         character: member.character,
         imageUrl: member.profile_path
@@ -154,6 +164,12 @@ async function fetchTmdbShowFullDetails(
       averageRuntime: json.episode_run_time?.[0] ?? null,
       originalLanguage: getLanguageDisplayName(json.original_language),
       originalCountry: getCountryDisplayName(json.origin_country?.[0]),
+      contentRating:
+        json.content_ratings?.results?.find((r) => r.iso_3166_1 === 'US')
+          ?.rating ?? null,
+      premiereDate: json.first_air_date ?? null,
+      lastAiredDate: json.last_air_date ?? null,
+      nextEpisodeDate: json.next_episode_to_air?.air_date ?? null,
     };
 
     const lastEpisode = json.last_episode_to_air;
@@ -180,14 +196,8 @@ async function fetchTmdbShowFullDetails(
     );
 
     const meta: ShowMeta = {
-      contentRating:
-        json.content_ratings?.results?.find((r) => r.iso_3166_1 === 'US')
-          ?.rating ?? null,
       numberOfSeasons: json.number_of_seasons ?? null,
       numberOfEpisodes: json.number_of_episodes ?? null,
-      premiereDate: json.first_air_date ?? null,
-      lastAiredDate: json.last_air_date ?? null,
-      nextEpisodeDate: json.next_episode_to_air?.air_date ?? null,
       seasons,
       // Ignore Specials (season_number 0) — TMDB occasionally promotes a
       // special to last_episode_to_air, which isn't a "latest episode" in
@@ -195,12 +205,13 @@ async function fetchTmdbShowFullDetails(
       latestEpisode: lastEpisode && lastEpisode.season_number > 0
         ? {
             name: lastEpisode.name,
+            overview: lastEpisode.overview,
             seasonNumber: lastEpisode.season_number,
             episodeNumber: lastEpisode.episode_number,
             airDate: lastEpisode.air_date,
             runtime: lastEpisode.runtime,
             imageUrl: lastEpisode.still_path
-              ? `${TMDB_IMAGE_BASE_URL}${lastEpisode.still_path}`
+              ? `${TMDB_BACKDROP_BASE_URL}${lastEpisode.still_path}`
               : null,
           }
         : null,

@@ -3,10 +3,10 @@
 import { useState } from 'react';
 
 import Image from 'next/image';
-import Link from 'next/link';
 import { Check, ChevronDown } from 'lucide-react';
 
-import type { Season } from '@/types';
+import { EpisodeModal } from '@/components';
+import type { CastMember, Season, SeasonEpisode } from '@/types';
 
 function formatDate(dateStr: string | null): string | null {
   if (!dateStr) return null;
@@ -19,14 +19,30 @@ function formatDate(dateStr: string | null): string | null {
   });
 }
 
+// Returns days until an episode airs, or null if it already aired (or the
+// date is unknown) — used to swap the watched button for a countdown.
+function getDaysUntilAir(dateStr: string | null): number | null {
+  if (!dateStr) return null;
+  const airDate = new Date(`${dateStr}T00:00:00`);
+  if (Number.isNaN(airDate.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const days = Math.round((airDate.getTime() - today.getTime()) / 86_400_000);
+  return days > 0 ? days : null;
+}
+
 export function SeasonAccordion({
-  showId,
   seasons,
+  cast,
 }: {
-  showId: number;
   seasons: Season[];
+  cast: CastMember[];
 }) {
   const [expandedSeason, setExpandedSeason] = useState<number | null>(null);
+  const [selected, setSelected] = useState<{
+    episode: SeasonEpisode;
+    seasonNumber: number;
+  } | null>(null);
 
   return (
     <div className="flex flex-col gap-3">
@@ -88,16 +104,35 @@ export function SeasonAccordion({
               <div className="overflow-hidden">
                 <div className="bg-main h-1 w-full" />
                 <div className="flex flex-col gap-2 p-2">
-                  {season.episodes.map((episode) => (
+                  {season.episodes.map((episode) => {
+                    const daysUntilAir = getDaysUntilAir(episode.airDate);
+
+                    return (
                     <div
                       key={episode.episodeNumber}
-                      className="flex items-center gap-3 rounded-md p-2 hover:bg-white/5"
+                      className="flex items-stretch overflow-hidden rounded-md bg-white/[0.03] hover:bg-white/[0.06]"
                     >
-                      <Link
-                        href={`/show/${showId}/season/${season.seasonNumber}/episode/${episode.episodeNumber}`}
-                        className="flex min-w-0 flex-1 items-center gap-3"
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelected({
+                            // Not-yet-aired episodes often have no still
+                            // image of their own — fall back to the
+                            // season's first episode's image so the modal
+                            // background isn't blank.
+                            episode: {
+                              ...episode,
+                              imageUrl:
+                                episode.imageUrl ??
+                                season.episodes[0]?.imageUrl ??
+                                null,
+                            },
+                            seasonNumber: season.seasonNumber,
+                          })
+                        }
+                        className="flex min-w-0 flex-1 items-stretch gap-3 text-left"
                       >
-                        <div className="relative h-14 w-24 shrink-0 overflow-hidden rounded bg-[#2c3440]">
+                        <div className="relative aspect-square shrink-0 overflow-hidden bg-[#2c3440]">
                           {episode.imageUrl ? (
                             <Image
                               src={episode.imageUrl}
@@ -108,7 +143,7 @@ export function SeasonAccordion({
                             />
                           ) : null}
                         </div>
-                        <div className="min-w-0 flex-1">
+                        <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 py-2">
                           <p className="text-sm font-semibold text-white">
                             S{String(season.seasonNumber).padStart(2, '0')} | E
                             {String(episode.episodeNumber).padStart(2, '0')}
@@ -122,23 +157,42 @@ export function SeasonAccordion({
                             </p>
                           ) : null}
                         </div>
-                      </Link>
-                      {/* Decorative for now — not wired to any real watch state. */}
-                      <button
-                        type="button"
-                        aria-label="Mark episode as watched"
-                        className="bg-main flex h-8 w-8 shrink-0 cursor-default items-center justify-center rounded-full text-[#14181c]"
-                      >
-                        <Check className="h-4 w-4" />
                       </button>
+                      <div className="flex shrink-0 items-center pr-3 pl-2">
+                        {daysUntilAir !== null ? (
+                          <span className="w-16 text-right text-xs text-[#8a9bab]">
+                            In {daysUntilAir} day{daysUntilAir === 1 ? '' : 's'}
+                          </span>
+                        ) : (
+                          // Decorative for now — not wired to any real watch state.
+                          <button
+                            type="button"
+                            aria-label="Mark episode as watched"
+                            className="bg-main flex h-8 w-8 shrink-0 cursor-default items-center justify-center rounded-full text-[#14181c]"
+                          >
+                            <Check className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
           </div>
         );
       })}
+
+      <EpisodeModal
+        episode={selected?.episode ?? null}
+        seasonNumber={selected?.seasonNumber ?? 0}
+        cast={cast}
+        open={selected !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setSelected(null);
+        }}
+      />
     </div>
   );
 }

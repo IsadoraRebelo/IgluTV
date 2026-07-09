@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import type { ReactNode } from 'react';
 
 import Image from 'next/image';
 import Link from 'next/link';
@@ -15,10 +15,28 @@ import {
   Trash2,
 } from 'lucide-react';
 
-import { SeasonAccordion, ShowOverview, ShowTabs } from '@/components';
+import {
+  LatestEpisodeCard,
+  SeasonAccordion,
+  ShowActionsMenu,
+  ShowOverview,
+  ShowTabs,
+} from '@/components';
 import { getPopularTvShows, getTmdbShowFullDetails } from '@/services/tv-shows';
-import { getTvdbShowByName } from '@/services/tvdb';
 import type { ShowDetails, ShowMeta } from '@/types';
+
+const SHOW_ACTIONS: { icon: ReactNode; label: string }[] = [
+  { icon: <Play className="h-4 w-4 text-[#8a9bab]" />, label: 'Currently watching' },
+  { icon: <Eye className="h-4 w-4 text-[#8a9bab]" />, label: 'Mark watched' },
+  { icon: <Clock className="h-4 w-4 text-[#8a9bab]" />, label: 'Add to watchlist' },
+  { icon: <Pencil className="h-4 w-4 text-[#8a9bab]" />, label: 'Add rating / log' },
+  { icon: <Pause className="h-4 w-4 text-[#8a9bab]" />, label: 'Pause' },
+  { icon: <Trash2 className="h-4 w-4 text-[#8a9bab]" />, label: 'Drop' },
+  { icon: <ThumbsUp className="h-4 w-4 text-[#8a9bab]" />, label: 'Recommend to friends' },
+  { icon: <ListPlus className="h-4 w-4 text-[#8a9bab]" />, label: 'Add to list' },
+  { icon: <ImageIcon className="h-4 w-4 text-[#8a9bab]" />, label: 'Change poster' },
+  { icon: <ImagePlus className="h-4 w-4 text-[#8a9bab]" />, label: 'Change banner' },
+];
 
 function formatDate(dateStr: string | null | undefined): string | null {
   if (!dateStr) return null;
@@ -54,48 +72,28 @@ export default async function ShowPage({
     return <ShowNotFound />;
   }
 
-  const name = curatedShow?.name ?? tmdbFull!.details.name;
-  const year =
-    (curatedShow?.firstAirDate
-      ? curatedShow.firstAirDate.slice(0, 4)
-      : tmdbFull?.details.year) ?? undefined;
-
-  const tvdbDetails = await getTvdbShowByName(name, year);
-
-  const details: ShowDetails =
-    tvdbDetails ??
-    tmdbFull?.details ??
-    (curatedShow
-      ? {
-          name: curatedShow.name,
-          overview: curatedShow.overview,
-          year: curatedShow.firstAirDate
-            ? curatedShow.firstAirDate.slice(0, 4)
-            : null,
-          bannerUrl: null,
-          posterUrl: curatedShow.posterUrl,
-          genres: [],
-          network: null,
-          cast: [],
-          status: null,
-          averageRuntime: null,
-          originalLanguage: null,
-          originalCountry: null,
-        }
-      : {
-          name,
-          overview: '',
-          year: year ?? null,
-          bannerUrl: null,
-          posterUrl: null,
-          genres: [],
-          network: null,
-          cast: [],
-          status: null,
-          averageRuntime: null,
-          originalLanguage: null,
-          originalCountry: null,
-        });
+  // If TMDB's detail fetch failed, `curatedShow` is guaranteed present (see
+  // the guard above), so this fallback always has a valid source.
+  const details: ShowDetails = tmdbFull?.details ?? {
+    name: curatedShow!.name,
+    overview: curatedShow!.overview,
+    year: curatedShow!.firstAirDate
+      ? curatedShow!.firstAirDate.slice(0, 4)
+      : null,
+    bannerUrl: null,
+    posterUrl: curatedShow!.posterUrl,
+    genres: [],
+    network: null,
+    cast: [],
+    status: null,
+    averageRuntime: null,
+    originalLanguage: null,
+    originalCountry: null,
+    contentRating: null,
+    premiereDate: null,
+    lastAiredDate: null,
+    nextEpisodeDate: null,
+  };
 
   const meta: ShowMeta | null = tmdbFull?.meta ?? null;
 
@@ -105,14 +103,13 @@ export default async function ShowPage({
       ? `${meta.numberOfSeasons} season${meta.numberOfSeasons === 1 ? '' : 's'}`
       : null,
     details.averageRuntime ? `${details.averageRuntime}m` : null,
-    details.genres.length > 0 ? details.genres.join(', ') : null,
-    meta?.contentRating ?? null,
+    details.contentRating,
   ].filter((part): part is string => Boolean(part));
 
   return (
     <div className="flex flex-1 flex-col bg-[#14181c] font-sans antialiased">
       <div className="relative mx-auto w-full max-w-6xl">
-        <div className="relative h-[220px] w-full overflow-hidden sm:h-[450px]">
+        <div className="relative h-[200px] w-full overflow-hidden sm:h-[450px]">
           {details.bannerUrl ? (
             <Image
               src={details.bannerUrl}
@@ -131,11 +128,14 @@ export default async function ShowPage({
           >
             ← Back to home
           </Link>
+          <div className="absolute top-4 right-4 z-10 sm:top-6 sm:right-6 lg:hidden">
+            <ShowActionsMenu actions={SHOW_ACTIONS} />
+          </div>
         </div>
 
-        <div className="relative z-10 mx-auto -mt-24 w-full max-w-[950px] px-2 sm:-mt-32">
+        <div className="px-5 md:px-0 relative z-10 mx-auto -mt-24 w-full max-w-[950px] px-2 sm:-mt-32">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
-            <div className="relative h-[345px] w-[230px] shrink-0 overflow-hidden rounded-md shadow-2xl ring-1 ring-white/10">
+            <div className="hidden md:block relative h-[345px] w-[230px] shrink-0 overflow-hidden rounded-md shadow-2xl ring-1 ring-white/10">
               {details.posterUrl ? (
                 <Image
                   src={details.posterUrl}
@@ -151,7 +151,7 @@ export default async function ShowPage({
               )}
             </div>
 
-            <div className="flex flex-1 flex-col gap-2 pb-1">
+            <div className="flex flex-1 flex-col md:gap-2 pb-1">
               <h1 className="text-2xl mt-5 font-semibold tracking-tight text-white sm:text-3xl">
                 {details.name}
               </h1>
@@ -168,37 +168,24 @@ export default async function ShowPage({
         </div>
       </div>
 
-      <main className="mx-auto w-full max-w-[950px] flex-1 pb-20">
-        <div className="mt-10 grid grid-cols-1 gap-10 px-2 lg:grid-cols-[1fr_260px]">
+      <main className="px-5 md:px-0 mx-auto w-full max-w-[950px] flex-1 pb-20">
+        <div className="mt-6 md:mt-10 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_260px]">
           <div>
             <ShowTabs
-              home={
-                <HomeTab
-                  showId={numericId}
-                  meta={meta}
-                  genres={details.genres}
-                  status={details.status}
-                  averageRuntime={details.averageRuntime}
-                  originalLanguage={details.originalLanguage}
-                  originalCountry={details.originalCountry}
-                />
-              }
+              home={<HomeTab meta={meta} details={details} />}
               cast={<CastTab cast={details.cast} />}
               similar={<SimilarTab shows={meta?.similar ?? []} />}
             />
           </div>
 
-          <aside className="flex h-fit flex-col gap-1 rounded-lg bg-white/[0.03] p-2">
-            <ActionItem icon={Play} label="Currently watching" />
-            <ActionItem icon={Eye} label="Mark watched" />
-            <ActionItem icon={Clock} label="Add to watchlist" />
-            <ActionItem icon={Pencil} label="Add rating / log" />
-            <ActionItem icon={Pause} label="Pause" />
-            <ActionItem icon={Trash2} label="Drop" />
-            <ActionItem icon={ThumbsUp} label="Recommend to friends" />
-            <ActionItem icon={ListPlus} label="Add to list" />
-            <ActionItem icon={ImageIcon} label="Change poster" />
-            <ActionItem icon={ImagePlus} label="Change banner" />
+          <aside className="hidden h-fit flex-col gap-1 rounded-lg bg-white/[0.03] p-2 lg:flex">
+            {SHOW_ACTIONS.map((action) => (
+              <ActionItem
+                key={action.label}
+                icon={action.icon}
+                label={action.label}
+              />
+            ))}
           </aside>
         </div>
       </main>
@@ -220,76 +207,30 @@ function ShowNotFound() {
   );
 }
 
-function ActionItem({
-  icon: Icon,
-  label,
-}: {
-  icon: ComponentType<{ className?: string }>;
-  label: string;
-}) {
+function ActionItem({ icon, label }: { icon: ReactNode; label: string }) {
   return (
     <div className="flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#c2d0dd] hover:bg-white/5">
-      <Icon className="h-4 w-4 text-[#8a9bab]" />
+      {icon}
       {label}
     </div>
   );
 }
 
 function HomeTab({
-  showId,
   meta,
-  genres,
-  status,
-  averageRuntime,
-  originalLanguage,
-  originalCountry,
+  details,
 }: {
-  showId: number;
   meta: ShowMeta | null;
-  genres: string[];
-  status: string | null;
-  averageRuntime: number | null;
-  originalLanguage: string | null;
-  originalCountry: string | null;
+  details: ShowDetails;
 }) {
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex flex-col gap-7 md:gap-10">
       {meta?.latestEpisode ? (
         <section>
           <h2 className="mb-4 text-lg font-semibold text-white">
             Latest episode
           </h2>
-          <div className="flex gap-4">
-            <div className="relative h-[84px] w-[150px] shrink-0 overflow-hidden rounded-md bg-[#2c3440]">
-              {meta.latestEpisode.imageUrl ? (
-                <Image
-                  src={meta.latestEpisode.imageUrl}
-                  alt={meta.latestEpisode.name}
-                  fill
-                  sizes="150px"
-                  className="object-cover"
-                />
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-1">
-              <p className="font-medium text-white">
-                {meta.latestEpisode.name}
-              </p>
-              <p className="text-xs text-[#8a9bab]">
-                {[
-                  `S${String(meta.latestEpisode.seasonNumber).padStart(2, '0')} E${String(
-                    meta.latestEpisode.episodeNumber
-                  ).padStart(2, '0')}`,
-                  formatDate(meta.latestEpisode.airDate),
-                  meta.latestEpisode.runtime
-                    ? `${meta.latestEpisode.runtime}m`
-                    : null,
-                ]
-                  .filter(Boolean)
-                  .join(' · ')}
-              </p>
-            </div>
-          </div>
+          <LatestEpisodeCard episode={meta.latestEpisode} cast={details.cast} />
         </section>
       ) : null}
 
@@ -298,7 +239,7 @@ function HomeTab({
           <h2 className="mb-4 text-lg font-semibold text-white">
             Seasons ({meta.numberOfSeasons ?? meta.seasons.length})
           </h2>
-          <SeasonAccordion showId={showId} seasons={meta.seasons} />
+          <SeasonAccordion seasons={meta.seasons} cast={details.cast} />
         </section>
       ) : null}
 
@@ -309,24 +250,26 @@ function HomeTab({
           <DetailRow label="Episodes" value={meta?.numberOfEpisodes} />
           <DetailRow
             label="Average run time"
-            value={averageRuntime ? `${averageRuntime} minutes` : null}
+            value={
+              details.averageRuntime ? `${details.averageRuntime} minutes` : null
+            }
           />
           <DetailRow
             label="Next episode"
-            value={formatDate(meta?.nextEpisodeDate)}
+            value={formatDate(details.nextEpisodeDate)}
           />
-          <DetailRow label="Premiere" value={formatDate(meta?.premiereDate)} />
+          <DetailRow label="Premiere" value={formatDate(details.premiereDate)} />
           <DetailRow
             label="Last aired"
-            value={formatDate(meta?.lastAiredDate)}
+            value={formatDate(details.lastAiredDate)}
           />
-          <DetailRow label="Status" value={status} />
-          <DetailRow label="Original language" value={originalLanguage} />
-          <DetailRow label="Country" value={originalCountry} />
+          <DetailRow label="Status" value={details.status} />
+          <DetailRow label="Network" value={details.network} />
           <DetailRow
-            label="Genres"
-            value={genres.length > 0 ? genres.join(', ') : null}
+            label="Original language"
+            value={details.originalLanguage}
           />
+          <DetailRow label="Country" value={details.originalCountry} />
         </div>
       </section>
     </div>
