@@ -67,3 +67,72 @@ export async function getMyShows(
     isFavourite: row.is_favourite,
   }));
 }
+
+async function requireUserId(
+  supabase: Awaited<ReturnType<typeof createClient>>
+): Promise<string> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new ServiceError('Not authenticated', 'not_authenticated');
+
+  return user.id;
+}
+
+export async function setShowStatus(
+  showId: number,
+  status: ShowStatus
+): Promise<void> {
+  const supabase = await createClient();
+  const userId = await requireUserId(supabase);
+
+  const { error } = await supabase
+    .from('show_tracking')
+    .upsert(
+      { user_id: userId, tmdb_show_id: showId, status },
+      { onConflict: 'user_id,tmdb_show_id' }
+    );
+
+  if (error) throw new ServiceError(error.message, error.code);
+}
+
+export async function toggleFavourite(
+  showId: number,
+  next: boolean
+): Promise<void> {
+  const supabase = await createClient();
+  const userId = await requireUserId(supabase);
+
+  const { data: existing, error: selectError } = await supabase
+    .from('show_tracking')
+    .select('tmdb_show_id')
+    .eq('tmdb_show_id', showId)
+    .maybeSingle();
+
+  if (selectError) {
+    throw new ServiceError(selectError.message, selectError.code);
+  }
+
+  if (existing) {
+    const { error } = await supabase
+      .from('show_tracking')
+      .update({ is_favourite: next })
+      .eq('user_id', userId)
+      .eq('tmdb_show_id', showId);
+
+    if (error) throw new ServiceError(error.message, error.code);
+    return;
+  }
+
+  // Toggling favourite on an untracked show creates the row with a
+  // default status of `watching` — see design spec's Data Model.
+  const { error } = await supabase.from('show_tracking').insert({
+    user_id: userId,
+    tmdb_show_id: showId,
+    status: 'watching',
+    is_favourite: next,
+  });
+
+  if (error) throw new ServiceError(error.message, error.code);
+}
