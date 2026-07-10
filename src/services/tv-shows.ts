@@ -8,6 +8,7 @@ import {
   TMDB_BACKDROP_LARGE_BASE_URL,
   TMDB_IMAGE_BASE_URL,
 } from '@/consts';
+
 import type {
   SeasonEpisode,
   ShowDetails,
@@ -17,6 +18,7 @@ import type {
   TMDBTvShowRaw,
   TvShow,
 } from '@/types';
+
 import { getCountryDisplayName, getLanguageDisplayName } from '@/utils';
 
 async function fetchPopularTvShows(): Promise<TvShow[]> {
@@ -87,8 +89,6 @@ async function fetchTmdbSeasonEpisodes(
 
     return (json.episodes ?? []).map((episode) => ({
       episodeNumber: episode.episode_number,
-      // TMDB auto-fills untitled episodes with "Episode N" rather than
-      // leaving the name blank — normalize that placeholder to "TBA".
       name:
         episode.name === `Episode ${episode.episode_number}`
           ? 'TBA'
@@ -96,8 +96,6 @@ async function fetchTmdbSeasonEpisodes(
       overview: episode.overview,
       runtime: episode.runtime,
       airDate: episode.air_date,
-      // Episode stills are wide (backdrop-shaped), not poster-shaped — use
-      // the larger backdrop size, same as the show banner.
       imageUrl: episode.still_path
         ? `${TMDB_BACKDROP_BASE_URL}${episode.still_path}`
         : null,

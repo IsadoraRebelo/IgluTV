@@ -34,12 +34,10 @@ import {
 } from './utils';
 
 function CatchUpDialog({
-  count,
   onYes,
   onNo,
   onNever,
 }: {
-  count: number;
   onYes: () => void;
   onNo: () => void;
   onNever: () => void;
@@ -53,28 +51,29 @@ function CatchUpDialog({
     >
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50" />
-        <DialogPrimitive.Content className="bg-background border-muted fixed top-1/2 left-1/2 z-50 flex w-[90vw] max-w-sm -translate-x-1/2 -translate-y-1/2 flex-col gap-5 rounded-lg border p-6 shadow-lg">
-          <DialogPrimitive.Title className="text-foreground text-lg font-semibold">
-            Catch up on earlier episodes?
+        <DialogPrimitive.Content className="bg-primary-foreground border-muted text-center fixed top-1/2 left-1/2 z-50 flex w-xs max-w-[250px] -translate-x-1/2 -translate-y-1/2 flex-col gap-1 rounded-lg border shadow-lg">
+          <DialogPrimitive.Title className="text-foreground text-md font-semibold pt-4">
+            Mark previous episodes?
           </DialogPrimitive.Title>
-          <DialogPrimitive.Description className="text-muted-foreground text-sm">
-            Mark {count} earlier episode{count === 1 ? '' : 's'} as watched
-            too?
+          <DialogPrimitive.Description className="text-muted-foreground text-xs px-4">
+           Do you want to mark all previous episodes as watched?
           </DialogPrimitive.Description>
-          <div className="flex flex-col gap-2">
-            <Button variant="primary" size="sm" onClick={onYes}>
-              Yes
-            </Button>
-            <Button variant="default" size="sm" onClick={onNo}>
-              No
-            </Button>
-            <button
-              type="button"
-              className="text-destructive text-sm underline"
-              onClick={onNever}
-            >
-              Never for this show
-            </button>
+          <div className="flex flex-col pt-4">
+            <div className="border-t border-white/10 py-1">
+              <Button variant="primary" className='w-full font-bold text-secondary' size="sm" onClick={onYes}>
+                Yes
+              </Button>
+            </div>
+            <div className="border-t border-white/10 py-1">
+              <Button variant="primary" className='w-full font-bold text-secondary' size="sm" onClick={onNo}>
+                No
+              </Button>
+            </div>
+            <div className="border-t border-white/10 py-1">
+              <Button variant="primary" className='w-full font-bold text-secondary' size="sm" onClick={onNever}>
+                Never for this show
+              </Button>
+            </div>
           </div>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
@@ -688,7 +687,6 @@ export function ShowTracker({
 
       {catchUpOffer !== null ? (
         <CatchUpDialog
-          count={catchUpOffer.length}
           onYes={() => {
             handleMarkPriorEpisodes(catchUpOffer);
             setCatchUpOffer(null);

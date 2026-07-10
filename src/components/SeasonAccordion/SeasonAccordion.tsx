@@ -26,10 +26,6 @@ function formatDate(dateStr: string | null): string | null {
   });
 }
 
-// Unwatched: a plain button that marks directly on click. Watched: the same
-// button becomes a dropdown trigger — clicking no longer unmarks directly,
-// it offers "Mark as rewatched" / "Remove" instead. Once rewatched at least
-// once, the checkmark is replaced by the rewatch count.
 function WatchedToggleButton({
   isWatched,
   isPending,
@@ -98,7 +94,7 @@ function WatchedToggleButton({
         <DropdownMenu.Content
           align="end"
           sideOffset={8}
-          className="z-50 w-48 rounded-lg bg-[#1c232b] p-2 shadow-2xl ring-1 ring-white/10
+          className="z-50 w-48 rounded-lg bg-primary-foreground p-2 shadow-2xl ring-1 ring-white/10
             data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out"
         >
           <DropdownMenu.Item

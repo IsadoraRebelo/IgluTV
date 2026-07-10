@@ -17,7 +17,7 @@ import {
   ShowTabs,
   ShowTracker,
 } from '@/components';
-import { getPopularTvShows, getTmdbShowFullDetails } from '@/services/tv-shows';
+import { getTmdbShowFullDetails } from '@/services/tv-shows';
 import { getShowTracking, getWatchedEpisodes } from '@/services/tracking';
 import type { EpisodeWatch, ShowDetails, ShowMeta } from '@/types';
 
@@ -47,14 +47,9 @@ export default async function ShowPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const shows = await getPopularTvShows();
-  // Shows on the homepage's curated top-10 already carry name/year here.
-  // A show reached via a "Similar" link isn't in that list, so it's
-  // resolved directly from TMDB by id below instead.
-  const curatedShow = shows.find((s) => String(s.id) === id);
-  const numericId = curatedShow?.id ?? Number(id);
+  const numericId = Number(id);
 
-  if (!curatedShow && Number.isNaN(numericId)) {
+  if (Number.isNaN(numericId)) {
     return <ShowNotFound />;
   }
 
@@ -64,34 +59,13 @@ export default async function ShowPage({
     getShowTracking(numericId),
   ]);
 
-  if (!curatedShow && !tmdbFull) {
+  if (!tmdbFull) {
     return <ShowNotFound />;
   }
 
-  // If TMDB's detail fetch failed, `curatedShow` is guaranteed present (see
-  // the guard above), so this fallback always has a valid source.
-  const details: ShowDetails = tmdbFull?.details ?? {
-    name: curatedShow!.name,
-    overview: curatedShow!.overview,
-    year: curatedShow!.firstAirDate
-      ? curatedShow!.firstAirDate.slice(0, 4)
-      : null,
-    bannerUrl: null,
-    posterUrl: curatedShow!.posterUrl,
-    genres: [],
-    network: null,
-    cast: [],
-    status: null,
-    averageRuntime: null,
-    originalLanguage: null,
-    originalCountry: null,
-    contentRating: null,
-    premiereDate: null,
-    lastAiredDate: null,
-    nextEpisodeDate: null,
-  };
+  const details: ShowDetails = tmdbFull.details;
 
-  const meta: ShowMeta | null = tmdbFull?.meta ?? null;
+  const meta: ShowMeta | null = tmdbFull.meta ?? null;
 
   const metaLineParts = [
     details.year,
