@@ -4,13 +4,16 @@ import { ServiceError } from '@/services/errors';
 import {
   markEpisodeWatched,
   markSeasonWatched,
-  resetEpisodeToSingleWatch,
-  resetSeasonToSingleWatch,
+  removeLastEpisodeRewatch,
+  removeLastSeasonRewatch,
+  removeShowTracking,
   rewatchSeason,
+  setShowStatus,
   setSkipCatchUpPrompt,
   unmarkEpisodeWatched,
   unmarkSeasonWatched,
 } from '@/services/tracking';
+import type { ShowStatus } from '@/types';
 
 export type TrackingActionResult =
   | { ok: true }
@@ -67,20 +70,20 @@ export async function rewatchSeasonAction(
   return toResult(rewatchSeason(showId, season, episodeNumbers));
 }
 
-export async function resetEpisodeToSingleWatchAction(
+export async function removeLastEpisodeRewatchAction(
   showId: number,
   season: number,
   episode: number
 ): Promise<TrackingActionResult> {
-  return toResult(resetEpisodeToSingleWatch(showId, season, episode));
+  return toResult(removeLastEpisodeRewatch(showId, season, episode));
 }
 
-export async function resetSeasonToSingleWatchAction(
+export async function removeLastSeasonRewatchAction(
   showId: number,
   season: number,
   episodeNumbers: number[]
 ): Promise<TrackingActionResult> {
-  return toResult(resetSeasonToSingleWatch(showId, season, episodeNumbers));
+  return toResult(removeLastSeasonRewatch(showId, season, episodeNumbers));
 }
 
 export async function setSkipCatchUpPromptAction(
@@ -88,4 +91,17 @@ export async function setSkipCatchUpPromptAction(
   skip: boolean
 ): Promise<TrackingActionResult> {
   return toResult(setSkipCatchUpPrompt(showId, skip));
+}
+
+export async function setShowStatusAction(
+  showId: number,
+  status: ShowStatus
+): Promise<TrackingActionResult> {
+  return toResult(setShowStatus(showId, status));
+}
+
+export async function removeShowTrackingAction(
+  showId: number
+): Promise<TrackingActionResult> {
+  return toResult(removeShowTracking(showId));
 }

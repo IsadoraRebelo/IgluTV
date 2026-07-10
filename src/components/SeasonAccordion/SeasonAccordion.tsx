@@ -133,10 +133,10 @@ export function SeasonAccordion({
   pendingKeys,
   onToggleEpisode,
   onRewatchEpisode,
-  onResetEpisodeRewatches,
+  onRemoveLastEpisodeRewatch,
   onToggleSeason,
   onRewatchSeason,
-  onResetSeasonRewatches,
+  onRemoveLastSeasonRewatch,
 }: {
   seasons: Season[];
   cast: CastMember[];
@@ -144,10 +144,10 @@ export function SeasonAccordion({
   pendingKeys: Set<string>;
   onToggleEpisode: (seasonNumber: number, episodeNumber: number) => void;
   onRewatchEpisode: (seasonNumber: number, episodeNumber: number) => void;
-  onResetEpisodeRewatches: (seasonNumber: number, episodeNumber: number) => void;
+  onRemoveLastEpisodeRewatch: (seasonNumber: number, episodeNumber: number) => void;
   onToggleSeason: (season: Season) => void;
   onRewatchSeason: (season: Season) => void;
-  onResetSeasonRewatches: (season: Season) => void;
+  onRemoveLastSeasonRewatch: (season: Season) => void;
 }) {
   const [expandedSeason, setExpandedSeason] = useState<number | null>(null);
   const [selected, setSelected] = useState<{
@@ -229,13 +229,13 @@ export function SeasonAccordion({
                   isPending={isSeasonPending}
                   rewatchCount={seasonRewatchCount}
                   markLabel="Mark season as watched"
-                  rewatchLabel="+ 1 Rewatched"
+                  rewatchLabel="Add Rewatch"
                   removeLabel="Not Watched"
-                  removeRewatchesLabel="Watche once"
+                  removeRewatchesLabel="Remove Rewatch"
                   onMark={() => onToggleSeason(season)}
                   onRewatch={() => onRewatchSeason(season)}
                   onRemove={() => onToggleSeason(season)}
-                  onRemoveRewatches={() => onResetSeasonRewatches(season)}
+                  onRemoveRewatches={() => onRemoveLastSeasonRewatch(season)}
                 />
               </div>
             </div>
@@ -322,7 +322,7 @@ export function SeasonAccordion({
                               markLabel="Mark episode as watched"
                               rewatchLabel="+1 Rewatched"
                               removeLabel="Not watched"
-                              removeRewatchesLabel="Watched once"
+                              removeRewatchesLabel="Remove last rewatch"
                               onMark={() =>
                                 onToggleEpisode(
                                   season.seasonNumber,
@@ -342,7 +342,7 @@ export function SeasonAccordion({
                                 )
                               }
                               onRemoveRewatches={() =>
-                                onResetEpisodeRewatches(
+                                onRemoveLastEpisodeRewatch(
                                   season.seasonNumber,
                                   episode.episodeNumber
                                 )

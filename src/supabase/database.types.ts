@@ -97,7 +97,7 @@ export type Database = {
           created_at: string
           is_favourite: boolean
           skip_catch_up_prompt: boolean
-          status: string
+          status: number
           tmdb_show_id: number
           updated_at: string
           user_id: string
@@ -106,7 +106,7 @@ export type Database = {
           created_at?: string
           is_favourite?: boolean
           skip_catch_up_prompt?: boolean
-          status: string
+          status: number
           tmdb_show_id: number
           updated_at?: string
           user_id: string
@@ -115,7 +115,7 @@ export type Database = {
           created_at?: string
           is_favourite?: boolean
           skip_catch_up_prompt?: boolean
-          status?: string
+          status?: number
           tmdb_show_id?: number
           updated_at?: string
           user_id?: string

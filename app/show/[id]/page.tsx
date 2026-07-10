@@ -13,19 +13,45 @@ import {
 
 import {
   ShowActionsMenu,
+  ShowActionsSidebar,
   ShowOverview,
   ShowTabs,
   ShowTracker,
+  ShowTrackingProvider,
 } from '@/components';
 import { getTmdbShowFullDetails } from '@/services/tv-shows';
 import { getShowTracking, getWatchedEpisodes } from '@/services/tracking';
-import type { EpisodeWatch, ShowDetails, ShowMeta } from '@/types';
+import type { ShowDetails, ShowMeta, ShowStatus } from '@/types';
 
-const SHOW_ACTIONS: { icon: ReactNode; label: string }[] = [
-  { icon: <Eye className="h-4 w-4 text-[#8a9bab]" />, label: 'Mark watched' },
-  { icon: <Clock className="h-4 w-4 text-[#8a9bab]" />, label: 'Add to watchlist' },
-  { icon: <Pause className="h-4 w-4 text-[#8a9bab]" />, label: 'Pause' },
-  { icon: <Trash2 className="h-4 w-4 text-[#8a9bab]" />, label: 'Drop' },
+const SHOW_ACTIONS: {
+  id?: string;
+  status?: ShowStatus;
+  icon: ReactNode;
+  label: string;
+}[] = [
+  {
+    id: 'mark-watched',
+    icon: <Eye className="h-4 w-4 text-[#8a9bab]" />,
+    label: 'Mark watched',
+  },
+  {
+    id: '1',
+    status: 'watch_later',
+    icon: <Clock className="h-4 w-4 text-[#8a9bab]" />,
+    label: 'Add to watchlist',
+  },
+  {
+    id: '2',
+    status: 'paused',
+    icon: <Pause className="h-4 w-4 text-[#8a9bab]" />,
+    label: 'Pause',
+  },
+  {
+    id: '3',
+    status: 'dropped',
+    icon: <Trash2 className="h-4 w-4 text-[#8a9bab]" />,
+    label: 'Drop',
+  },
   { icon: <ImageIcon className="h-4 w-4 text-[#8a9bab]" />, label: 'Change poster' },
   { icon: <ImagePlus className="h-4 w-4 text-[#8a9bab]" />, label: 'Change banner' },
 ];
@@ -77,97 +103,92 @@ export default async function ShowPage({
   ].filter((part): part is string => Boolean(part));
 
   return (
-    <div className="flex flex-1 flex-col bg-[#14181c] font-sans antialiased">
-      <div className="relative mx-auto w-full max-w-6xl">
-        <div className="relative h-[200px] w-full overflow-hidden sm:h-[450px]">
-          {details.bannerUrl ? (
-            <Image
-              src={details.bannerUrl}
-              alt=""
-              fill
-              sizes="100vw"
-              priority
-              className="object-cover object-top"
-            />
-          ) : null}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#14181c] via-[#14181c]/40 to-[#14181c]/10" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#14181c] via-transparent to-[#14181c]" />
-          <Link
-            href="/"
-            className="absolute top-4 left-4 z-10 text-sm text-white/70 transition-colors hover:text-white sm:top-6 sm:left-6"
-          >
-            ← Back to home
-          </Link>
-          <div className="absolute top-4 right-4 z-10 sm:top-6 sm:right-6 lg:hidden">
-            <ShowActionsMenu actions={SHOW_ACTIONS} />
-          </div>
-        </div>
-
-        <div className="px-5 md:px-0 relative z-10 mx-auto -mt-24 w-full max-w-[950px] px-2 sm:-mt-32">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
-            <div className="hidden md:block relative h-[345px] w-[230px] shrink-0 overflow-hidden rounded-md shadow-2xl ring-1 ring-white/10">
-              {details.posterUrl ? (
-                <Image
-                  src={details.posterUrl}
-                  alt={details.name}
-                  fill
-                  sizes="230px"
-                  className="object-cover"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-[#2c3440] text-xs text-[#678]">
-                  No poster
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-1 flex-col md:gap-2 pb-1">
-              <h1 className="text-2xl mt-5 font-semibold tracking-tight text-white sm:text-3xl">
-                {details.name}
-              </h1>
-              {metaLineParts.length > 0 ? (
-                <p className="text-sm text-[#8a9bab]">
-                  {metaLineParts.join(' · ')}
-                </p>
-              ) : null}
-              {details.overview ? (
-                <ShowOverview text={details.overview} />
-              ) : null}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <main className="px-5 md:px-0 mx-auto w-full max-w-[950px] flex-1 pb-20">
-        <div className="mt-6 md:mt-10 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_260px]">
-          <div>
-            <ShowTabs
-              home={
-                <HomeTab
-                  meta={meta}
-                  details={details}
-                  showId={numericId}
-                  watchedEpisodes={watchedEpisodes}
-                  skipCatchUpPrompt={tracking?.skipCatchUpPrompt ?? false}
-                />
-              }
-              cast={<CastTab cast={details.cast} />}
-              similar={<SimilarTab shows={meta?.similar ?? []} />}
-            />
-          </div>
-
-          <aside className="hidden h-fit flex-col gap-1 rounded-lg bg-white/[0.03] p-2 lg:flex">
-            {SHOW_ACTIONS.map((action) => (
-              <ActionItem
-                key={action.label}
-                icon={action.icon}
-                label={action.label}
+    <ShowTrackingProvider
+      showId={numericId}
+      seasons={meta?.seasons ?? []}
+      watchedEpisodes={watchedEpisodes}
+      skipCatchUpPrompt={tracking?.skipCatchUpPrompt ?? false}
+      initialStatus={tracking?.status ?? null}
+      tmdbStatus={details.status}
+    >
+      <div className="flex flex-1 flex-col bg-[#14181c] font-sans antialiased">
+        <div className="relative mx-auto w-full max-w-6xl">
+          <div className="relative h-[200px] w-full overflow-hidden sm:h-[450px]">
+            {details.bannerUrl ? (
+              <Image
+                src={details.bannerUrl}
+                alt=""
+                fill
+                sizes="100vw"
+                priority
+                className="object-cover object-top"
               />
-            ))}
-          </aside>
+            ) : null}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#14181c] via-[#14181c]/40 to-[#14181c]/10" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#14181c] via-transparent to-[#14181c]" />
+            <Link
+              href="/"
+              className="absolute top-4 left-4 z-10 text-sm text-white/70 transition-colors hover:text-white sm:top-6 sm:left-6"
+            >
+              ← Back to home
+            </Link>
+            <div className="absolute top-4 right-4 z-10 sm:top-6 sm:right-6 lg:hidden">
+              <ShowActionsMenu actions={SHOW_ACTIONS} />
+            </div>
+          </div>
+
+          <div className="px-5 md:px-0 relative z-10 mx-auto -mt-24 w-full max-w-[950px] px-2 sm:-mt-32">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
+              <div className="hidden md:block relative h-[345px] w-[230px] shrink-0 overflow-hidden rounded-md shadow-2xl ring-1 ring-white/10">
+                {details.posterUrl ? (
+                  <Image
+                    src={details.posterUrl}
+                    alt={details.name}
+                    fill
+                    sizes="230px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-[#2c3440] text-xs text-[#678]">
+                    No poster
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-1 flex-col md:gap-2 pb-1">
+                <h1 className="text-2xl mt-5 font-semibold tracking-tight text-white sm:text-3xl">
+                  {details.name}
+                </h1>
+                {metaLineParts.length > 0 ? (
+                  <p className="text-sm text-[#8a9bab]">
+                    {metaLineParts.join(' · ')}
+                  </p>
+                ) : null}
+                {details.overview ? (
+                  <ShowOverview text={details.overview} />
+                ) : null}
+              </div>
+            </div>
+          </div>
         </div>
-      </main>
-    </div>
+
+        <main className="px-5 md:px-0 mx-auto w-full max-w-[950px] flex-1 pb-20">
+          <div className="mt-6 md:mt-10 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_260px]">
+            <div>
+              <ShowTabs
+                home={<HomeTab meta={meta} details={details} />}
+                cast={<CastTab cast={details.cast} />}
+                similar={<SimilarTab shows={meta?.similar ?? []} />}
+              />
+            </div>
+
+            <aside className="hidden h-fit flex-col gap-1 rounded-lg bg-white/[0.03] p-2 lg:flex">
+              <ShowActionsSidebar actions={SHOW_ACTIONS} />
+            </aside>
+          </div>
+        </main>
+      </div>
+    </ShowTrackingProvider>
   );
 }
 
@@ -185,36 +206,18 @@ function ShowNotFound() {
   );
 }
 
-function ActionItem({ icon, label }: { icon: ReactNode; label: string }) {
-  return (
-    <div className="flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#c2d0dd] hover:bg-white/5">
-      {icon}
-      {label}
-    </div>
-  );
-}
-
 function HomeTab({
   meta,
   details,
-  showId,
-  watchedEpisodes,
-  skipCatchUpPrompt,
 }: {
   meta: ShowMeta | null;
   details: ShowDetails;
-  showId: number;
-  watchedEpisodes: EpisodeWatch[];
-  skipCatchUpPrompt: boolean;
 }) {
   return (
     <div className="flex flex-col gap-7 md:gap-10">
       <ShowTracker
         seasons={meta?.seasons ?? []}
         cast={details.cast}
-        showId={showId}
-        watchedEpisodes={watchedEpisodes}
-        skipCatchUpPrompt={skipCatchUpPrompt}
         meta={meta}
         details={details}
       />

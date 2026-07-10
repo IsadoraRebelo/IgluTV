@@ -3,8 +3,32 @@
 import { createClient } from '@/supabase/server';
 import type { EpisodeWatch, ShowStatus, ShowTracking } from '@/types';
 
+import { isShowFinished } from '@/components/ShowTracker/utils';
+
 import { ServiceError } from './errors';
 import { getTmdbShowFullDetails } from './tv-shows';
+
+const STATUS_CODES: Record<ShowStatus, number> = {
+  watching: 1,
+  watch_later: 2,
+  paused: 3,
+  dropped: 4,
+  completed: 5,
+};
+
+const STATUS_BY_CODE = Object.fromEntries(
+  Object.entries(STATUS_CODES).map(([status, code]) => [code, status])
+) as Record<number, ShowStatus>;
+
+function statusToCode(status: ShowStatus): number {
+  return STATUS_CODES[status];
+}
+
+function codeToStatus(code: number): ShowStatus {
+  const status = STATUS_BY_CODE[code];
+  if (!status) throw new ServiceError(`Unknown status code: ${code}`);
+  return status;
+}
 
 export async function getShowTracking(
   showId: number
@@ -22,7 +46,7 @@ export async function getShowTracking(
 
   return {
     tmdbShowId: data.tmdb_show_id,
-    status: data.status as ShowStatus,
+    status: codeToStatus(data.status),
     isFavourite: data.is_favourite,
     skipCatchUpPrompt: data.skip_catch_up_prompt,
   };
@@ -58,14 +82,14 @@ export async function getMyShows(
     .from('show_tracking')
     .select('tmdb_show_id, status, is_favourite, skip_catch_up_prompt');
 
-  if (status) query = query.eq('status', status);
+  if (status) query = query.eq('status', statusToCode(status));
 
   const { data, error } = await query;
   if (error) throw new ServiceError(error.message, error.code);
 
   return (data ?? []).map((row) => ({
     tmdbShowId: row.tmdb_show_id,
-    status: row.status as ShowStatus,
+    status: codeToStatus(row.status),
     isFavourite: row.is_favourite,
     skipCatchUpPrompt: row.skip_catch_up_prompt,
   }));
@@ -93,9 +117,21 @@ export async function setShowStatus(
   const { error } = await supabase
     .from('show_tracking')
     .upsert(
-      { user_id: userId, tmdb_show_id: showId, status },
+      { user_id: userId, tmdb_show_id: showId, status: statusToCode(status) },
       { onConflict: 'user_id,tmdb_show_id' }
     );
+
+  if (error) throw new ServiceError(error.message, error.code);
+}
+export async function removeShowTracking(showId: number): Promise<void> {
+  const supabase = await createClient();
+  const userId = await requireUserId(supabase);
+
+  const { error } = await supabase
+    .from('show_tracking')
+    .delete()
+    .eq('user_id', userId)
+    .eq('tmdb_show_id', showId);
 
   if (error) throw new ServiceError(error.message, error.code);
 }
@@ -147,7 +183,7 @@ export async function toggleFavourite(
   const { error } = await supabase.from('show_tracking').insert({
     user_id: userId,
     tmdb_show_id: showId,
-    status: 'watching',
+    status: statusToCode('watching'),
     is_favourite: next,
   });
 
@@ -200,9 +236,19 @@ async function autoUpdateStatus(
   }
 
   if (!tracking) {
+    const { error } = await supabase.from('show_tracking').insert({
+      user_id: userId,
+      tmdb_show_id: showId,
+      status: statusToCode('watching'),
+    });
+
+    if (error) throw new ServiceError(error.message, error.code);
+  } else if (tracking.status === statusToCode('watch_later')) {
     const { error } = await supabase
       .from('show_tracking')
-      .insert({ user_id: userId, tmdb_show_id: showId, status: 'watching' });
+      .update({ status: statusToCode('watching') })
+      .eq('user_id', userId)
+      .eq('tmdb_show_id', showId);
 
     if (error) throw new ServiceError(error.message, error.code);
   }
@@ -237,10 +283,13 @@ async function autoUpdateStatus(
     )
   );
 
-  if (distinctWatched.size >= regularEpisodeCount) {
+  if (
+    distinctWatched.size >= regularEpisodeCount &&
+    isShowFinished(full.details.status)
+  ) {
     const { error } = await supabase
       .from('show_tracking')
-      .update({ status: 'completed' })
+      .update({ status: statusToCode('completed') })
       .eq('user_id', userId)
       .eq('tmdb_show_id', showId);
 
@@ -294,7 +343,7 @@ export async function unmarkEpisodeWatched(
   await pruneIfUntracked(supabase, userId, showId);
 }
 
-export async function resetEpisodeToSingleWatch(
+export async function removeLastEpisodeRewatch(
   showId: number,
   season: number,
   episode: number
@@ -302,31 +351,32 @@ export async function resetEpisodeToSingleWatch(
   const supabase = await createClient();
   const userId = await requireUserId(supabase);
 
-  const { data: inserted, error: insertError } = await supabase
+  const { data: rows, error: selectError } = await supabase
     .from('episode_watches')
-    .insert({
-      user_id: userId,
-      tmdb_show_id: showId,
-      season_number: season,
-      episode_number: episode,
-    })
     .select('id')
-    .single();
-
-  if (insertError) throw new ServiceError(insertError.message, insertError.code);
-
-  const { error: deleteError } = await supabase
-    .from('episode_watches')
-    .delete()
     .eq('user_id', userId)
     .eq('tmdb_show_id', showId)
     .eq('season_number', season)
     .eq('episode_number', episode)
-    .neq('id', inserted.id);
+    .order('id', { ascending: false })
+    .limit(1);
+
+  if (selectError) {
+    throw new ServiceError(selectError.message, selectError.code);
+  }
+  if (!rows || rows.length === 0) return;
+
+  const { error: deleteError } = await supabase
+    .from('episode_watches')
+    .delete()
+    .eq('id', rows[0].id)
+    .eq('user_id', userId);
 
   if (deleteError) {
     throw new ServiceError(deleteError.message, deleteError.code);
   }
+
+  await pruneIfUntracked(supabase, userId, showId);
 }
 
 export async function markSeasonWatched(
@@ -391,7 +441,7 @@ export async function rewatchSeason(
   await autoUpdateStatus(supabase, userId, showId);
 }
 
-export async function resetSeasonToSingleWatch(
+export async function removeLastSeasonRewatch(
   showId: number,
   season: number,
   episodeNumbers: number[]
@@ -399,34 +449,40 @@ export async function resetSeasonToSingleWatch(
   const supabase = await createClient();
   const userId = await requireUserId(supabase);
 
-  const { data: inserted, error: insertError } = await supabase
+  const { data: rows, error: selectError } = await supabase
     .from('episode_watches')
-    .insert(
-      episodeNumbers.map((episodeNumber) => ({
-        user_id: userId,
-        tmdb_show_id: showId,
-        season_number: season,
-        episode_number: episodeNumber,
-      }))
-    )
-    .select('id');
+    .select('id, episode_number')
+    .eq('user_id', userId)
+    .eq('tmdb_show_id', showId)
+    .eq('season_number', season)
+    .in('episode_number', episodeNumbers)
+    .order('id', { ascending: false });
 
-  if (insertError) throw new ServiceError(insertError.message, insertError.code);
+  if (selectError) {
+    throw new ServiceError(selectError.message, selectError.code);
+  }
 
-  const insertedIds = (inserted ?? []).map((row) => row.id);
+  const seenEpisodes = new Set<number>();
+  const idsToDelete: number[] = [];
+  for (const row of rows ?? []) {
+    if (seenEpisodes.has(row.episode_number)) continue;
+    seenEpisodes.add(row.episode_number);
+    idsToDelete.push(row.id);
+  }
+
+  if (idsToDelete.length === 0) return;
 
   const { error: deleteError } = await supabase
     .from('episode_watches')
     .delete()
     .eq('user_id', userId)
-    .eq('tmdb_show_id', showId)
-    .eq('season_number', season)
-    .in('episode_number', episodeNumbers)
-    .not('id', 'in', `(${insertedIds.join(',')})`);
+    .in('id', idsToDelete);
 
   if (deleteError) {
     throw new ServiceError(deleteError.message, deleteError.code);
   }
+
+  await pruneIfUntracked(supabase, userId, showId);
 }
 
 export async function unmarkSeasonWatched(
