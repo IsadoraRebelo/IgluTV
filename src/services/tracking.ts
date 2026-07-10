@@ -13,7 +13,7 @@ export async function getShowTracking(
 
   const { data, error } = await supabase
     .from('show_tracking')
-    .select('tmdb_show_id, status, is_favourite')
+    .select('tmdb_show_id, status, is_favourite, skip_catch_up_prompt')
     .eq('tmdb_show_id', showId)
     .maybeSingle();
 
@@ -24,6 +24,7 @@ export async function getShowTracking(
     tmdbShowId: data.tmdb_show_id,
     status: data.status as ShowStatus,
     isFavourite: data.is_favourite,
+    skipCatchUpPrompt: data.skip_catch_up_prompt,
   };
 }
 
@@ -55,7 +56,7 @@ export async function getMyShows(
 
   let query = supabase
     .from('show_tracking')
-    .select('tmdb_show_id, status, is_favourite');
+    .select('tmdb_show_id, status, is_favourite, skip_catch_up_prompt');
 
   if (status) query = query.eq('status', status);
 
@@ -66,6 +67,7 @@ export async function getMyShows(
     tmdbShowId: row.tmdb_show_id,
     status: row.status as ShowStatus,
     isFavourite: row.is_favourite,
+    skipCatchUpPrompt: row.skip_catch_up_prompt,
   }));
 }
 
@@ -98,6 +100,22 @@ export async function setShowStatus(
   if (error) throw new ServiceError(error.message, error.code);
 }
 
+export async function setSkipCatchUpPrompt(
+  showId: number,
+  skip: boolean
+): Promise<void> {
+  const supabase = await createClient();
+  const userId = await requireUserId(supabase);
+
+  const { error } = await supabase
+    .from('show_tracking')
+    .update({ skip_catch_up_prompt: skip })
+    .eq('user_id', userId)
+    .eq('tmdb_show_id', showId);
+
+  if (error) throw new ServiceError(error.message, error.code);
+}
+
 export async function toggleFavourite(
   showId: number,
   next: boolean
@@ -126,8 +144,6 @@ export async function toggleFavourite(
     return;
   }
 
-  // Toggling favourite on an untracked show creates the row with a
-  // default status of `watching` — see design spec's Data Model.
   const { error } = await supabase.from('show_tracking').insert({
     user_id: userId,
     tmdb_show_id: showId,
@@ -183,8 +199,6 @@ async function autoUpdateStatus(
     throw new ServiceError(trackingError.message, trackingError.code);
   }
 
-  // Auto-`watching` never overrides a manual status — only an untracked
-  // show is auto-set to `watching`.
   if (!tracking) {
     const { error } = await supabase
       .from('show_tracking')
@@ -223,9 +237,6 @@ async function autoUpdateStatus(
     )
   );
 
-  // Auto-`completed` applies unconditionally when the counts match — even
-  // overriding a manual paused/dropped/watch_later status. Reversing a
-  // completion is not auto-handled (see design spec's "Decisions / Defaults").
   if (distinctWatched.size >= regularEpisodeCount) {
     const { error } = await supabase
       .from('show_tracking')
@@ -234,6 +245,31 @@ async function autoUpdateStatus(
       .eq('tmdb_show_id', showId);
 
     if (error) throw new ServiceError(error.message, error.code);
+  }
+}
+
+async function pruneIfUntracked(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  showId: number
+): Promise<void> {
+  const { count, error } = await supabase
+    .from('episode_watches')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('tmdb_show_id', showId);
+
+  if (error) throw new ServiceError(error.message, error.code);
+  if ((count ?? 0) > 0) return;
+
+  const { error: deleteError } = await supabase
+    .from('show_tracking')
+    .delete()
+    .eq('user_id', userId)
+    .eq('tmdb_show_id', showId);
+
+  if (deleteError) {
+    throw new ServiceError(deleteError.message, deleteError.code);
   }
 }
 
@@ -254,17 +290,178 @@ export async function unmarkEpisodeWatched(
     .eq('episode_number', episode);
 
   if (error) throw new ServiceError(error.message, error.code);
+
+  await pruneIfUntracked(supabase, userId, showId);
 }
 
-export async function deleteWatch(watchId: number): Promise<void> {
+export async function resetEpisodeToSingleWatch(
+  showId: number,
+  season: number,
+  episode: number
+): Promise<void> {
+  const supabase = await createClient();
+  const userId = await requireUserId(supabase);
+
+  const { data: inserted, error: insertError } = await supabase
+    .from('episode_watches')
+    .insert({
+      user_id: userId,
+      tmdb_show_id: showId,
+      season_number: season,
+      episode_number: episode,
+    })
+    .select('id')
+    .single();
+
+  if (insertError) throw new ServiceError(insertError.message, insertError.code);
+
+  const { error: deleteError } = await supabase
+    .from('episode_watches')
+    .delete()
+    .eq('user_id', userId)
+    .eq('tmdb_show_id', showId)
+    .eq('season_number', season)
+    .eq('episode_number', episode)
+    .neq('id', inserted.id);
+
+  if (deleteError) {
+    throw new ServiceError(deleteError.message, deleteError.code);
+  }
+}
+
+export async function markSeasonWatched(
+  showId: number,
+  season: number,
+  episodeNumbers: number[]
+): Promise<void> {
+  const supabase = await createClient();
+  const userId = await requireUserId(supabase);
+
+  const { data: existingRows, error: existingError } = await supabase
+    .from('episode_watches')
+    .select('episode_number')
+    .eq('user_id', userId)
+    .eq('tmdb_show_id', showId)
+    .eq('season_number', season);
+
+  if (existingError) {
+    throw new ServiceError(existingError.message, existingError.code);
+  }
+
+  const alreadyWatched = new Set(
+    (existingRows ?? []).map((row) => row.episode_number)
+  );
+  const toInsert = episodeNumbers.filter((n) => !alreadyWatched.has(n));
+
+  if (toInsert.length > 0) {
+    const { error } = await supabase.from('episode_watches').insert(
+      toInsert.map((episodeNumber) => ({
+        user_id: userId,
+        tmdb_show_id: showId,
+        season_number: season,
+        episode_number: episodeNumber,
+      }))
+    );
+
+    if (error) throw new ServiceError(error.message, error.code);
+  }
+
+  await autoUpdateStatus(supabase, userId, showId);
+}
+
+export async function rewatchSeason(
+  showId: number,
+  season: number,
+  episodeNumbers: number[]
+): Promise<void> {
+  const supabase = await createClient();
+  const userId = await requireUserId(supabase);
+
+  const { error } = await supabase.from('episode_watches').insert(
+    episodeNumbers.map((episodeNumber) => ({
+      user_id: userId,
+      tmdb_show_id: showId,
+      season_number: season,
+      episode_number: episodeNumber,
+    }))
+  );
+
+  if (error) throw new ServiceError(error.message, error.code);
+
+  await autoUpdateStatus(supabase, userId, showId);
+}
+
+export async function resetSeasonToSingleWatch(
+  showId: number,
+  season: number,
+  episodeNumbers: number[]
+): Promise<void> {
+  const supabase = await createClient();
+  const userId = await requireUserId(supabase);
+
+  const { data: inserted, error: insertError } = await supabase
+    .from('episode_watches')
+    .insert(
+      episodeNumbers.map((episodeNumber) => ({
+        user_id: userId,
+        tmdb_show_id: showId,
+        season_number: season,
+        episode_number: episodeNumber,
+      }))
+    )
+    .select('id');
+
+  if (insertError) throw new ServiceError(insertError.message, insertError.code);
+
+  const insertedIds = (inserted ?? []).map((row) => row.id);
+
+  const { error: deleteError } = await supabase
+    .from('episode_watches')
+    .delete()
+    .eq('user_id', userId)
+    .eq('tmdb_show_id', showId)
+    .eq('season_number', season)
+    .in('episode_number', episodeNumbers)
+    .not('id', 'in', `(${insertedIds.join(',')})`);
+
+  if (deleteError) {
+    throw new ServiceError(deleteError.message, deleteError.code);
+  }
+}
+
+export async function unmarkSeasonWatched(
+  showId: number,
+  season: number
+): Promise<void> {
   const supabase = await createClient();
   const userId = await requireUserId(supabase);
 
   const { error } = await supabase
     .from('episode_watches')
     .delete()
-    .eq('id', watchId)
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .eq('tmdb_show_id', showId)
+    .eq('season_number', season);
 
   if (error) throw new ServiceError(error.message, error.code);
+
+  await pruneIfUntracked(supabase, userId, showId);
+}
+
+export async function deleteWatch(watchId: number): Promise<void> {
+  const supabase = await createClient();
+  const userId = await requireUserId(supabase);
+
+  const { data, error } = await supabase
+    .from('episode_watches')
+    .delete()
+    .eq('id', watchId)
+    .eq('user_id', userId)
+    .select('tmdb_show_id')
+    .maybeSingle();
+
+  if (error) throw new ServiceError(error.message, error.code);
+  if (!data) return;
+
+  await pruneIfUntracked(supabase, userId, data.tmdb_show_id);
 }

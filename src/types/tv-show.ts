@@ -74,18 +74,15 @@ export type SimilarShow = {
   id: number;
   name: string;
   posterUrl: string | null;
-  // TMDB's own "match" percentage, as shown on themoviedb.org's
-  // recommendations section: round(vote_average * 10).
   matchPercentage: number | null;
 };
 
-// Additional show metadata (seasons, latest episode, recommendations),
-// all sourced from TMDB.
 export type ShowMeta = {
   numberOfSeasons: number | null;
   numberOfEpisodes: number | null;
   seasons: Season[];
   latestEpisode: LatestEpisode | null;
+  nextEpisode: LatestEpisode | null;
   similar: SimilarShow[];
 };
 

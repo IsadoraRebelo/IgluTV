@@ -7,33 +7,25 @@ import {
   Eye,
   Image as ImageIcon,
   ImagePlus,
-  ListPlus,
   Pause,
-  Pencil,
-  Play,
-  ThumbsUp,
   Trash2,
 } from 'lucide-react';
 
 import {
-  LatestEpisodeCard,
-  SeasonAccordion,
   ShowActionsMenu,
   ShowOverview,
   ShowTabs,
+  ShowTracker,
 } from '@/components';
 import { getPopularTvShows, getTmdbShowFullDetails } from '@/services/tv-shows';
-import type { ShowDetails, ShowMeta } from '@/types';
+import { getShowTracking, getWatchedEpisodes } from '@/services/tracking';
+import type { EpisodeWatch, ShowDetails, ShowMeta } from '@/types';
 
 const SHOW_ACTIONS: { icon: ReactNode; label: string }[] = [
-  { icon: <Play className="h-4 w-4 text-[#8a9bab]" />, label: 'Currently watching' },
   { icon: <Eye className="h-4 w-4 text-[#8a9bab]" />, label: 'Mark watched' },
   { icon: <Clock className="h-4 w-4 text-[#8a9bab]" />, label: 'Add to watchlist' },
-  { icon: <Pencil className="h-4 w-4 text-[#8a9bab]" />, label: 'Add rating / log' },
   { icon: <Pause className="h-4 w-4 text-[#8a9bab]" />, label: 'Pause' },
   { icon: <Trash2 className="h-4 w-4 text-[#8a9bab]" />, label: 'Drop' },
-  { icon: <ThumbsUp className="h-4 w-4 text-[#8a9bab]" />, label: 'Recommend to friends' },
-  { icon: <ListPlus className="h-4 w-4 text-[#8a9bab]" />, label: 'Add to list' },
   { icon: <ImageIcon className="h-4 w-4 text-[#8a9bab]" />, label: 'Change poster' },
   { icon: <ImagePlus className="h-4 w-4 text-[#8a9bab]" />, label: 'Change banner' },
 ];
@@ -66,7 +58,11 @@ export default async function ShowPage({
     return <ShowNotFound />;
   }
 
-  const tmdbFull = await getTmdbShowFullDetails(numericId);
+  const [tmdbFull, watchedEpisodes, tracking] = await Promise.all([
+    getTmdbShowFullDetails(numericId),
+    getWatchedEpisodes(numericId),
+    getShowTracking(numericId),
+  ]);
 
   if (!curatedShow && !tmdbFull) {
     return <ShowNotFound />;
@@ -172,7 +168,15 @@ export default async function ShowPage({
         <div className="mt-6 md:mt-10 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_260px]">
           <div>
             <ShowTabs
-              home={<HomeTab meta={meta} details={details} />}
+              home={
+                <HomeTab
+                  meta={meta}
+                  details={details}
+                  showId={numericId}
+                  watchedEpisodes={watchedEpisodes}
+                  skipCatchUpPrompt={tracking?.skipCatchUpPrompt ?? false}
+                />
+              }
               cast={<CastTab cast={details.cast} />}
               similar={<SimilarTab shows={meta?.similar ?? []} />}
             />
@@ -219,29 +223,27 @@ function ActionItem({ icon, label }: { icon: ReactNode; label: string }) {
 function HomeTab({
   meta,
   details,
+  showId,
+  watchedEpisodes,
+  skipCatchUpPrompt,
 }: {
   meta: ShowMeta | null;
   details: ShowDetails;
+  showId: number;
+  watchedEpisodes: EpisodeWatch[];
+  skipCatchUpPrompt: boolean;
 }) {
   return (
     <div className="flex flex-col gap-7 md:gap-10">
-      {meta?.latestEpisode ? (
-        <section>
-          <h2 className="mb-4 text-lg font-semibold text-white">
-            Latest episode
-          </h2>
-          <LatestEpisodeCard episode={meta.latestEpisode} cast={details.cast} />
-        </section>
-      ) : null}
-
-      {meta && meta.seasons.length > 0 ? (
-        <section>
-          <h2 className="mb-4 text-lg font-semibold text-white">
-            Seasons ({meta.numberOfSeasons ?? meta.seasons.length})
-          </h2>
-          <SeasonAccordion seasons={meta.seasons} cast={details.cast} />
-        </section>
-      ) : null}
+      <ShowTracker
+        seasons={meta?.seasons ?? []}
+        cast={details.cast}
+        showId={showId}
+        watchedEpisodes={watchedEpisodes}
+        skipCatchUpPrompt={skipCatchUpPrompt}
+        meta={meta}
+        details={details}
+      />
 
       <section>
         <h2 className="mb-4 text-lg font-semibold text-white">Details</h2>

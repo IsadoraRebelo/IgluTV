@@ -173,6 +173,7 @@ async function fetchTmdbShowFullDetails(
     };
 
     const lastEpisode = json.last_episode_to_air;
+    const nextEpisode = json.next_episode_to_air;
 
     const sortedSeasons = (json.seasons ?? [])
       .slice()
@@ -199,9 +200,6 @@ async function fetchTmdbShowFullDetails(
       numberOfSeasons: json.number_of_seasons ?? null,
       numberOfEpisodes: json.number_of_episodes ?? null,
       seasons,
-      // Ignore Specials (season_number 0) — TMDB occasionally promotes a
-      // special to last_episode_to_air, which isn't a "latest episode" in
-      // the show's regular run.
       latestEpisode: lastEpisode && lastEpisode.season_number > 0
         ? {
             name: lastEpisode.name,
@@ -212,6 +210,19 @@ async function fetchTmdbShowFullDetails(
             runtime: lastEpisode.runtime,
             imageUrl: lastEpisode.still_path
               ? `${TMDB_BACKDROP_BASE_URL}${lastEpisode.still_path}`
+              : null,
+          }
+        : null,
+      nextEpisode: nextEpisode && nextEpisode.season_number > 0
+        ? {
+            name: nextEpisode.name,
+            overview: nextEpisode.overview,
+            seasonNumber: nextEpisode.season_number,
+            episodeNumber: nextEpisode.episode_number,
+            airDate: nextEpisode.air_date,
+            runtime: nextEpisode.runtime,
+            imageUrl: nextEpisode.still_path
+              ? `${TMDB_BACKDROP_BASE_URL}${nextEpisode.still_path}`
               : null,
           }
         : null,

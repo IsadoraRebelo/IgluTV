@@ -9,6 +9,7 @@ export type ShowTracking = {
   tmdbShowId: number;
   status: ShowStatus;
   isFavourite: boolean;
+  skipCatchUpPrompt: boolean;
 };
 
 export type EpisodeWatch = {

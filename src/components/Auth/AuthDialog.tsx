@@ -21,26 +21,43 @@ const VIEW_COPY: Record<AuthView, { title: string; description: string }> = {
   },
 };
 
-export const AuthDialog = () => {
-  const [open, setOpen] = useState(false);
+type AuthDialogProps = {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+};
+
+export const AuthDialog = ({
+  open: controlledOpen,
+  onOpenChange: setControlledOpen,
+}: AuthDialogProps = {}) => {
+  const isControlled = controlledOpen !== undefined;
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const [view, setView] = useState<AuthView>('login');
 
+  const open = isControlled ? controlledOpen : uncontrolledOpen;
+
   const handleOpenChange = (nextOpen: boolean) => {
-    setOpen(nextOpen);
+    if (isControlled) {
+      setControlledOpen?.(nextOpen);
+    } else {
+      setUncontrolledOpen(nextOpen);
+    }
     if (!nextOpen) setView('login');
   };
 
-  const handleSuccess = () => setOpen(false);
+  const handleSuccess = () => handleOpenChange(false);
 
   const { title, description } = VIEW_COPY[view];
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange}>
-      <DialogPrimitive.Trigger asChild>
-        <Button variant="primary" size="sm">
-          Log in
-        </Button>
-      </DialogPrimitive.Trigger>
+      {!isControlled ? (
+        <DialogPrimitive.Trigger asChild>
+          <Button variant="primary" size="sm">
+            Log in
+          </Button>
+        </DialogPrimitive.Trigger>
+      ) : null}
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50" />
         <DialogPrimitive.Content className="bg-background border-muted fixed top-1/2 left-1/2 z-50 flex w-[90vw] max-w-sm -translate-x-1/2 -translate-y-1/2 flex-col gap-5 rounded-lg border p-6 shadow-lg">

@@ -96,6 +96,7 @@ export type Database = {
         Row: {
           created_at: string
           is_favourite: boolean
+          skip_catch_up_prompt: boolean
           status: string
           tmdb_show_id: number
           updated_at: string
@@ -104,6 +105,7 @@ export type Database = {
         Insert: {
           created_at?: string
           is_favourite?: boolean
+          skip_catch_up_prompt?: boolean
           status: string
           tmdb_show_id: number
           updated_at?: string
@@ -112,6 +114,7 @@ export type Database = {
         Update: {
           created_at?: string
           is_favourite?: boolean
+          skip_catch_up_prompt?: boolean
           status?: string
           tmdb_show_id?: number
           updated_at?: string

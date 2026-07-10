@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Check } from 'lucide-react';
 
 import { EpisodeModal } from '@/components';
+import { getDaysUntilAir } from '@/components/ShowTracker/utils';
 import type { CastMember, LatestEpisode } from '@/types';
 
 function formatDate(dateStr: string | null): string | null {
@@ -19,24 +20,18 @@ function formatDate(dateStr: string | null): string | null {
   });
 }
 
-// Returns days until an episode airs, or null if it already aired (or the
-// date is unknown) — used to swap the watched button for a countdown.
-function getDaysUntilAir(dateStr: string | null): number | null {
-  if (!dateStr) return null;
-  const airDate = new Date(`${dateStr}T00:00:00`);
-  if (Number.isNaN(airDate.getTime())) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const days = Math.round((airDate.getTime() - today.getTime()) / 86_400_000);
-  return days > 0 ? days : null;
-}
-
 export function LatestEpisodeCard({
   episode,
   cast,
+  isWatched,
+  isPending,
+  onToggleWatched,
 }: {
   episode: LatestEpisode;
   cast: CastMember[];
+  isWatched: boolean;
+  isPending: boolean;
+  onToggleWatched: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const daysUntilAir = getDaysUntilAir(episode.airDate);
@@ -81,11 +76,16 @@ export function LatestEpisodeCard({
               In {daysUntilAir} day{daysUntilAir === 1 ? '' : 's'}
             </span>
           ) : (
-            // Decorative for now — not wired to any real watch state.
             <button
               type="button"
-              aria-label="Mark episode as watched"
-              className="bg-main flex h-8 w-8 shrink-0 cursor-default items-center justify-center rounded-full text-[#14181c]"
+              aria-label={
+                isWatched ? 'Unmark episode as watched' : 'Mark episode as watched'
+              }
+              disabled={isPending}
+              onClick={onToggleWatched}
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#14181c] transition-colors disabled:opacity-50 ${
+                isWatched ? 'bg-[#66cc24]' : 'bg-main'
+              }`}
             >
               <Check className="h-4 w-4" />
             </button>

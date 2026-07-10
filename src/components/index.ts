@@ -1,5 +1,6 @@
 export * from './atoms';
 export * from './Auth/AuthButton';
+export * from './Auth/AuthDialog';
 export * from './Auth/RecoveryErrorToast';
 export * from './EpisodeModal/EpisodeModal';
 export * from './Form/Form';
@@ -8,5 +9,7 @@ export * from './SeasonAccordion/SeasonAccordion';
 export * from './ShowActionsMenu/ShowActionsMenu';
 export * from './ShowOverview/ShowOverview';
 export * from './ShowTabs/ShowTabs';
+export * from './ShowTracker/ShowTracker';
 export * from './Toaster/Toaster';
 export * from './TvShowCard/TvShowCard';
+export * from './WatchNextCard/WatchNextCard';
