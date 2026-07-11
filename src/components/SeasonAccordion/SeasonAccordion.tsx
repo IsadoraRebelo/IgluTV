@@ -37,6 +37,7 @@ export function SeasonAccordion({
   onToggleSeason,
   onRewatchSeason,
   onRemoveLastSeasonRewatch,
+  isLoggedIn,
 }: {
   seasons: Season[];
   cast: CastMember[];
@@ -51,6 +52,7 @@ export function SeasonAccordion({
   onToggleSeason: (season: Season) => void;
   onRewatchSeason: (season: Season) => void;
   onRemoveLastSeasonRewatch: (season: Season) => void;
+  isLoggedIn: boolean;
 }) {
   const [expandedSeason, setExpandedSeason] = useState<number | null>(null);
   const [selected, setSelected] = useState<{
@@ -83,13 +85,13 @@ export function SeasonAccordion({
           markableEpisodes.length === 0
             ? 0
             : Math.min(
-                ...markableEpisodes.map((ep) =>
-                  getRewatchCount(
-                    watchedDates,
-                    episodeKey(season.seasonNumber, ep.episodeNumber)
-                  )
+              ...markableEpisodes.map((ep) =>
+                getRewatchCount(
+                  watchedDates,
+                  episodeKey(season.seasonNumber, ep.episodeNumber)
                 )
-              );
+              )
+            );
 
         return (
           <div
@@ -115,9 +117,8 @@ export function SeasonAccordion({
                   ) : null}
                 </div>
                 <ChevronDown
-                  className={`h-6 w-6 shrink-0 text-[#678] transition-transform duration-300 ease-in-out ${
-                    isExpanded ? 'rotate-180' : ''
-                  }`}
+                  className={`h-6 w-6 shrink-0 text-[#678] transition-transform duration-300 ease-in-out ${isExpanded ? 'rotate-180' : ''
+                    }`}
                 />
               </button>
 
@@ -127,29 +128,30 @@ export function SeasonAccordion({
                     {seasonWatchedCount}/{total}
                   </span>
                 ) : null}
-                <WatchedToggleButton
-                  isWatched={isSeasonFullyWatched}
-                  isPending={isSeasonPending}
-                  rewatchCount={seasonRewatchCount}
-                  markLabel="Mark season as watched"
-                  rewatchLabel="Add Rewatch"
-                  removeLabel="Not Watched"
-                  removeRewatchesLabel="Remove Rewatch"
-                  onMark={() => onToggleSeason(season)}
-                  onRewatch={() => onRewatchSeason(season)}
-                  onRemove={() => onToggleSeason(season)}
-                  onRemoveRewatches={() => onRemoveLastSeasonRewatch(season)}
-                />
+                {isLoggedIn ? (
+                  <WatchedToggleButton
+                    isWatched={isSeasonFullyWatched}
+                    isPending={isSeasonPending}
+                    rewatchCount={seasonRewatchCount}
+                    markLabel="Mark season as watched"
+                    rewatchLabel="Add Rewatch"
+                    removeLabel="Not Watched"
+                    removeRewatchesLabel="Remove Rewatch"
+                    onMark={() => onToggleSeason(season)}
+                    onRewatch={() => onRewatchSeason(season)}
+                    onRemove={() => onToggleSeason(season)}
+                    onRemoveRewatches={() => onRemoveLastSeasonRewatch(season)}
+                  />
+                ) : null}
               </div>
             </div>
 
             <div
-              className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
-                isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-              }`}
+              className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                }`}
             >
               <div className="overflow-hidden">
-                <div className="bg-main h-1 w-full" />
+                <div className="bg-accent h-1 w-full" />
                 <div className="flex flex-col gap-2 p-2">
                   {season.episodes.map((episode) => {
                     const daysUntilAir = getDaysUntilAir(episode.airDate);
@@ -218,7 +220,7 @@ export function SeasonAccordion({
                               In {daysUntilAir} day
                               {daysUntilAir === 1 ? '' : 's'}
                             </span>
-                          ) : (
+                          ) : !isLoggedIn ? null : (
                             <WatchedToggleButton
                               isWatched={isEpisodeWatched}
                               isPending={isEpisodePending}

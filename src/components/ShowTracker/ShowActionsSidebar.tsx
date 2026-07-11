@@ -31,7 +31,21 @@ export function ShowActionsSidebar({
     showStatus,
     onSetShowStatus,
     isSettingShowStatus,
+    isLoggedIn,
+    openAuthDialog,
   } = useShowTrackingContext();
+
+  if (!isLoggedIn) {
+    return (
+      <button
+        type="button"
+        onClick={openAuthDialog}
+        className="text-md rounded-md bg-white/5 px-3 py-2.5 text-left text-[#c2d0dd] hover:bg-white/10"
+      >
+        Sign in to log, rate or review
+      </button>
+    );
+  }
 
   const visibleActions = actions.filter((action) => {
     if (action.status === undefined) return true;

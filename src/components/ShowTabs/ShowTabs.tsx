@@ -29,11 +29,10 @@ export function ShowTabs({
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`-mb-px flex-1 border-b-2 px-1 py-3 text-center text-base font-medium transition-colors sm:flex-none sm:py-0 sm:pb-3 sm:text-sm ${
-              activeTab === tab.id
-                ? 'border-main text-white'
+            className={`-mb-px flex-1 border-b-2 px-1 py-3 text-center text-base font-medium transition-colors sm:flex-none sm:py-0 sm:pb-3 sm:text-sm ${activeTab === tab.id
+                ? 'border-accent text-white'
                 : 'border-transparent text-[#678] hover:text-[#9ab0bf]'
-            }`}
+              }`}
           >
             {tab.label}
           </button>

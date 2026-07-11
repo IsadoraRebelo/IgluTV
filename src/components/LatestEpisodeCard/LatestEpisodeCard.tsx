@@ -27,12 +27,14 @@ export function LatestEpisodeCard({
   isWatched,
   isPending,
   onToggleWatched,
+  isLoggedIn,
 }: {
   episode: LatestEpisode;
   cast: CastMember[];
   isWatched: boolean;
   isPending: boolean;
   onToggleWatched: () => void;
+  isLoggedIn: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const daysUntilAir = getDaysUntilAir(episode.airDate);
@@ -76,7 +78,7 @@ export function LatestEpisodeCard({
             <span className="text-xs text-[#8a9bab]">
               In {daysUntilAir} day{daysUntilAir === 1 ? '' : 's'}
             </span>
-          ) : (
+          ) : !isLoggedIn ? null : (
             <button
               type="button"
               aria-label={
@@ -86,11 +88,10 @@ export function LatestEpisodeCard({
               }
               disabled={isPending}
               onClick={onToggleWatched}
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#14181c] transition-colors disabled:opacity-50 ${
-                isWatched ? 'bg-[#66cc24]' : 'bg-main'
-              }`}
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#14181c] transition-colors disabled:opacity-50 ${isWatched ? 'bg-[#66cc24]' : 'bg-accent'
+                }`}
             >
-              <Check className="h-4 w-4" />
+              <Check className="h-4 w-4 text-white" />
             </button>
           )}
         </div>

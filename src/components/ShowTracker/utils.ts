@@ -1,7 +1,26 @@
-import type { LatestEpisode, Season, ShowDetails, ShowMeta } from '@/types';
+import type {
+  EpisodeWatch,
+  LatestEpisode,
+  Season,
+  ShowDetails,
+  ShowMeta,
+} from '@/types';
 
 export function episodeKey(season: number, episode: number): string {
   return `${season}-${episode}`;
+}
+
+export function buildWatchedDatesMap(
+  watched: EpisodeWatch[]
+): Map<string, string[]> {
+  const dates = new Map<string, string[]>();
+  for (const w of watched) {
+    const key = episodeKey(w.seasonNumber, w.episodeNumber);
+    const existing = dates.get(key);
+    if (existing) existing.push(w.watchedOn);
+    else dates.set(key, [w.watchedOn]);
+  }
+  return dates;
 }
 
 export function getWatchCount(

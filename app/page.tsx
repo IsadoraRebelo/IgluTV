@@ -1,6 +1,11 @@
 import { Suspense } from 'react';
 
-import { AuthButton, RecoveryErrorToast, TvShowCard } from '@/components';
+import {
+  AuthButton,
+  RecoveryErrorToast,
+  TvShowCard,
+  WatchListLink,
+} from '@/components';
 
 import { getPopularTvShows } from '@/services/tv-shows';
 
@@ -17,7 +22,10 @@ export default async function Home() {
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
             Popular TV Shows
           </h1>
-          <AuthButton />
+          <div className="flex items-center gap-4">
+            <WatchListLink />
+            <AuthButton />
+          </div>
         </div>
 
         {shows.length === 0 ? (

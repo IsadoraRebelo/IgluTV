@@ -29,6 +29,8 @@ export function ShowActionsMenu({
     showStatus,
     onSetShowStatus,
     isSettingShowStatus,
+    isLoggedIn,
+    openAuthDialog,
   } = useShowTrackingContext();
 
   const visibleActions = actions.filter((action) => {
@@ -57,80 +59,90 @@ export function ShowActionsMenu({
           sideOffset={8}
           className="data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out z-50 w-64 rounded-lg bg-[#1c232b] p-2 shadow-2xl ring-1 ring-white/10"
         >
-          {visibleActions.map((action) => {
-            const { icon, label, id, status } = action;
-            const isMarkWatched = id === 'mark-watched';
-            const isActiveStatus =
-              status !== undefined && showStatus === status;
-            const isWatchLater = status === 'watch_later';
+          {!isLoggedIn ? (
+            <DropdownMenu.Item
+              onSelect={openAuthDialog}
+              className="rounded-md bg-white/5 px-3 py-2.5 text-sm text-[#c2d0dd] outline-none data-[highlighted]:bg-white/10"
+            >
+              Sign in to log, rate or review
+            </DropdownMenu.Item>
+          ) : (
+            visibleActions.map((action) => {
+              const { icon, label, id, status } = action;
+              const isMarkWatched = id === 'mark-watched';
+              const isActiveStatus =
+                status !== undefined && showStatus === status;
+              const isWatchLater = status === 'watch_later';
 
-            if (status !== undefined) {
-              const displayLabel = isActiveStatus
-                ? isWatchLater
-                  ? 'Remove from watchlist'
-                  : status === 'paused'
-                    ? 'Paused'
-                    : 'Dropped'
+              if (status !== undefined) {
+                const displayLabel = isActiveStatus
+                  ? isWatchLater
+                    ? 'Remove from watchlist'
+                    : status === 'paused'
+                      ? 'Paused'
+                      : 'Dropped'
+                  : label;
+
+                return (
+                  <DropdownMenu.Item
+                    key={status}
+                    disabled={
+                      isSettingShowStatus || (isActiveStatus && !isWatchLater)
+                    }
+                    onSelect={() => onSetShowStatus(status)}
+                    className={
+                      isActiveStatus
+                        ? 'flex items-center gap-3 rounded-md bg-white/10 px-3 py-2.5 text-sm font-medium text-white outline-none'
+                        : 'flex items-center gap-3 rounded-md px-3 py-2.5 text-[#c2d0dd] outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-white/5'
+                    }
+                  >
+                    {icon}
+                    {displayLabel}
+                  </DropdownMenu.Item>
+                );
+              }
+
+              const isRevivingToWatching =
+                showStatus === 'paused' || showStatus === 'dropped';
+              const isDone =
+                isMarkWatched && isShowFullyWatched && !isRevivingToWatching;
+              const isFinished =
+                isMarkWatched && isShowCompleted && !isRevivingToWatching;
+              const displayLabel = isMarkWatched
+                ? isRevivingToWatching
+                  ? 'Back to watching'
+                  : isFinished
+                    ? 'Finished'
+                    : isShowCaughtUp
+                      ? 'All caught up'
+                      : label
                 : label;
+              const displayIcon = isFinished
+                ? (action.finishedIcon ?? icon)
+                : icon;
 
               return (
                 <DropdownMenu.Item
-                  key={status}
+                  key={label}
                   disabled={
-                    isSettingShowStatus || (isActiveStatus && !isWatchLater)
+                    isMarkWatched &&
+                    (isMarkingShowWatched || isSettingShowStatus)
                   }
-                  onSelect={() => onSetShowStatus(status)}
+                  onSelect={isMarkWatched ? onMarkShowWatched : undefined}
                   className={
-                    isActiveStatus
-                      ? 'flex items-center gap-3 rounded-md bg-white/10 px-3 py-2.5 text-sm font-medium text-white outline-none'
-                      : 'flex items-center gap-3 rounded-md px-3 py-2.5 text-[#c2d0dd] outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-white/5'
+                    isDone
+                      ? 'flex items-center gap-3 rounded-md bg-[#66cc24] px-3 py-2.5 text-sm text-[#14181c] outline-none'
+                      : `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#c2d0dd] outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-white/5 ${
+                          isMarkWatched ? '' : 'cursor-default'
+                        }`
                   }
                 >
-                  {icon}
+                  {displayIcon}
                   {displayLabel}
                 </DropdownMenu.Item>
               );
-            }
-
-            const isRevivingToWatching =
-              showStatus === 'paused' || showStatus === 'dropped';
-            const isDone =
-              isMarkWatched && isShowFullyWatched && !isRevivingToWatching;
-            const isFinished =
-              isMarkWatched && isShowCompleted && !isRevivingToWatching;
-            const displayLabel = isMarkWatched
-              ? isRevivingToWatching
-                ? 'Back to watching'
-                : isFinished
-                  ? 'Finished'
-                  : isShowCaughtUp
-                    ? 'All caught up'
-                    : label
-              : label;
-            const displayIcon = isFinished
-              ? (action.finishedIcon ?? icon)
-              : icon;
-
-            return (
-              <DropdownMenu.Item
-                key={label}
-                disabled={
-                  isMarkWatched && (isMarkingShowWatched || isSettingShowStatus)
-                }
-                onSelect={isMarkWatched ? onMarkShowWatched : undefined}
-                className={
-                  isDone
-                    ? 'flex items-center gap-3 rounded-md bg-[#66cc24] px-3 py-2.5 text-sm text-[#14181c] outline-none'
-                    : `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#c2d0dd] outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-white/5 ${
-                        isMarkWatched ? '' : 'cursor-default'
-                      }`
-                }
-              >
-                {displayIcon}
-                {displayLabel}
-              </DropdownMenu.Item>
-            );
-          })}
+            })
+          )}
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>

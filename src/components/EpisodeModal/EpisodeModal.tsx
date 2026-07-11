@@ -47,6 +47,7 @@ export function EpisodeModal({
     onToggleEpisode,
     onRewatchEpisode,
     onRemoveLastEpisodeRewatch,
+    isLoggedIn,
   } = useShowTrackingContext();
 
   const daysUntilAir = episode ? getDaysUntilAir(episode.airDate) : null;
@@ -150,7 +151,7 @@ export function EpisodeModal({
                     <span className="shrink-0 text-xs text-[#8a9bab]">
                       In {daysUntilAir} day{daysUntilAir === 1 ? '' : 's'}
                     </span>
-                  ) : (
+                  ) : !isLoggedIn ? null : (
                     <WatchedToggleButton
                       isWatched={isWatched}
                       isPending={isPending}
@@ -162,6 +163,7 @@ export function EpisodeModal({
                       onMark={() => {
                         if (episodeNumber === null) return;
                         onToggleEpisode(seasonNumber, episodeNumber);
+                        onOpenChange(false);
                       }}
                       onRewatch={() => {
                         if (episodeNumber === null) return;

@@ -13,11 +13,13 @@ export function WatchNextCard({
   cast,
   isPending,
   onToggleEpisode,
+  isLoggedIn,
 }: {
   episodeSection: EpisodeSectionState;
   cast: CastMember[];
   isPending: boolean;
   onToggleEpisode: (seasonNumber: number, episodeNumber: number) => void;
+  isLoggedIn: boolean;
 }) {
   const [phase, setPhase] = useState<'idle' | 'exiting' | 'entering'>('idle');
 
@@ -77,6 +79,7 @@ export function WatchNextCard({
             isWatched={false}
             isPending={isPending}
             onToggleWatched={handleCheck}
+            isLoggedIn={isLoggedIn}
           />
         ) : (
           <p className="text-sm text-[#8a9bab]">

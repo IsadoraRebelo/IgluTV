@@ -28,6 +28,7 @@ import {
   unmarkSeasonWatchedAction,
 } from './actions';
 import {
+  buildWatchedDatesMap,
   episodeKey,
   getDaysUntilAir,
   getPriorUnwatchedAiredEpisodes,
@@ -68,6 +69,8 @@ type ShowTrackingContextValue = {
   showStatus: ShowStatus | null;
   onSetShowStatus: (status: ShowStatus) => void;
   isSettingShowStatus: boolean;
+  isLoggedIn: boolean;
+  openAuthDialog: () => void;
 };
 
 const ShowTrackingContext = createContext<ShowTrackingContextValue | null>(
@@ -113,7 +116,7 @@ function CatchUpDialog({
             <div className="border-t border-white/10 py-1">
               <Button
                 variant="primary"
-                className="text-secondary w-full font-bold"
+                className="text-accent w-full font-bold"
                 size="sm"
                 onClick={onYes}
               >
@@ -123,7 +126,7 @@ function CatchUpDialog({
             <div className="border-t border-white/10 py-1">
               <Button
                 variant="primary"
-                className="text-secondary w-full font-bold"
+                className="text-accent w-full font-bold"
                 size="sm"
                 onClick={onNo}
               >
@@ -133,7 +136,7 @@ function CatchUpDialog({
             <div className="border-t border-white/10 py-1">
               <Button
                 variant="primary"
-                className="text-secondary w-full font-bold"
+                className="text-accent w-full font-bold"
                 size="sm"
                 onClick={onNever}
               >
@@ -177,7 +180,7 @@ function UnmarkShowDialog({
             <div className="border-t border-white/10 py-1">
               <Button
                 variant="primary"
-                className="text-secondary w-full font-bold"
+                className="text-accent w-full font-bold"
                 size="sm"
                 onClick={onYes}
               >
@@ -187,7 +190,7 @@ function UnmarkShowDialog({
             <div className="border-t border-white/10 py-1">
               <Button
                 variant="primary"
-                className="text-secondary w-full font-bold"
+                className="text-accent w-full font-bold"
                 size="sm"
                 onClick={onNo}
               >
@@ -208,6 +211,7 @@ export function ShowTrackingProvider({
   skipCatchUpPrompt,
   initialStatus,
   tmdbStatus,
+  isLoggedIn,
   children,
 }: {
   showId: number;
@@ -216,19 +220,11 @@ export function ShowTrackingProvider({
   skipCatchUpPrompt: boolean;
   initialStatus: ShowStatus | null;
   tmdbStatus: string | null;
+  isLoggedIn: boolean;
   children: ReactNode;
 }) {
   const [watchedDates, setWatchedDates] = useState<Map<string, string[]>>(
-    () => {
-      const dates = new Map<string, string[]>();
-      for (const w of watchedEpisodes) {
-        const key = episodeKey(w.seasonNumber, w.episodeNumber);
-        const existing = dates.get(key);
-        if (existing) existing.push(w.watchedOn);
-        else dates.set(key, [w.watchedOn]);
-      }
-      return dates;
-    }
+    () => buildWatchedDatesMap(watchedEpisodes)
   );
   const [pendingKeys, setPendingKeys] = useState<Set<string>>(new Set());
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
@@ -272,7 +268,7 @@ export function ShowTrackingProvider({
   const displayedShowStatus: ShowStatus | null = isShowCompleted
     ? 'completed'
     : (showStatus === null || showStatus === 'watch_later') &&
-        hasStartedWatching
+      hasStartedWatching
       ? 'watching'
       : showStatus;
 
@@ -338,7 +334,6 @@ export function ShowTrackingProvider({
 
       const failedGroups: {
         episodes: EpisodeRef[];
-        code: string | null;
         message: string;
       }[] = [];
       let markedCount = 0;
@@ -350,7 +345,6 @@ export function ShowTrackingProvider({
         } else {
           failedGroups.push({
             episodes,
-            code: result.code,
             message: result.message,
           });
         }
@@ -379,14 +373,7 @@ export function ShowTrackingProvider({
         );
       }
 
-      const authFailure = failedGroups.find(
-        (failed) => failed.code === 'not_authenticated'
-      );
-      if (authFailure) {
-        setAuthDialogOpen(true);
-      } else {
-        toast.error(failedGroups[0].message);
-      }
+      toast.error(failedGroups[0].message);
     } finally {
       setPendingKeys((prev) => {
         const next = new Set(prev);
@@ -409,12 +396,7 @@ export function ShowTrackingProvider({
     const result = await setSkipCatchUpPromptAction(showId, true);
     if (!result.ok) {
       setCatchUpDisabled(previousDisabled);
-
-      if (result.code === 'not_authenticated') {
-        setAuthDialogOpen(true);
-      } else {
-        toast.error(result.message);
-      }
+      toast.error(result.message);
     }
   }
 
@@ -449,11 +431,7 @@ export function ShowTrackingProvider({
           return next;
         });
 
-        if (result.code === 'not_authenticated') {
-          setAuthDialogOpen(true);
-        } else {
-          toast.error(result.message);
-        }
+        toast.error(result.message);
       } else if (!wasWatched) {
         offerToMarkPriorEpisodes(
           getPriorUnwatchedAiredEpisodes(
@@ -504,11 +482,7 @@ export function ShowTrackingProvider({
           return next;
         });
 
-        if (result.code === 'not_authenticated') {
-          setAuthDialogOpen(true);
-        } else {
-          toast.error(result.message);
-        }
+        toast.error(result.message);
         return;
       }
     } finally {
@@ -552,11 +526,7 @@ export function ShowTrackingProvider({
           return next;
         });
 
-        if (result.code === 'not_authenticated') {
-          setAuthDialogOpen(true);
-        } else {
-          toast.error(result.message);
-        }
+        toast.error(result.message);
         return;
       }
     } finally {
@@ -589,12 +559,12 @@ export function ShowTrackingProvider({
     const episodesToToggle = isFullyWatched
       ? markableEpisodes
       : markableEpisodes.filter(
-          (ep) =>
-            getWatchCount(
-              watchedDates,
-              episodeKey(season.seasonNumber, ep.episodeNumber)
-            ) === 0
-        );
+        (ep) =>
+          getWatchCount(
+            watchedDates,
+            episodeKey(season.seasonNumber, ep.episodeNumber)
+          ) === 0
+      );
 
     const episodeKeysToLock = episodesToToggle.map((ep) =>
       episodeKey(season.seasonNumber, ep.episodeNumber)
@@ -628,10 +598,10 @@ export function ShowTrackingProvider({
       const result = isFullyWatched
         ? await unmarkSeasonWatchedAction(showId, season.seasonNumber)
         : await markSeasonWatchedAction(
-            showId,
-            season.seasonNumber,
-            markableEpisodes.map((ep) => ep.episodeNumber)
-          );
+          showId,
+          season.seasonNumber,
+          markableEpisodes.map((ep) => ep.episodeNumber)
+        );
 
       if (!result.ok) {
         setWatchedDates((prev) => {
@@ -643,11 +613,7 @@ export function ShowTrackingProvider({
           return next;
         });
 
-        if (result.code === 'not_authenticated') {
-          setAuthDialogOpen(true);
-        } else {
-          toast.error(result.message);
-        }
+        toast.error(result.message);
       } else if (!isFullyWatched) {
         offerToMarkPriorEpisodes(
           getPriorUnwatchedAiredEpisodes(
@@ -721,11 +687,7 @@ export function ShowTrackingProvider({
           return next;
         });
 
-        if (result.code === 'not_authenticated') {
-          setAuthDialogOpen(true);
-        } else {
-          toast.error(result.message);
-        }
+        toast.error(result.message);
         return;
       }
     } finally {
@@ -792,11 +754,7 @@ export function ShowTrackingProvider({
           return next;
         });
 
-        if (result.code === 'not_authenticated') {
-          setAuthDialogOpen(true);
-        } else {
-          toast.error(result.message);
-        }
+        toast.error(result.message);
         return;
       }
     } finally {
@@ -857,7 +815,6 @@ export function ShowTrackingProvider({
       const failedSeasons: {
         season: Season;
         markableEpisodes: SeasonEpisode[];
-        code: string | null;
         message: string;
       }[] = [];
 
@@ -867,7 +824,6 @@ export function ShowTrackingProvider({
           failedSeasons.push({
             season,
             markableEpisodes,
-            code: result.code,
             message: result.message,
           });
         }
@@ -891,14 +847,7 @@ export function ShowTrackingProvider({
         return next;
       });
 
-      const authFailure = failedSeasons.find(
-        (failed) => failed.code === 'not_authenticated'
-      );
-      if (authFailure) {
-        setAuthDialogOpen(true);
-      } else {
-        toast.error(failedSeasons[0].message);
-      }
+      toast.error(failedSeasons[0].message);
     } finally {
       setPendingKeys((prev) => {
         const next = new Set(prev);
@@ -951,7 +900,6 @@ export function ShowTrackingProvider({
       const failedSeasons: {
         season: Season;
         markableEpisodes: SeasonEpisode[];
-        code: string | null;
         message: string;
       }[] = [];
 
@@ -961,7 +909,6 @@ export function ShowTrackingProvider({
           failedSeasons.push({
             season,
             markableEpisodes,
-            code: result.code,
             message: result.message,
           });
         }
@@ -984,14 +931,7 @@ export function ShowTrackingProvider({
         return next;
       });
 
-      const authFailure = failedSeasons.find(
-        (failed) => failed.code === 'not_authenticated'
-      );
-      if (authFailure) {
-        setAuthDialogOpen(true);
-      } else {
-        toast.error(failedSeasons[0].message);
-      }
+      toast.error(failedSeasons[0].message);
     } finally {
       setPendingKeys((prev) => {
         const next = new Set(prev);
@@ -1015,11 +955,7 @@ export function ShowTrackingProvider({
       if (!result.ok) {
         setShowStatusState(previousStatus);
 
-        if (result.code === 'not_authenticated') {
-          setAuthDialogOpen(true);
-        } else {
-          toast.error(result.message);
-        }
+        toast.error(result.message);
       }
     } finally {
       setPendingKeys((prev) => {
@@ -1055,11 +991,7 @@ export function ShowTrackingProvider({
       if (!result.ok) {
         setShowStatusState(previousStatus);
 
-        if (result.code === 'not_authenticated') {
-          setAuthDialogOpen(true);
-        } else {
-          toast.error(result.message);
-        }
+        toast.error(result.message);
       }
     } finally {
       setPendingKeys((prev) => {
@@ -1089,11 +1021,7 @@ export function ShowTrackingProvider({
       if (!result.ok) {
         setShowStatusState(previousStatus);
 
-        if (result.code === 'not_authenticated') {
-          setAuthDialogOpen(true);
-        } else {
-          toast.error(result.message);
-        }
+        toast.error(result.message);
       }
     } finally {
       setPendingKeys((prev) => {
@@ -1121,6 +1049,8 @@ export function ShowTrackingProvider({
     showStatus: displayedShowStatus,
     onSetShowStatus: handleSetShowStatus,
     isSettingShowStatus: pendingKeys.has(SHOW_STATUS_KEY),
+    isLoggedIn,
+    openAuthDialog: () => setAuthDialogOpen(true),
   };
 
   return (

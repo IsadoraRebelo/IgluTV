@@ -29,9 +29,8 @@ export function WatchedToggleButton({
   onRemove: () => void;
   onRemoveRewatches: () => void;
 }) {
-  const buttonClassName = `flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#14181c] transition-colors disabled:opacity-50 ${
-    isWatched ? 'bg-[#66cc24]' : 'bg-secondary'
-  }`;
+  const buttonClassName = `flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#14181c] transition-colors disabled:opacity-50 ${isWatched ? 'bg-[#66cc24]' : 'bg-accent'
+    }`;
 
   if (!isWatched) {
     return (

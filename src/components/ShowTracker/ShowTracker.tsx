@@ -27,6 +27,7 @@ export function ShowTracker({
     onToggleSeason,
     onRewatchSeason,
     onRemoveLastSeasonRewatch,
+    isLoggedIn,
   } = useShowTrackingContext();
 
   const episodeSection = getEpisodeSectionState(meta, details, watchedDates);
@@ -48,6 +49,7 @@ export function ShowTracker({
           cast={cast}
           isPending={isCurrentEpisodePending}
           onToggleEpisode={onToggleEpisode}
+          isLoggedIn={isLoggedIn}
         />
       ) : null}
 
@@ -67,6 +69,7 @@ export function ShowTracker({
             onToggleSeason={onToggleSeason}
             onRewatchSeason={onRewatchSeason}
             onRemoveLastSeasonRewatch={onRemoveLastSeasonRewatch}
+            isLoggedIn={isLoggedIn}
           />
         </section>
       ) : null}

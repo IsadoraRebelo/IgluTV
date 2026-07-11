@@ -21,6 +21,8 @@ import {
 import { getShowTracking, getWatchedEpisodes } from '@/services/tracking';
 import { getTmdbShowFullDetails } from '@/services/tv-shows';
 
+import { createClient } from '@/supabase/server';
+
 import type { ShowDetails, ShowMeta, ShowStatus } from '@/types';
 import type { ReactNode } from 'react';
 
@@ -97,11 +99,14 @@ export default async function ShowPage({
     return <ShowNotFound />;
   }
 
-  const [tmdbFull, watchedEpisodes, tracking] = await Promise.all([
+  const supabase = await createClient();
+  const [tmdbFull, watchedEpisodes, tracking, userResult] = await Promise.all([
     getTmdbShowFullDetails(numericId),
     getWatchedEpisodes(numericId),
     getShowTracking(numericId),
+    supabase.auth.getUser(),
   ]);
+  const isLoggedIn = userResult.data.user !== null;
 
   if (!tmdbFull) {
     return <ShowNotFound />;
@@ -128,6 +133,7 @@ export default async function ShowPage({
       skipCatchUpPrompt={tracking?.skipCatchUpPrompt ?? false}
       initialStatus={tracking?.status ?? null}
       tmdbStatus={details.status}
+      isLoggedIn={isLoggedIn}
     >
       <div className="flex flex-1 flex-col bg-[#14181c] font-sans antialiased">
         <div className="relative mx-auto w-full max-w-6xl">
