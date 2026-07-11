@@ -12,6 +12,7 @@ export * from './ShowTabs/ShowTabs';
 export * from './ShowTracker/ShowActionsSidebar';
 export * from './ShowTracker/ShowTracker';
 export * from './ShowTracker/ShowTrackingContext';
+export * from './ShowTracker/WatchedToggleButton';
 export * from './Toaster/Toaster';
 export * from './TvShowCard/TvShowCard';
 export * from './WatchNextCard/WatchNextCard';

@@ -1,9 +1,18 @@
 'use client';
 
+import { useState } from 'react';
+
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import Image from 'next/image';
-import { Check, X } from 'lucide-react';
+import { ChevronDown, X } from 'lucide-react';
 
+import { WatchedToggleButton } from '@/components';
+import { useShowTrackingContext } from '@/components/ShowTracker/ShowTrackingContext';
+import {
+  episodeKey,
+  getDaysUntilAir,
+  getWatchedDates,
+} from '@/components/ShowTracker/utils';
 import type { CastMember, SeasonEpisode } from '@/types';
 
 function formatDate(dateStr: string | null): string | null {
@@ -15,18 +24,6 @@ function formatDate(dateStr: string | null): string | null {
     day: 'numeric',
     year: 'numeric',
   });
-}
-
-// Returns days until an episode airs, or null if it already aired (or the
-// date is unknown) — used to swap the watched button for a countdown.
-function getDaysUntilAir(dateStr: string | null): number | null {
-  if (!dateStr) return null;
-  const airDate = new Date(`${dateStr}T00:00:00`);
-  if (Number.isNaN(airDate.getTime())) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const days = Math.round((airDate.getTime() - today.getTime()) / 86_400_000);
-  return days > 0 ? days : null;
 }
 
 export function EpisodeModal({
@@ -42,10 +39,31 @@ export function EpisodeModal({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const {
+    watchedDates,
+    pendingKeys,
+    onToggleEpisode,
+    onRewatchEpisode,
+    onRemoveLastEpisodeRewatch,
+  } = useShowTrackingContext();
+
   const daysUntilAir = episode ? getDaysUntilAir(episode.airDate) : null;
+  const episodeNumber = episode ? episode.episodeNumber : null;
+  const key = episode ? episodeKey(seasonNumber, episode.episodeNumber) : null;
+  const episodeWatchDates = key !== null ? getWatchedDates(watchedDates, key) : [];
+  const isWatched = episodeWatchDates.length > 0;
+  const rewatchCount = Math.max(0, episodeWatchDates.length - 1);
+  const isPending = key !== null && pendingKeys.has(key);
 
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+    <DialogPrimitive.Root
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) setHistoryOpen(false);
+        onOpenChange(nextOpen);
+      }}
+    >
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
           className="fixed inset-0 z-50 bg-black/70
@@ -99,20 +117,74 @@ export function EpisodeModal({
                         .filter(Boolean)
                         .join(' · ')}
                     </p>
+                    {isWatched ? (
+                      <div className="mt-1">
+                        {episodeWatchDates.length > 1 ? (
+                          <button
+                            type="button"
+                            onClick={() => setHistoryOpen((prev) => !prev)}
+                            className="flex items-center gap-1 text-xs text-[#8a9bab]"
+                          >
+                            <span>
+                              Watched {episodeWatchDates.length}× · first{' '}
+                              {formatDate(episodeWatchDates[0])}
+                            </span>
+                            <ChevronDown
+                              className={`h-3 w-3 transition-transform ${
+                                historyOpen ? 'rotate-180' : ''
+                              }`}
+                            />
+                          </button>
+                        ) : (
+                          <p className="text-xs text-[#8a9bab]">
+                            Watched · {formatDate(episodeWatchDates[0])}
+                          </p>
+                        )}
+                        {historyOpen && episodeWatchDates.length > 1 ? (
+                          <ul className="mt-1 flex flex-col gap-0.5 pl-1">
+                            {episodeWatchDates.map((date, index) => (
+                              <li
+                                key={`${date}-${index}`}
+                                className="text-xs text-[#678]"
+                              >
+                                {formatDate(date)}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                   {daysUntilAir !== null ? (
                     <span className="shrink-0 text-xs text-[#8a9bab]">
                       In {daysUntilAir} day{daysUntilAir === 1 ? '' : 's'}
                     </span>
                   ) : (
-                    // Decorative for now — not wired to any real watch state.
-                    <button
-                      type="button"
-                      aria-label="Mark episode as watched"
-                      className="bg-main flex h-8 w-8 shrink-0 cursor-default items-center justify-center rounded-full text-[#14181c]"
-                    >
-                      <Check className="h-4 w-4" />
-                    </button>
+                    <WatchedToggleButton
+                      isWatched={isWatched}
+                      isPending={isPending}
+                      rewatchCount={rewatchCount}
+                      markLabel="Mark episode as watched"
+                      rewatchLabel="+1 Rewatched"
+                      removeLabel="Not watched"
+                      removeRewatchesLabel="Remove last rewatch"
+                      onMark={() => {
+                        if (episodeNumber === null) return;
+                        onToggleEpisode(seasonNumber, episodeNumber);
+                      }}
+                      onRewatch={() => {
+                        if (episodeNumber === null) return;
+                        onRewatchEpisode(seasonNumber, episodeNumber);
+                      }}
+                      onRemove={() => {
+                        if (episodeNumber === null) return;
+                        onToggleEpisode(seasonNumber, episodeNumber);
+                      }}
+                      onRemoveRewatches={() => {
+                        if (episodeNumber === null) return;
+                        onRemoveLastEpisodeRewatch(seasonNumber, episodeNumber);
+                      }}
+                    />
                   )}
                 </div>
 
