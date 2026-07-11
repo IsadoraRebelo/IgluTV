@@ -1,7 +1,8 @@
 'use client';
 
+import { EyeSlashIcon } from '@heroicons/react/24/solid';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { Check, RotateCcw, Trash2, Undo2 } from 'lucide-react';
+import { Check, RotateCcw, Undo2 } from 'lucide-react';
 
 export function WatchedToggleButton({
   isWatched,
@@ -29,7 +30,7 @@ export function WatchedToggleButton({
   onRemoveRewatches: () => void;
 }) {
   const buttonClassName = `flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#14181c] transition-colors disabled:opacity-50 ${
-    isWatched ? 'bg-[#66cc24]' : 'bg-main'
+    isWatched ? 'bg-[#66cc24]' : 'bg-secondary'
   }`;
 
   if (!isWatched) {
@@ -41,7 +42,7 @@ export function WatchedToggleButton({
         onClick={onMark}
         className={buttonClassName}
       >
-        <Check className="h-4 w-4" />
+        <Check className="h-4 w-4 text-white" />
       </button>
     );
   }
@@ -61,7 +62,9 @@ export function WatchedToggleButton({
           className={buttonClassName}
         >
           {rewatchCount > 0 ? (
-            <span className="text-sm font-bold text-white">x{rewatchCount}</span>
+            <span className="text-sm font-bold text-white">
+              x{rewatchCount}
+            </span>
           ) : (
             <Check className="h-5 w-5 text-white" />
           )}
@@ -71,12 +74,11 @@ export function WatchedToggleButton({
         <DropdownMenu.Content
           align="end"
           sideOffset={8}
-          className="z-50 w-48 rounded-lg bg-primary-foreground p-2 shadow-2xl ring-1 ring-white/10
-            data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out"
+          className="bg-primary-foreground data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out z-50 w-48 rounded-lg p-2 shadow-2xl ring-1 ring-white/10"
         >
           <DropdownMenu.Item
             onClick={onRewatch}
-            className="cursor-pointer flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#c2d0dd] outline-none data-[highlighted]:bg-white/5"
+            className="flex cursor-default cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#c2d0dd] outline-none data-[highlighted]:bg-white/5"
           >
             <RotateCcw className="h-4 w-4" />
             {rewatchLabel}
@@ -84,7 +86,7 @@ export function WatchedToggleButton({
           {rewatchCount > 0 ? (
             <DropdownMenu.Item
               onClick={onRemoveRewatches}
-              className="flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#c2d0dd] outline-none data-[highlighted]:bg-white/5 cursor-pointer"
+              className="flex cursor-default cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#c2d0dd] outline-none data-[highlighted]:bg-white/5"
             >
               <Undo2 className="h-4 w-4" />
               {removeRewatchesLabel}
@@ -92,9 +94,9 @@ export function WatchedToggleButton({
           ) : null}
           <DropdownMenu.Item
             onClick={onRemove}
-            className="cursor-pointer flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#c2d0dd] outline-none data-[highlighted]:bg-white/5"
+            className="flex cursor-default cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#c2d0dd] outline-none data-[highlighted]:bg-white/5"
           >
-            <Trash2 className="h-4 w-4" />
+            <EyeSlashIcon className="h-4 w-4" />
             {removeLabel}
           </DropdownMenu.Item>
         </DropdownMenu.Content>

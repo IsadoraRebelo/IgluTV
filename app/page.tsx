@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 
 import { AuthButton, RecoveryErrorToast, TvShowCard } from '@/components';
+
 import { getPopularTvShows } from '@/services/tv-shows';
 
 export default async function Home() {

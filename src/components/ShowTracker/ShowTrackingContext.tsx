@@ -1,18 +1,18 @@
 'use client';
 
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import {
   createContext,
+  type ReactNode,
   useContext,
   useEffect,
   useRef,
   useState,
-  type ReactNode,
 } from 'react';
-
-import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { toast } from 'sonner';
 
 import { AuthDialog, Button } from '@/components';
+
 import type { EpisodeWatch, Season, SeasonEpisode, ShowStatus } from '@/types';
 
 import {
@@ -27,7 +27,6 @@ import {
   unmarkEpisodeWatchedAction,
   unmarkSeasonWatchedAction,
 } from './actions';
-import type { EpisodeRef } from './utils';
 import {
   episodeKey,
   getDaysUntilAir,
@@ -36,6 +35,7 @@ import {
   getWatchedDates,
   isShowFinished,
 } from './utils';
+import type { EpisodeRef } from './utils';
 
 const MARK_SHOW_WATCHED_KEY = 'mark-show-watched';
 const SHOW_STATUS_KEY = 'show-status';
@@ -102,26 +102,41 @@ function CatchUpDialog({
     >
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50" />
-        <DialogPrimitive.Content className="bg-primary-foreground border-muted text-center fixed top-1/2 left-1/2 z-50 flex w-xs max-w-[250px] -translate-x-1/2 -translate-y-1/2 flex-col gap-1 rounded-lg border shadow-lg">
-          <DialogPrimitive.Title className="text-foreground text-md font-semibold pt-4">
+        <DialogPrimitive.Content className="bg-primary-foreground border-muted fixed top-1/2 left-1/2 z-50 flex w-xs max-w-[250px] -translate-x-1/2 -translate-y-1/2 flex-col gap-1 rounded-lg border text-center shadow-lg">
+          <DialogPrimitive.Title className="text-foreground text-md pt-4 font-semibold">
             Mark previous episodes?
           </DialogPrimitive.Title>
-          <DialogPrimitive.Description className="text-muted-foreground text-xs px-4">
-           Do you want to mark all previous episodes as watched?
+          <DialogPrimitive.Description className="text-muted-foreground px-4 text-xs">
+            Do you want to mark all previous episodes as watched?
           </DialogPrimitive.Description>
           <div className="flex flex-col pt-4">
             <div className="border-t border-white/10 py-1">
-              <Button variant="primary" className='w-full font-bold text-secondary' size="sm" onClick={onYes}>
+              <Button
+                variant="primary"
+                className="text-secondary w-full font-bold"
+                size="sm"
+                onClick={onYes}
+              >
                 Yes
               </Button>
             </div>
             <div className="border-t border-white/10 py-1">
-              <Button variant="primary" className='w-full font-bold text-secondary' size="sm" onClick={onNo}>
+              <Button
+                variant="primary"
+                className="text-secondary w-full font-bold"
+                size="sm"
+                onClick={onNo}
+              >
                 No
               </Button>
             </div>
             <div className="border-t border-white/10 py-1">
-              <Button variant="primary" className='w-full font-bold text-secondary' size="sm" onClick={onNever}>
+              <Button
+                variant="primary"
+                className="text-secondary w-full font-bold"
+                size="sm"
+                onClick={onNever}
+              >
                 Never for this show
               </Button>
             </div>
@@ -151,21 +166,31 @@ function UnmarkShowDialog({
     >
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50" />
-        <DialogPrimitive.Content className="bg-primary-foreground border-muted text-center fixed top-1/2 left-1/2 z-50 flex w-xs max-w-[250px] -translate-x-1/2 -translate-y-1/2 flex-col gap-1 rounded-lg border shadow-lg">
-          <DialogPrimitive.Title className="text-foreground text-md font-semibold pt-4">
+        <DialogPrimitive.Content className="bg-primary-foreground border-muted fixed top-1/2 left-1/2 z-50 flex w-xs max-w-[250px] -translate-x-1/2 -translate-y-1/2 flex-col gap-1 rounded-lg border text-center shadow-lg">
+          <DialogPrimitive.Title className="text-foreground text-md pt-4 font-semibold">
             Mark show as unwatched?
           </DialogPrimitive.Title>
-          <DialogPrimitive.Description className="text-muted-foreground text-xs px-4">
+          <DialogPrimitive.Description className="text-muted-foreground px-4 text-xs">
             This will remove every watched episode for this show.
           </DialogPrimitive.Description>
           <div className="flex flex-col pt-4">
             <div className="border-t border-white/10 py-1">
-              <Button variant="primary" className='w-full font-bold text-secondary' size="sm" onClick={onYes}>
+              <Button
+                variant="primary"
+                className="text-secondary w-full font-bold"
+                size="sm"
+                onClick={onYes}
+              >
                 Yes
               </Button>
             </div>
             <div className="border-t border-white/10 py-1">
-              <Button variant="primary" className='w-full font-bold text-secondary' size="sm" onClick={onNo}>
+              <Button
+                variant="primary"
+                className="text-secondary w-full font-bold"
+                size="sm"
+                onClick={onNo}
+              >
                 No
               </Button>
             </div>
@@ -269,7 +294,9 @@ export function ShowTrackingProvider({
   async function handleMarkPriorEpisodes(priorEpisodes: EpisodeRef[]) {
     const toMark = priorEpisodes.filter(
       (ep) =>
-        !pendingKeysRef.current.has(episodeKey(ep.seasonNumber, ep.episodeNumber))
+        !pendingKeysRef.current.has(
+          episodeKey(ep.seasonNumber, ep.episodeNumber)
+        )
     );
     if (toMark.length === 0) {
       toast.info('Those episodes are already being updated');

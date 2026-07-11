@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-
-import Image from 'next/image';
 import { Check } from 'lucide-react';
+import Image from 'next/image';
+import { useState } from 'react';
 
 import { EpisodeModal } from '@/components';
 import { getDaysUntilAir } from '@/components/ShowTracker/utils';
+
+
 import type { CastMember, LatestEpisode } from '@/types';
 
 function formatDate(dateStr: string | null): string | null {
@@ -79,7 +80,9 @@ export function LatestEpisodeCard({
             <button
               type="button"
               aria-label={
-                isWatched ? 'Unmark episode as watched' : 'Mark episode as watched'
+                isWatched
+                  ? 'Unmark episode as watched'
+                  : 'Mark episode as watched'
               }
               disabled={isPending}
               onClick={onToggleWatched}

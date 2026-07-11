@@ -2,19 +2,20 @@
 
 import { headers } from 'next/headers';
 
-import { redeemInviteCode } from '@/services/invite-codes';
 import {
   resetPasswordForEmail,
   signInWithPassword,
   signUp,
 } from '@/services/auth';
 import { ServiceError } from '@/services/errors';
+import { redeemInviteCode } from '@/services/invite-codes';
+
 import {
   CreateUserInput,
-  LoginUserInput,
-  RecoverPasswordUserInput,
   loginFormSchema,
+  LoginUserInput,
   recoverPasswordFormSchema,
+  RecoverPasswordUserInput,
   signupFormSchema,
 } from '@/types';
 

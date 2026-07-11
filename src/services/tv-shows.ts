@@ -198,32 +198,34 @@ async function fetchTmdbShowFullDetails(
       numberOfSeasons: json.number_of_seasons ?? null,
       numberOfEpisodes: json.number_of_episodes ?? null,
       seasons,
-      latestEpisode: lastEpisode && lastEpisode.season_number > 0
-        ? {
-            name: lastEpisode.name,
-            overview: lastEpisode.overview,
-            seasonNumber: lastEpisode.season_number,
-            episodeNumber: lastEpisode.episode_number,
-            airDate: lastEpisode.air_date,
-            runtime: lastEpisode.runtime,
-            imageUrl: lastEpisode.still_path
-              ? `${TMDB_BACKDROP_BASE_URL}${lastEpisode.still_path}`
-              : null,
-          }
-        : null,
-      nextEpisode: nextEpisode && nextEpisode.season_number > 0
-        ? {
-            name: nextEpisode.name,
-            overview: nextEpisode.overview,
-            seasonNumber: nextEpisode.season_number,
-            episodeNumber: nextEpisode.episode_number,
-            airDate: nextEpisode.air_date,
-            runtime: nextEpisode.runtime,
-            imageUrl: nextEpisode.still_path
-              ? `${TMDB_BACKDROP_BASE_URL}${nextEpisode.still_path}`
-              : null,
-          }
-        : null,
+      latestEpisode:
+        lastEpisode && lastEpisode.season_number > 0
+          ? {
+              name: lastEpisode.name,
+              overview: lastEpisode.overview,
+              seasonNumber: lastEpisode.season_number,
+              episodeNumber: lastEpisode.episode_number,
+              airDate: lastEpisode.air_date,
+              runtime: lastEpisode.runtime,
+              imageUrl: lastEpisode.still_path
+                ? `${TMDB_BACKDROP_BASE_URL}${lastEpisode.still_path}`
+                : null,
+            }
+          : null,
+      nextEpisode:
+        nextEpisode && nextEpisode.season_number > 0
+          ? {
+              name: nextEpisode.name,
+              overview: nextEpisode.overview,
+              seasonNumber: nextEpisode.season_number,
+              episodeNumber: nextEpisode.episode_number,
+              airDate: nextEpisode.air_date,
+              runtime: nextEpisode.runtime,
+              imageUrl: nextEpisode.still_path
+                ? `${TMDB_BACKDROP_BASE_URL}${nextEpisode.still_path}`
+                : null,
+            }
+          : null,
       similar: (json.recommendations?.results ?? []).slice(0, 12).map((s) => ({
         id: s.id,
         name: s.name,

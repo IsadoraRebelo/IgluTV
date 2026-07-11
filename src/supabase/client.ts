@@ -2,7 +2,8 @@ import { createBrowserClient } from '@supabase/ssr';
 
 import { Database } from './database.types';
 
-let browserClient: ReturnType<typeof createBrowserClient<Database>> | null = null;
+let browserClient: ReturnType<typeof createBrowserClient<Database>> | null =
+  null;
 
 export function createClient() {
   // Create a singleton instance to avoid multiple GoTrueClient instances

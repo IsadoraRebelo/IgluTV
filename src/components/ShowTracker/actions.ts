@@ -13,11 +13,11 @@ import {
   unmarkEpisodeWatched,
   unmarkSeasonWatched,
 } from '@/services/tracking';
+
 import type { ShowStatus } from '@/types';
 
 export type TrackingActionResult =
-  | { ok: true }
-  | { ok: false; code: string | null; message: string };
+  { ok: true } | { ok: false; code: string | null; message: string };
 
 async function toResult(work: Promise<void>): Promise<TrackingActionResult> {
   try {

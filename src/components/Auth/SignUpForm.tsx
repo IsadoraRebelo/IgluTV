@@ -7,6 +7,7 @@ import { SubmitHandler, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
 import { Button, Form, FormField, FormInput } from '@/components';
+
 import { CreateUserInput, signupFormSchema } from '@/types';
 
 import { signUpWithEmailAndPassword } from './actions';
@@ -41,10 +42,7 @@ export const SignUpForm = ({ onSuccess }: SignUpFormProps) => {
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmitHandler)}
-        className="space-y-4"
-      >
+      <form onSubmit={form.handleSubmit(onSubmitHandler)} className="space-y-4">
         <FormField
           control={form.control}
           name="email"

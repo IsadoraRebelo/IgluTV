@@ -1,9 +1,5 @@
 export type ShowStatus =
-  | 'watching'
-  | 'watch_later'
-  | 'paused'
-  | 'dropped'
-  | 'completed';
+  'watching' | 'watch_later' | 'paused' | 'dropped' | 'completed';
 
 export type ShowTracking = {
   tmdbShowId: number;

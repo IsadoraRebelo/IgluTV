@@ -1,9 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-
-import Image from 'next/image';
 import { ChevronDown } from 'lucide-react';
+import Image from 'next/image';
+import { useState } from 'react';
 
 import { EpisodeModal, WatchedToggleButton } from '@/components';
 import {
@@ -12,6 +11,8 @@ import {
   getRewatchCount,
   getWatchCount,
 } from '@/components/ShowTracker/utils';
+
+
 import type { CastMember, Season, SeasonEpisode } from '@/types';
 
 function formatDate(dateStr: string | null): string | null {
@@ -43,7 +44,10 @@ export function SeasonAccordion({
   pendingKeys: Set<string>;
   onToggleEpisode: (seasonNumber: number, episodeNumber: number) => void;
   onRewatchEpisode: (seasonNumber: number, episodeNumber: number) => void;
-  onRemoveLastEpisodeRewatch: (seasonNumber: number, episodeNumber: number) => void;
+  onRemoveLastEpisodeRewatch: (
+    seasonNumber: number,
+    episodeNumber: number
+  ) => void;
   onToggleSeason: (season: Season) => void;
   onRewatchSeason: (season: Season) => void;
   onRemoveLastSeasonRewatch: (season: Season) => void;
@@ -195,8 +199,8 @@ export function SeasonAccordion({
                           </div>
                           <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 py-2">
                             <p className="text-sm font-semibold text-white">
-                              S{String(season.seasonNumber).padStart(2, '0')} | E
-                              {String(episode.episodeNumber).padStart(2, '0')}
+                              S{String(season.seasonNumber).padStart(2, '0')} |
+                              E{String(episode.episodeNumber).padStart(2, '0')}
                             </p>
                             <p className="truncate text-sm text-[#c2d0dd]">
                               {episode.name}
@@ -211,7 +215,8 @@ export function SeasonAccordion({
                         <div className="flex shrink-0 items-center pr-3 pl-2">
                           {daysUntilAir !== null ? (
                             <span className="w-16 text-right text-xs text-[#8a9bab]">
-                              In {daysUntilAir} day{daysUntilAir === 1 ? '' : 's'}
+                              In {daysUntilAir} day
+                              {daysUntilAir === 1 ? '' : 's'}
                             </span>
                           ) : (
                             <WatchedToggleButton

@@ -1,6 +1,7 @@
 'use client';
 
 import { SeasonAccordion, WatchNextCard } from '@/components';
+
 import type { CastMember, Season, ShowDetails, ShowMeta } from '@/types';
 
 import { useShowTrackingContext } from './ShowTrackingContext';

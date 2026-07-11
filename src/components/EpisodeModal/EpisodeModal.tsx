@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import Image from 'next/image';
 import { ChevronDown, X } from 'lucide-react';
+import Image from 'next/image';
+import { useState } from 'react';
 
 import { WatchedToggleButton } from '@/components';
 import { useShowTrackingContext } from '@/components/ShowTracker/ShowTrackingContext';
@@ -13,6 +12,8 @@ import {
   getDaysUntilAir,
   getWatchedDates,
 } from '@/components/ShowTracker/utils';
+
+
 import type { CastMember, SeasonEpisode } from '@/types';
 
 function formatDate(dateStr: string | null): string | null {
@@ -51,7 +52,8 @@ export function EpisodeModal({
   const daysUntilAir = episode ? getDaysUntilAir(episode.airDate) : null;
   const episodeNumber = episode ? episode.episodeNumber : null;
   const key = episode ? episodeKey(seasonNumber, episode.episodeNumber) : null;
-  const episodeWatchDates = key !== null ? getWatchedDates(watchedDates, key) : [];
+  const episodeWatchDates =
+    key !== null ? getWatchedDates(watchedDates, key) : [];
   const isWatched = episodeWatchDates.length > 0;
   const rewatchCount = Math.max(0, episodeWatchDates.length - 1);
   const isPending = key !== null && pendingKeys.has(key);
@@ -65,19 +67,8 @@ export function EpisodeModal({
       }}
     >
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay
-          className="fixed inset-0 z-50 bg-black/70
-            max-sm:data-[state=open]:animate-fade-in
-            max-sm:data-[state=closed]:animate-fade-out"
-        />
-        <DialogPrimitive.Content
-          className="fixed inset-x-0 bottom-0 z-50 max-h-[85vh] w-full
-            overflow-y-auto rounded-t-lg bg-[#14181c] shadow-2xl
-            max-sm:data-[state=open]:animate-slide-up
-            max-sm:data-[state=closed]:animate-slide-down
-            sm:top-1/2 sm:left-1/2 sm:bottom-auto sm:w-[90vw] sm:max-w-lg
-            sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg"
-        >
+        <DialogPrimitive.Overlay className="max-sm:data-[state=open]:animate-fade-in max-sm:data-[state=closed]:animate-fade-out fixed inset-0 z-50 bg-black/70" />
+        <DialogPrimitive.Content className="max-sm:data-[state=open]:animate-slide-up max-sm:data-[state=closed]:animate-slide-down fixed inset-x-0 bottom-0 z-50 max-h-[85vh] w-full overflow-y-auto rounded-t-lg bg-[#14181c] shadow-2xl sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-[90vw] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg">
           {episode ? (
             <>
               <div className="relative h-[160px] w-full overflow-hidden rounded-t-lg bg-[#2c3440] sm:h-[220px]">

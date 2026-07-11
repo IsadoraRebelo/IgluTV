@@ -1,15 +1,13 @@
-import type { ReactNode } from 'react';
-
+import {
+  EyeIcon,
+  PauseIcon,
+  PlayIcon,
+  RocketLaunchIcon,
+  TrashIcon,
+} from '@heroicons/react/24/solid';
+import { Clock, Image as ImageIcon, ImagePlus } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import {
-  Clock,
-  Eye,
-  Image as ImageIcon,
-  ImagePlus,
-  Pause,
-  Trash2,
-} from 'lucide-react';
 
 import {
   ShowActionsMenu,
@@ -19,41 +17,61 @@ import {
   ShowTracker,
   ShowTrackingProvider,
 } from '@/components';
-import { getTmdbShowFullDetails } from '@/services/tv-shows';
+
 import { getShowTracking, getWatchedEpisodes } from '@/services/tracking';
+import { getTmdbShowFullDetails } from '@/services/tv-shows';
+
 import type { ShowDetails, ShowMeta, ShowStatus } from '@/types';
+import type { ReactNode } from 'react';
 
 const SHOW_ACTIONS: {
   id?: string;
   status?: ShowStatus;
   icon: ReactNode;
+  reviveIcon?: ReactNode;
+  finishedIcon?: ReactNode;
   label: string;
+  activeColor?: string;
 }[] = [
   {
     id: 'mark-watched',
-    icon: <Eye className="h-4 w-4 text-[#8a9bab]" />,
+    icon: <EyeIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    reviveIcon: <PlayIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    finishedIcon: (
+      <RocketLaunchIcon className="h-4 w-4 text-yellow-500 md:h-5 md:w-5" />
+    ),
     label: 'Mark watched',
+    activeColor: '[&_svg]:!text-green-500',
   },
   {
     id: '1',
     status: 'watch_later',
-    icon: <Clock className="h-4 w-4 text-[#8a9bab]" />,
+    icon: <Clock className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
     label: 'Add to watchlist',
+    activeColor: '[&_svg]:!text-green-500',
   },
   {
     id: '2',
     status: 'paused',
-    icon: <Pause className="h-4 w-4 text-[#8a9bab]" />,
+    icon: <PauseIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
     label: 'Pause',
+    activeColor: '[&_svg]:!text-red-500',
   },
   {
     id: '3',
     status: 'dropped',
-    icon: <Trash2 className="h-4 w-4 text-[#8a9bab]" />,
+    icon: <TrashIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
     label: 'Drop',
+    activeColor: '[&_svg]:!text-gray-200',
   },
-  { icon: <ImageIcon className="h-4 w-4 text-[#8a9bab]" />, label: 'Change poster' },
-  { icon: <ImagePlus className="h-4 w-4 text-[#8a9bab]" />, label: 'Change banner' },
+  {
+    icon: <ImageIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    label: 'Change poster',
+  },
+  {
+    icon: <ImagePlus className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    label: 'Change banner',
+  },
 ];
 
 function formatDate(dateStr: string | null | undefined): string | null {
@@ -137,9 +155,9 @@ export default async function ShowPage({
             </div>
           </div>
 
-          <div className="px-5 md:px-0 relative z-10 mx-auto -mt-24 w-full max-w-[950px] px-2 sm:-mt-32">
+          <div className="relative z-10 mx-auto -mt-24 w-full max-w-[950px] px-2 px-5 sm:-mt-32 md:px-0">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
-              <div className="hidden md:block relative h-[345px] w-[230px] shrink-0 overflow-hidden rounded-md shadow-2xl ring-1 ring-white/10">
+              <div className="relative hidden h-[345px] w-[230px] shrink-0 overflow-hidden rounded-md shadow-2xl ring-1 ring-white/10 md:block">
                 {details.posterUrl ? (
                   <Image
                     src={details.posterUrl}
@@ -155,8 +173,8 @@ export default async function ShowPage({
                 )}
               </div>
 
-              <div className="flex flex-1 flex-col md:gap-2 pb-1">
-                <h1 className="text-2xl mt-5 font-semibold tracking-tight text-white sm:text-3xl">
+              <div className="flex flex-1 flex-col pb-1 md:gap-2">
+                <h1 className="mt-5 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
                   {details.name}
                 </h1>
                 {metaLineParts.length > 0 ? (
@@ -172,8 +190,8 @@ export default async function ShowPage({
           </div>
         </div>
 
-        <main className="px-5 md:px-0 mx-auto w-full max-w-[950px] flex-1 pb-20">
-          <div className="mt-6 md:mt-10 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_260px]">
+        <main className="mx-auto w-full max-w-[950px] flex-1 px-5 pb-20 md:px-0">
+          <div className="mt-6 grid grid-cols-1 gap-10 md:mt-10 lg:grid-cols-[1fr_260px]">
             <div>
               <ShowTabs
                 home={<HomeTab meta={meta} details={details} />}
@@ -230,14 +248,19 @@ function HomeTab({
           <DetailRow
             label="Average run time"
             value={
-              details.averageRuntime ? `${details.averageRuntime} minutes` : null
+              details.averageRuntime
+                ? `${details.averageRuntime} minutes`
+                : null
             }
           />
           <DetailRow
             label="Next episode"
             value={formatDate(details.nextEpisodeDate)}
           />
-          <DetailRow label="Premiere" value={formatDate(details.premiereDate)} />
+          <DetailRow
+            label="Premiere"
+            value={formatDate(details.premiereDate)}
+          />
           <DetailRow
             label="Last aired"
             value={formatDate(details.lastAiredDate)}

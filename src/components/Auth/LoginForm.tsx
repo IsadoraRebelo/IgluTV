@@ -7,7 +7,8 @@ import { SubmitHandler, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
 import { Button, Form, FormField, FormInput } from '@/components';
-import { LoginUserInput, loginFormSchema } from '@/types';
+
+import { loginFormSchema, LoginUserInput } from '@/types';
 
 import { loginWithEmailAndPassword } from './actions';
 
@@ -41,10 +42,7 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmitHandler)}
-        className="space-y-4"
-      >
+      <form onSubmit={form.handleSubmit(onSubmitHandler)} className="space-y-4">
         <FormField
           control={form.control}
           name="email"

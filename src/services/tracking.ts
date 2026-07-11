@@ -1,9 +1,10 @@
 'use server';
 
-import { createClient } from '@/supabase/server';
-import type { EpisodeWatch, ShowStatus, ShowTracking } from '@/types';
-
 import { isShowFinished } from '@/components/ShowTracker/utils';
+
+import { createClient } from '@/supabase/server';
+
+import type { EpisodeWatch, ShowStatus, ShowTracking } from '@/types';
 
 import { ServiceError } from './errors';
 import { getTmdbShowFullDetails } from './tv-shows';
@@ -73,9 +74,7 @@ export async function getWatchedEpisodes(
   }));
 }
 
-export async function getMyShows(
-  status?: ShowStatus
-): Promise<ShowTracking[]> {
+export async function getMyShows(status?: ShowStatus): Promise<ShowTracking[]> {
   const supabase = await createClient();
 
   let query = supabase

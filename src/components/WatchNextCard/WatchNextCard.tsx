@@ -4,6 +4,8 @@ import { useState } from 'react';
 
 import { LatestEpisodeCard } from '@/components';
 import type { EpisodeSectionState } from '@/components/ShowTracker/utils';
+
+
 import type { CastMember } from '@/types';
 
 export function WatchNextCard({
@@ -19,10 +21,8 @@ export function WatchNextCard({
 }) {
   const [phase, setPhase] = useState<'idle' | 'exiting' | 'entering'>('idle');
 
-
-  const [frozenSection, setFrozenSection] = useState<EpisodeSectionState | null>(
-    null
-  );
+  const [frozenSection, setFrozenSection] =
+    useState<EpisodeSectionState | null>(null);
 
   const displayedSection =
     phase === 'idle' ? episodeSection : (frozenSection ?? episodeSection);
@@ -30,7 +30,10 @@ export function WatchNextCard({
   if (displayedSection.kind === 'hidden') return null;
 
   function handleCheck() {
-    if (displayedSection.kind !== 'latest' && displayedSection.kind !== 'next') {
+    if (
+      displayedSection.kind !== 'latest' &&
+      displayedSection.kind !== 'next'
+    ) {
       return;
     }
     onToggleEpisode(
@@ -66,7 +69,8 @@ export function WatchNextCard({
         {displayedSection.title}
       </h2>
       <div className={animationClassName} onAnimationEnd={handleAnimationEnd}>
-        {displayedSection.kind === 'latest' || displayedSection.kind === 'next' ? (
+        {displayedSection.kind === 'latest' ||
+        displayedSection.kind === 'next' ? (
           <LatestEpisodeCard
             episode={displayedSection.episode}
             cast={cast}

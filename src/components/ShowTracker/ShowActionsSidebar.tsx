@@ -1,10 +1,12 @@
 'use client';
 
-import type { ReactNode } from 'react';
 
 import type { ShowStatus } from '@/types';
 
+import { cn } from '@/utils/cn';
+
 import { useShowTrackingContext } from './ShowTrackingContext';
+import type { ReactNode } from 'react';
 
 export function ShowActionsSidebar({
   actions,
@@ -13,7 +15,10 @@ export function ShowActionsSidebar({
     id?: string;
     status?: ShowStatus;
     icon: ReactNode;
+    reviveIcon?: ReactNode;
+    finishedIcon?: ReactNode;
     label: string;
+    activeColor?: string;
   }[];
 }) {
   const {
@@ -27,7 +32,6 @@ export function ShowActionsSidebar({
     onSetShowStatus,
     isSettingShowStatus,
   } = useShowTrackingContext();
-
 
   const visibleActions = actions.filter((action) => {
     if (action.status === undefined) return true;
@@ -44,11 +48,19 @@ export function ShowActionsSidebar({
         if (action.id === 'mark-watched') {
           const isRevivingToWatching =
             showStatus === 'paused' || showStatus === 'dropped';
+          const isFinished = isShowCompleted && !isRevivingToWatching;
           const label = isRevivingToWatching
             ? 'Back to watching'
-            : isShowCaughtUp
-              ? 'All caught up'
-              : action.label;
+            : isFinished
+              ? 'Finished'
+              : isShowCaughtUp
+                ? 'All caught up'
+                : action.label;
+          const icon = isRevivingToWatching
+            ? (action.reviveIcon ?? action.icon)
+            : isFinished
+              ? (action.finishedIcon ?? action.icon)
+              : action.icon;
 
           return (
             <button
@@ -56,13 +68,17 @@ export function ShowActionsSidebar({
               type="button"
               disabled={isMarkingShowWatched || isSettingShowStatus}
               onClick={onMarkShowWatched}
-              className={
-                isShowFullyWatched && !isRevivingToWatching
-                  ? 'flex items-center gap-3 rounded-md bg-[#66cc24] px-3 py-2.5 text-left text-sm text-[#14181c] disabled:opacity-50'
-                  : 'flex items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm text-[#c2d0dd] hover:bg-white/5 disabled:opacity-50'
-              }
+              className="text-md flex items-center gap-3 rounded-md px-3 py-2.5 text-left text-[#c2d0dd] hover:bg-white/5 disabled:pointer-events-none disabled:opacity-50"
             >
-              {action.icon}
+              <span
+                className={cn(
+                  !isRevivingToWatching &&
+                    (isShowCaughtUp || isShowFullyWatched) &&
+                    action.activeColor
+                )}
+              >
+                {icon}
+              </span>
               {label}
             </button>
           );
@@ -85,13 +101,11 @@ export function ShowActionsSidebar({
               type="button"
               disabled={isSettingShowStatus || (isActive && !isWatchLater)}
               onClick={() => onSetShowStatus(action.status!)}
-              className={
-                isActive
-                  ? 'flex items-center gap-3 rounded-md bg-white/10 px-3 py-2.5 text-left text-sm font-medium text-white disabled:opacity-50'
-                  : 'flex items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm text-[#c2d0dd] hover:bg-white/5 disabled:opacity-50'
-              }
+              className="text-md flex items-center gap-3 rounded-md px-3 py-2.5 text-left text-[#c2d0dd] hover:bg-white/5 disabled:pointer-events-none"
             >
-              {action.icon}
+              <span className={cn(isActive && action.activeColor)}>
+                {action.icon}
+              </span>
               {label}
             </button>
           );
@@ -100,7 +114,7 @@ export function ShowActionsSidebar({
         return (
           <div
             key={action.label}
-            className="flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#c2d0dd] hover:bg-white/5"
+            className="text-md flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-[#c2d0dd] hover:bg-white/5"
           >
             {action.icon}
             {action.label}

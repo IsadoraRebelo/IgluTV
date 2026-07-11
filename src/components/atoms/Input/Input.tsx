@@ -9,8 +9,7 @@ const inputVariants = {
   },
 } as const;
 
-export interface inputProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface inputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   variant?: keyof typeof inputVariants.variant;
   label?: string;
   description?: string;
@@ -34,7 +33,7 @@ export const Input = forwardRef<HTMLInputElement, inputProps>(
           id={id}
           className={cn(
             'placeholder:text-muted-foreground w-full rounded-md text-sm',
-            'h-10 border border-muted px-3 py-2 leading-none',
+            'border-muted h-10 border px-3 py-2 leading-none',
             'focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none',
             'disabled:cursor-not-allowed disabled:opacity-50',
             inputVariants.variant[variant],

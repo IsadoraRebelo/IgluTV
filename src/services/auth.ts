@@ -17,7 +17,11 @@ export async function signInWithPassword(email: string, password: string) {
   return data;
 }
 
-export async function signUp(email: string, password: string, username: string) {
+export async function signUp(
+  email: string,
+  password: string,
+  username: string
+) {
   const supabase = await createClient();
 
   const { data, error } = await supabase.auth.signUp({

@@ -7,7 +7,8 @@ import { SubmitHandler, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
 import { Button, Form, FormField, FormInput } from '@/components';
-import { PasswordUserInput, changePasswordFormSchema } from '@/types';
+
+import { changePasswordFormSchema, PasswordUserInput } from '@/types';
 
 import { updatePasswordAction } from './actions';
 
@@ -37,10 +38,7 @@ export const ResetPasswordForm = () => {
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmitHandler)}
-        className="space-y-4"
-      >
+      <form onSubmit={form.handleSubmit(onSubmitHandler)} className="space-y-4">
         <FormField
           control={form.control}
           name="password"

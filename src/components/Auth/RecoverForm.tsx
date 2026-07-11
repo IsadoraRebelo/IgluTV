@@ -6,7 +6,8 @@ import { SubmitHandler, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
 import { Button, Form, FormField, FormInput } from '@/components';
-import { RecoverPasswordUserInput, recoverPasswordFormSchema } from '@/types';
+
+import { recoverPasswordFormSchema, RecoverPasswordUserInput } from '@/types';
 
 import { recoverPasswordWithEmail } from './actions';
 
@@ -22,9 +23,7 @@ export const RecoverForm = ({ onSuccess }: RecoverFormProps) => {
     defaultValues: { email: '' },
   });
 
-  const onSubmitHandler: SubmitHandler<RecoverPasswordUserInput> = (
-    values
-  ) => {
+  const onSubmitHandler: SubmitHandler<RecoverPasswordUserInput> = (values) => {
     startTransition(async () => {
       const { error } = await recoverPasswordWithEmail({ data: values });
 
@@ -40,10 +39,7 @@ export const RecoverForm = ({ onSuccess }: RecoverFormProps) => {
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmitHandler)}
-        className="space-y-4"
-      >
+      <form onSubmit={form.handleSubmit(onSubmitHandler)} className="space-y-4">
         <FormField
           control={form.control}
           name="email"

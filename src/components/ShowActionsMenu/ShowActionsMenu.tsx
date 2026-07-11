@@ -2,10 +2,11 @@
 
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { MoreHorizontal } from 'lucide-react';
-import type { ReactNode } from 'react';
 
 import { useShowTrackingContext } from '@/components';
+
 import type { ShowStatus } from '@/types';
+import type { ReactNode } from 'react';
 
 export function ShowActionsMenu({
   actions,
@@ -14,6 +15,7 @@ export function ShowActionsMenu({
     id?: string;
     status?: ShowStatus;
     icon: ReactNode;
+    finishedIcon?: ReactNode;
     label: string;
   }[];
 }) {
@@ -53,13 +55,13 @@ export function ShowActionsMenu({
         <DropdownMenu.Content
           align="end"
           sideOffset={8}
-          className="z-50 w-64 rounded-lg bg-[#1c232b] p-2 shadow-2xl ring-1 ring-white/10
-            data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out"
+          className="data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out z-50 w-64 rounded-lg bg-[#1c232b] p-2 shadow-2xl ring-1 ring-white/10"
         >
           {visibleActions.map((action) => {
             const { icon, label, id, status } = action;
             const isMarkWatched = id === 'mark-watched';
-            const isActiveStatus = status !== undefined && showStatus === status;
+            const isActiveStatus =
+              status !== undefined && showStatus === status;
             const isWatchLater = status === 'watch_later';
 
             if (status !== undefined) {
@@ -74,12 +76,14 @@ export function ShowActionsMenu({
               return (
                 <DropdownMenu.Item
                   key={status}
-                  disabled={isSettingShowStatus || (isActiveStatus && !isWatchLater)}
+                  disabled={
+                    isSettingShowStatus || (isActiveStatus && !isWatchLater)
+                  }
                   onSelect={() => onSetShowStatus(status)}
                   className={
                     isActiveStatus
                       ? 'flex items-center gap-3 rounded-md bg-white/10 px-3 py-2.5 text-sm font-medium text-white outline-none'
-                      : 'flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#c2d0dd] outline-none data-[highlighted]:bg-white/5 data-[disabled]:opacity-50'
+                      : 'flex items-center gap-3 rounded-md px-3 py-2.5 text-[#c2d0dd] outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-white/5'
                   }
                 >
                   {icon}
@@ -90,14 +94,22 @@ export function ShowActionsMenu({
 
             const isRevivingToWatching =
               showStatus === 'paused' || showStatus === 'dropped';
-            const isDone = isMarkWatched && isShowFullyWatched && !isRevivingToWatching;
+            const isDone =
+              isMarkWatched && isShowFullyWatched && !isRevivingToWatching;
+            const isFinished =
+              isMarkWatched && isShowCompleted && !isRevivingToWatching;
             const displayLabel = isMarkWatched
               ? isRevivingToWatching
                 ? 'Back to watching'
-                : isShowCaughtUp
-                  ? 'All caught up'
-                  : label
+                : isFinished
+                  ? 'Finished'
+                  : isShowCaughtUp
+                    ? 'All caught up'
+                    : label
               : label;
+            const displayIcon = isFinished
+              ? (action.finishedIcon ?? icon)
+              : icon;
 
             return (
               <DropdownMenu.Item
@@ -109,12 +121,12 @@ export function ShowActionsMenu({
                 className={
                   isDone
                     ? 'flex items-center gap-3 rounded-md bg-[#66cc24] px-3 py-2.5 text-sm text-[#14181c] outline-none'
-                    : `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#c2d0dd] outline-none data-[highlighted]:bg-white/5 data-[disabled]:opacity-50 ${
+                    : `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#c2d0dd] outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-white/5 ${
                         isMarkWatched ? '' : 'cursor-default'
                       }`
                 }
               >
-                {icon}
+                {displayIcon}
                 {displayLabel}
               </DropdownMenu.Item>
             );

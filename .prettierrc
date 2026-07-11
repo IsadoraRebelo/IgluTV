@@ -1,0 +1,26 @@
+{
+  "singleQuote": true,
+  "trailingComma": "es5",
+  "importOrder": [
+    "<THIRD_PART_MODULES>",
+    "^@/components/(.*)$",
+    "^@/components$",
+    "^@/consts/(.*)$",
+    "^@/consts$",
+    "^@/services/(.*)$",
+    "^@/services$",
+    "^@/supabase/(.*)$",
+    "^@/types/(.*)$",
+    "^@/types$",
+    "^@/utils/(.*)$",
+    "^@/utils$",
+    "^[./]"
+  ],
+  "importOrderSeparation": true,
+  "importOrderSortSpecifiers": true,
+  "importOrderCaseInsensitive": true,
+  "plugins": [
+    "@trivago/prettier-plugin-sort-imports",
+    "prettier-plugin-tailwindcss"
+  ]
+}

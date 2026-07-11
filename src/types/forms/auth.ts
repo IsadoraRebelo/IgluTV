@@ -28,7 +28,9 @@ export const recoverPasswordFormSchema = z.object({
 
 export type LoginUserInput = z.TypeOf<typeof loginFormSchema>;
 export type CreateUserInput = z.TypeOf<typeof signupFormSchema>;
-export type RecoverPasswordUserInput = z.TypeOf<typeof recoverPasswordFormSchema>;
+export type RecoverPasswordUserInput = z.TypeOf<
+  typeof recoverPasswordFormSchema
+>;
 
 export const changePasswordFormSchema = z.object({
   password: z
