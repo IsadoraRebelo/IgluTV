@@ -33,14 +33,23 @@ import {
   getDaysUntilAir,
   getPriorUnwatchedAiredEpisodes,
   getWatchCount,
+  getWatchedDates,
   isShowFinished,
 } from './utils';
 
 const MARK_SHOW_WATCHED_KEY = 'mark-show-watched';
 const SHOW_STATUS_KEY = 'show-status';
 
+function todayIso(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 type ShowTrackingContextValue = {
-  watchedCounts: Map<string, number>;
+  watchedDates: Map<string, string[]>;
   pendingKeys: Set<string>;
   onToggleEpisode: (seasonNumber: number, episodeNumber: number) => void;
   onRewatchEpisode: (seasonNumber: number, episodeNumber: number) => void;
@@ -184,14 +193,16 @@ export function ShowTrackingProvider({
   tmdbStatus: string | null;
   children: ReactNode;
 }) {
-  const [watchedCounts, setWatchedCounts] = useState<Map<string, number>>(
+  const [watchedDates, setWatchedDates] = useState<Map<string, string[]>>(
     () => {
-      const counts = new Map<string, number>();
+      const dates = new Map<string, string[]>();
       for (const w of watchedEpisodes) {
         const key = episodeKey(w.seasonNumber, w.episodeNumber);
-        counts.set(key, (counts.get(key) ?? 0) + 1);
+        const existing = dates.get(key);
+        if (existing) existing.push(w.watchedOn);
+        else dates.set(key, [w.watchedOn]);
       }
-      return counts;
+      return dates;
     }
   );
   const [pendingKeys, setPendingKeys] = useState<Set<string>>(new Set());
@@ -223,7 +234,7 @@ export function ShowTrackingProvider({
       markableEpisodes.every(
         (ep) =>
           getWatchCount(
-            watchedCounts,
+            watchedDates,
             episodeKey(season.seasonNumber, ep.episodeNumber)
           ) > 0
       )
@@ -232,7 +243,7 @@ export function ShowTrackingProvider({
   const isShowCompleted = isShowFullyWatched && isShowFinished(tmdbStatus);
   const isShowCaughtUp = isShowFullyWatched && !isShowFinished(tmdbStatus);
 
-  const hasStartedWatching = watchedCounts.size > 0;
+  const hasStartedWatching = watchedDates.size > 0;
   const displayedShowStatus: ShowStatus | null = isShowCompleted
     ? 'completed'
     : (showStatus === null || showStatus === 'watch_later') &&
@@ -240,10 +251,10 @@ export function ShowTrackingProvider({
       ? 'watching'
       : showStatus;
 
-  const watchedCountsRef = useRef(watchedCounts);
+  const watchedDatesRef = useRef(watchedDates);
   useEffect(() => {
-    watchedCountsRef.current = watchedCounts;
-  }, [watchedCounts]);
+    watchedDatesRef.current = watchedDates;
+  }, [watchedDates]);
 
   const pendingKeysRef = useRef(pendingKeys);
   useEffect(() => {
@@ -280,9 +291,9 @@ export function ShowTrackingProvider({
       allKeys.forEach((key) => next.add(key));
       return next;
     });
-    setWatchedCounts((prev) => {
+    setWatchedDates((prev) => {
       const next = new Map(prev);
-      allKeys.forEach((key) => next.set(key, 1));
+      allKeys.forEach((key) => next.set(key, [todayIso()]));
       return next;
     });
 
@@ -325,7 +336,7 @@ export function ShowTrackingProvider({
         return;
       }
 
-      setWatchedCounts((prev) => {
+      setWatchedDates((prev) => {
         const next = new Map(prev);
         for (const failed of failedGroups) {
           for (const ep of failed.episodes) {
@@ -387,14 +398,14 @@ export function ShowTrackingProvider({
     const key = episodeKey(seasonNumber, episodeNumber);
     if (pendingKeys.has(key)) return;
 
-    const previousCount = getWatchCount(watchedCounts, key);
-    const wasWatched = previousCount > 0;
+    const previousDates = getWatchedDates(watchedDates, key);
+    const wasWatched = previousDates.length > 0;
 
     setPendingKeys((prev) => new Set(prev).add(key));
-    setWatchedCounts((prev) => {
+    setWatchedDates((prev) => {
       const next = new Map(prev);
       if (wasWatched) next.delete(key);
-      else next.set(key, 1);
+      else next.set(key, [todayIso()]);
       return next;
     });
 
@@ -404,9 +415,9 @@ export function ShowTrackingProvider({
         : await markEpisodeWatchedAction(showId, seasonNumber, episodeNumber);
 
       if (!result.ok) {
-        setWatchedCounts((prev) => {
+        setWatchedDates((prev) => {
           const next = new Map(prev);
-          if (wasWatched) next.set(key, previousCount);
+          if (wasWatched) next.set(key, previousDates);
           else next.delete(key);
           return next;
         });
@@ -420,7 +431,7 @@ export function ShowTrackingProvider({
         offerToMarkPriorEpisodes(
           getPriorUnwatchedAiredEpisodes(
             seasons,
-            watchedCountsRef.current,
+            watchedDatesRef.current,
             seasonNumber,
             episodeNumber
           )
@@ -442,12 +453,12 @@ export function ShowTrackingProvider({
     const key = episodeKey(seasonNumber, episodeNumber);
     if (pendingKeys.has(key)) return;
 
-    const previousCount = getWatchCount(watchedCounts, key);
+    const previousDates = getWatchedDates(watchedDates, key);
 
     setPendingKeys((prev) => new Set(prev).add(key));
-    setWatchedCounts((prev) => {
+    setWatchedDates((prev) => {
       const next = new Map(prev);
-      next.set(key, (prev.get(key) ?? 0) + 1);
+      next.set(key, [...(prev.get(key) ?? []), todayIso()]);
       return next;
     });
 
@@ -459,9 +470,9 @@ export function ShowTrackingProvider({
       );
 
       if (!result.ok) {
-        setWatchedCounts((prev) => {
+        setWatchedDates((prev) => {
           const next = new Map(prev);
-          if (previousCount > 0) next.set(key, previousCount);
+          if (previousDates.length > 0) next.set(key, previousDates);
           else next.delete(key);
           return next;
         });
@@ -489,13 +500,14 @@ export function ShowTrackingProvider({
     const key = episodeKey(seasonNumber, episodeNumber);
     if (pendingKeys.has(key)) return;
 
-    const previousCount = getWatchCount(watchedCounts, key);
-    if (previousCount <= 1) return;
+    const previousDates = getWatchedDates(watchedDates, key);
+    if (previousDates.length <= 1) return;
 
     setPendingKeys((prev) => new Set(prev).add(key));
-    setWatchedCounts((prev) => {
+    setWatchedDates((prev) => {
       const next = new Map(prev);
-      next.set(key, previousCount - 1);
+      const dates = prev.get(key) ?? [];
+      next.set(key, dates.slice(0, -1));
       return next;
     });
 
@@ -507,9 +519,9 @@ export function ShowTrackingProvider({
       );
 
       if (!result.ok) {
-        setWatchedCounts((prev) => {
+        setWatchedDates((prev) => {
           const next = new Map(prev);
-          next.set(key, previousCount);
+          next.set(key, previousDates);
           return next;
         });
 
@@ -541,7 +553,7 @@ export function ShowTrackingProvider({
     const watchedCount = markableEpisodes.filter(
       (ep) =>
         getWatchCount(
-          watchedCounts,
+          watchedDates,
           episodeKey(season.seasonNumber, ep.episodeNumber)
         ) > 0
     ).length;
@@ -552,7 +564,7 @@ export function ShowTrackingProvider({
       : markableEpisodes.filter(
           (ep) =>
             getWatchCount(
-              watchedCounts,
+              watchedDates,
               episodeKey(season.seasonNumber, ep.episodeNumber)
             ) === 0
         );
@@ -562,10 +574,10 @@ export function ShowTrackingProvider({
     );
     if (episodeKeysToLock.some((key) => pendingKeys.has(key))) return;
 
-    const previousCounts = new Map(
+    const previousDatesByKey = new Map(
       episodesToToggle.map((ep) => {
         const key = episodeKey(season.seasonNumber, ep.episodeNumber);
-        return [key, getWatchCount(watchedCounts, key)] as const;
+        return [key, getWatchedDates(watchedDates, key)] as const;
       })
     );
 
@@ -575,12 +587,12 @@ export function ShowTrackingProvider({
       episodeKeysToLock.forEach((key) => next.add(key));
       return next;
     });
-    setWatchedCounts((prev) => {
+    setWatchedDates((prev) => {
       const next = new Map(prev);
       for (const ep of episodesToToggle) {
         const key = episodeKey(season.seasonNumber, ep.episodeNumber);
         if (isFullyWatched) next.delete(key);
-        else next.set(key, 1);
+        else next.set(key, [todayIso()]);
       }
       return next;
     });
@@ -595,10 +607,10 @@ export function ShowTrackingProvider({
           );
 
       if (!result.ok) {
-        setWatchedCounts((prev) => {
+        setWatchedDates((prev) => {
           const next = new Map(prev);
-          for (const [key, count] of previousCounts) {
-            if (count > 0) next.set(key, count);
+          for (const [key, dates] of previousDatesByKey) {
+            if (dates.length > 0) next.set(key, dates);
             else next.delete(key);
           }
           return next;
@@ -613,7 +625,7 @@ export function ShowTrackingProvider({
         offerToMarkPriorEpisodes(
           getPriorUnwatchedAiredEpisodes(
             seasons,
-            watchedCountsRef.current,
+            watchedDatesRef.current,
             season.seasonNumber,
             null
           )
@@ -643,10 +655,10 @@ export function ShowTrackingProvider({
     );
     if (episodeKeysToLock.some((key) => pendingKeys.has(key))) return;
 
-    const previousCounts = new Map(
+    const previousDatesByKey = new Map(
       markableEpisodes.map((ep) => {
         const key = episodeKey(season.seasonNumber, ep.episodeNumber);
-        return [key, getWatchCount(watchedCounts, key)] as const;
+        return [key, getWatchedDates(watchedDates, key)] as const;
       })
     );
 
@@ -656,11 +668,11 @@ export function ShowTrackingProvider({
       episodeKeysToLock.forEach((key) => next.add(key));
       return next;
     });
-    setWatchedCounts((prev) => {
+    setWatchedDates((prev) => {
       const next = new Map(prev);
       for (const ep of markableEpisodes) {
         const key = episodeKey(season.seasonNumber, ep.episodeNumber);
-        next.set(key, (prev.get(key) ?? 0) + 1);
+        next.set(key, [...(prev.get(key) ?? []), todayIso()]);
       }
       return next;
     });
@@ -673,10 +685,10 @@ export function ShowTrackingProvider({
       );
 
       if (!result.ok) {
-        setWatchedCounts((prev) => {
+        setWatchedDates((prev) => {
           const next = new Map(prev);
-          for (const [key, count] of previousCounts) {
-            if (count > 0) next.set(key, count);
+          for (const [key, dates] of previousDatesByKey) {
+            if (dates.length > 0) next.set(key, dates);
             else next.delete(key);
           }
           return next;
@@ -713,10 +725,10 @@ export function ShowTrackingProvider({
     );
     if (episodeKeysToLock.some((key) => pendingKeys.has(key))) return;
 
-    const previousCounts = new Map(
+    const previousDatesByKey = new Map(
       markableEpisodes.map((ep) => {
         const key = episodeKey(season.seasonNumber, ep.episodeNumber);
-        return [key, getWatchCount(watchedCounts, key)] as const;
+        return [key, getWatchedDates(watchedDates, key)] as const;
       })
     );
 
@@ -726,11 +738,12 @@ export function ShowTrackingProvider({
       episodeKeysToLock.forEach((key) => next.add(key));
       return next;
     });
-    setWatchedCounts((prev) => {
+    setWatchedDates((prev) => {
       const next = new Map(prev);
       for (const ep of markableEpisodes) {
         const key = episodeKey(season.seasonNumber, ep.episodeNumber);
-        next.set(key, (prev.get(key) ?? 0) - 1);
+        const dates = prev.get(key) ?? [];
+        next.set(key, dates.slice(0, -1));
       }
       return next;
     });
@@ -743,10 +756,10 @@ export function ShowTrackingProvider({
       );
 
       if (!result.ok) {
-        setWatchedCounts((prev) => {
+        setWatchedDates((prev) => {
           const next = new Map(prev);
-          for (const [key, count] of previousCounts) {
-            if (count > 0) next.set(key, count);
+          for (const [key, dates] of previousDatesByKey) {
+            if (dates.length > 0) next.set(key, dates);
             else next.delete(key);
           }
           return next;
@@ -783,9 +796,9 @@ export function ShowTrackingProvider({
     if (episodeKeysToLock.length === 0) return;
     if (episodeKeysToLock.some((key) => pendingKeys.has(key))) return;
 
-    const previousCounts = new Map(
+    const previousDatesByKey = new Map(
       episodeKeysToLock.map(
-        (key) => [key, getWatchCount(watchedCounts, key)] as const
+        (key) => [key, getWatchedDates(watchedDates, key)] as const
       )
     );
 
@@ -795,10 +808,10 @@ export function ShowTrackingProvider({
       episodeKeysToLock.forEach((key) => next.add(key));
       return next;
     });
-    setWatchedCounts((prev) => {
+    setWatchedDates((prev) => {
       const next = new Map(prev);
       episodeKeysToLock.forEach((key) => {
-        if (!next.has(key)) next.set(key, 1);
+        if (!next.has(key)) next.set(key, [todayIso()]);
       });
       return next;
     });
@@ -835,7 +848,7 @@ export function ShowTrackingProvider({
 
       if (failedSeasons.length === 0) return;
 
-      setWatchedCounts((prev) => {
+      setWatchedDates((prev) => {
         const next = new Map(prev);
         for (const failed of failedSeasons) {
           for (const ep of failed.markableEpisodes) {
@@ -843,8 +856,8 @@ export function ShowTrackingProvider({
               failed.season.seasonNumber,
               ep.episodeNumber
             );
-            const previousCount = previousCounts.get(key) ?? 0;
-            if (previousCount > 0) next.set(key, previousCount);
+            const previousEpDates = previousDatesByKey.get(key) ?? [];
+            if (previousEpDates.length > 0) next.set(key, previousEpDates);
             else next.delete(key);
           }
         }
@@ -883,9 +896,9 @@ export function ShowTrackingProvider({
     if (episodeKeysToLock.length === 0) return;
     if (episodeKeysToLock.some((key) => pendingKeys.has(key))) return;
 
-    const previousCounts = new Map(
+    const previousDatesByKey = new Map(
       episodeKeysToLock.map(
-        (key) => [key, getWatchCount(watchedCounts, key)] as const
+        (key) => [key, getWatchedDates(watchedDates, key)] as const
       )
     );
 
@@ -895,7 +908,7 @@ export function ShowTrackingProvider({
       episodeKeysToLock.forEach((key) => next.add(key));
       return next;
     });
-    setWatchedCounts((prev) => {
+    setWatchedDates((prev) => {
       const next = new Map(prev);
       episodeKeysToLock.forEach((key) => next.delete(key));
       return next;
@@ -929,7 +942,7 @@ export function ShowTrackingProvider({
 
       if (failedSeasons.length === 0) return;
 
-      setWatchedCounts((prev) => {
+      setWatchedDates((prev) => {
         const next = new Map(prev);
         for (const failed of failedSeasons) {
           for (const ep of failed.markableEpisodes) {
@@ -937,8 +950,8 @@ export function ShowTrackingProvider({
               failed.season.seasonNumber,
               ep.episodeNumber
             );
-            const previousCount = previousCounts.get(key) ?? 0;
-            if (previousCount > 0) next.set(key, previousCount);
+            const previousEpDates = previousDatesByKey.get(key) ?? [];
+            if (previousEpDates.length > 0) next.set(key, previousEpDates);
           }
         }
         return next;
@@ -1065,7 +1078,7 @@ export function ShowTrackingProvider({
   }
 
   const value: ShowTrackingContextValue = {
-    watchedCounts,
+    watchedDates,
     pendingKeys,
     onToggleEpisode: handleToggleEpisode,
     onRewatchEpisode: handleRewatchEpisode,

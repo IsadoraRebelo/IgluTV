@@ -5,17 +5,24 @@ export function episodeKey(season: number, episode: number): string {
 }
 
 export function getWatchCount(
-  watchedCounts: Map<string, number>,
+  watchedDates: Map<string, string[]>,
   key: string
 ): number {
-  return watchedCounts.get(key) ?? 0;
+  return (watchedDates.get(key) ?? []).length;
 }
 
 export function getRewatchCount(
-  watchedCounts: Map<string, number>,
+  watchedDates: Map<string, string[]>,
   key: string
 ): number {
-  return Math.max(0, getWatchCount(watchedCounts, key) - 1);
+  return Math.max(0, getWatchCount(watchedDates, key) - 1);
+}
+
+export function getWatchedDates(
+  watchedDates: Map<string, string[]>,
+  key: string
+): string[] {
+  return watchedDates.get(key) ?? [];
 }
 
 export function getDaysUntilAir(dateStr: string | null): number | null {
@@ -41,7 +48,7 @@ export type EpisodeRef = { seasonNumber: number; episodeNumber: number };
 
 export function getPriorUnwatchedAiredEpisodes(
   seasons: Season[],
-  watchedCounts: Map<string, number>,
+  watchedDates: Map<string, string[]>,
   cutoffSeason: number,
   cutoffEpisode: number | null
 ): EpisodeRef[] {
@@ -60,7 +67,7 @@ export function getPriorUnwatchedAiredEpisodes(
       if (getDaysUntilAir(episode.airDate) !== null) continue;
 
       const key = episodeKey(season.seasonNumber, episode.episodeNumber);
-      if (getWatchCount(watchedCounts, key) === 0) {
+      if (getWatchCount(watchedDates, key) === 0) {
         prior.push({
           seasonNumber: season.seasonNumber,
           episodeNumber: episode.episodeNumber,
@@ -74,7 +81,7 @@ export function getPriorUnwatchedAiredEpisodes(
 
 export function getWatchNextEpisode(
   seasons: Season[],
-  watchedCounts: Map<string, number>
+  watchedDates: Map<string, string[]>
 ): LatestEpisode | null {
   let furthest: { seasonNumber: number; episodeNumber: number } | null = null;
 
@@ -83,7 +90,7 @@ export function getWatchNextEpisode(
 
     for (const episode of season.episodes) {
       const key = episodeKey(season.seasonNumber, episode.episodeNumber);
-      if (getWatchCount(watchedCounts, key) === 0) continue;
+      if (getWatchCount(watchedDates, key) === 0) continue;
 
       if (
         !furthest ||
@@ -144,15 +151,15 @@ export type EpisodeSectionState =
 export function getEpisodeSectionState(
   meta: ShowMeta | null,
   details: ShowDetails,
-  watchedCounts: Map<string, number>
+  watchedDates: Map<string, string[]>
 ): EpisodeSectionState {
-  if (watchedCounts.size === 0) {
+  if (watchedDates.size === 0) {
     return meta?.latestEpisode
       ? { kind: 'latest', title: 'Latest episode', episode: meta.latestEpisode }
       : { kind: 'hidden' };
   }
 
-  const nextEpisode = getWatchNextEpisode(meta?.seasons ?? [], watchedCounts);
+  const nextEpisode = getWatchNextEpisode(meta?.seasons ?? [], watchedDates);
   if (nextEpisode) {
     return { kind: 'next', title: 'Watch Next', episode: nextEpisode };
   }

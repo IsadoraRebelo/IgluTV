@@ -129,7 +129,7 @@ function WatchedToggleButton({
 export function SeasonAccordion({
   seasons,
   cast,
-  watchedCounts,
+  watchedDates,
   pendingKeys,
   onToggleEpisode,
   onRewatchEpisode,
@@ -140,7 +140,7 @@ export function SeasonAccordion({
 }: {
   seasons: Season[];
   cast: CastMember[];
-  watchedCounts: Map<string, number>;
+  watchedDates: Map<string, string[]>;
   pendingKeys: Set<string>;
   onToggleEpisode: (seasonNumber: number, episodeNumber: number) => void;
   onRewatchEpisode: (seasonNumber: number, episodeNumber: number) => void;
@@ -166,7 +166,7 @@ export function SeasonAccordion({
         const seasonWatchedCount = markableEpisodes.filter(
           (ep) =>
             getWatchCount(
-              watchedCounts,
+              watchedDates,
               episodeKey(season.seasonNumber, ep.episodeNumber)
             ) > 0
         ).length;
@@ -182,7 +182,7 @@ export function SeasonAccordion({
             : Math.min(
                 ...markableEpisodes.map((ep) =>
                   getRewatchCount(
-                    watchedCounts,
+                    watchedDates,
                     episodeKey(season.seasonNumber, ep.episodeNumber)
                   )
                 )
@@ -255,9 +255,9 @@ export function SeasonAccordion({
                       episode.episodeNumber
                     );
                     const isEpisodeWatched =
-                      getWatchCount(watchedCounts, key) > 0;
+                      getWatchCount(watchedDates, key) > 0;
                     const episodeRewatchCount = getRewatchCount(
-                      watchedCounts,
+                      watchedDates,
                       key
                     );
                     const isEpisodePending = pendingKeys.has(key);

@@ -18,7 +18,7 @@ export function ShowActionsMenu({
   }[];
 }) {
   const {
-    watchedCounts,
+    watchedDates,
     onMarkShowWatched,
     isMarkingShowWatched,
     isShowFullyWatched,
@@ -35,7 +35,7 @@ export function ShowActionsMenu({
     if (action.status === 'watch_later') {
       return showStatus === null || showStatus === 'watch_later';
     }
-    return watchedCounts.size > 0;
+    return watchedDates.size > 0;
   });
 
   return (

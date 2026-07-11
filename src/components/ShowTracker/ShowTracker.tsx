@@ -18,7 +18,7 @@ export function ShowTracker({
   details: ShowDetails;
 }) {
   const {
-    watchedCounts,
+    watchedDates,
     pendingKeys,
     onToggleEpisode,
     onRewatchEpisode,
@@ -28,7 +28,7 @@ export function ShowTracker({
     onRemoveLastSeasonRewatch,
   } = useShowTrackingContext();
 
-  const episodeSection = getEpisodeSectionState(meta, details, watchedCounts);
+  const episodeSection = getEpisodeSectionState(meta, details, watchedDates);
   const isCurrentEpisodePending =
     episodeSection.kind === 'latest' || episodeSection.kind === 'next'
       ? pendingKeys.has(
@@ -58,7 +58,7 @@ export function ShowTracker({
           <SeasonAccordion
             seasons={seasons}
             cast={cast}
-            watchedCounts={watchedCounts}
+            watchedDates={watchedDates}
             pendingKeys={pendingKeys}
             onToggleEpisode={onToggleEpisode}
             onRewatchEpisode={onRewatchEpisode}
