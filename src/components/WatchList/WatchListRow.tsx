@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -10,9 +10,14 @@ import {
   EpisodeModal,
   ShowTrackingProvider,
   useShowTrackingContext,
+  WatchedToggleButton,
 } from '@/components';
 
-import { episodeKey, getWatchCount } from '@/components/ShowTracker/utils';
+import {
+  episodeKey,
+  getRewatchCount,
+  getWatchCount,
+} from '@/components/ShowTracker/utils';
 
 import type {
   CastMember,
@@ -96,8 +101,13 @@ function WatchListRowContent({
   const [phase, setPhase] = useState<'idle' | 'exiting' | 'entering'>('idle');
   const router = useRouter();
   const [isRefreshing, startTransition] = useTransition();
-  const { onToggleEpisode, pendingKeys, watchedDates } =
-    useShowTrackingContext();
+  const {
+    onToggleEpisode,
+    onRewatchEpisode,
+    onRemoveLastEpisodeRewatch,
+    pendingKeys,
+    watchedDates,
+  } = useShowTrackingContext();
 
   const prevPendingSizeRef = useRef(0);
   useEffect(() => {
@@ -133,6 +143,7 @@ function WatchListRowContent({
   );
   const isPending = pendingKeys.has(episodeKeyValue);
   const isWatched = getWatchCount(watchedDates, episodeKeyValue) > 0;
+  const rewatchCount = getRewatchCount(watchedDates, episodeKeyValue);
 
   const baseRowClassName = `flex cursor-pointer items-stretch overflow-hidden rounded-lg bg-white/[0.03] hover:bg-white/[0.06] ${faded ? 'opacity-60 hover:opacity-100' : ''
     }`;
@@ -205,24 +216,34 @@ function WatchListRowContent({
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center pr-3 pl-1">
-          <button
-            type="button"
-            aria-label={
-              isWatched
-                ? 'Unmark episode as watched'
-                : 'Mark episode as watched'
+        <div
+          className="flex shrink-0 items-center pr-3 pl-1"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <WatchedToggleButton
+            isWatched={isWatched}
+            isPending={isPending}
+            rewatchCount={rewatchCount}
+            markLabel="Mark episode as watched"
+            rewatchLabel="+1 Rewatched"
+            removeLabel="Not watched"
+            removeRewatchesLabel="Remove last rewatch"
+            onMark={() =>
+              onToggleEpisode(episode.seasonNumber, episode.episodeNumber)
             }
-            disabled={isPending}
-            onClick={(event) => {
-              event.stopPropagation();
-              onToggleEpisode(episode.seasonNumber, episode.episodeNumber);
-            }}
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition-colors disabled:opacity-50 ${isWatched ? 'bg-accent' : 'bg-muted-foreground'
-              }`}
-          >
-            <Check className="h-4 w-4 text-white" />
-          </button>
+            onRewatch={() =>
+              onRewatchEpisode(episode.seasonNumber, episode.episodeNumber)
+            }
+            onRemove={() =>
+              onToggleEpisode(episode.seasonNumber, episode.episodeNumber)
+            }
+            onRemoveRewatches={() =>
+              onRemoveLastEpisodeRewatch(
+                episode.seasonNumber,
+                episode.episodeNumber
+              )
+            }
+          />
         </div>
       </div>
 

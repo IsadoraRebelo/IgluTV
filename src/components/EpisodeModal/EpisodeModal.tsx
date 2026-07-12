@@ -2,6 +2,7 @@
 
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { ChevronDown, X } from 'lucide-react';
+import { CalendarDaysIcon } from '@heroicons/react/24/solid';
 import Image from 'next/image';
 
 import { useState } from 'react';
@@ -138,12 +139,12 @@ export function EpisodeModal({
                           <button
                             type="button"
                             onClick={() => setHistoryOpen((prev) => !prev)}
-                            className="flex items-center gap-1 text-xs text-[#8a9bab]"
+                            className="mt-4 flex items-center gap-1 text-sm text-[#8a9bab]"
                           >
-                            <span>
-                              Watched {episodeWatchDates.length}× · first{' '}
+                            <div className="flex items-center gap-1">
+                              <CalendarDaysIcon className="h-5 w-5" /> {episodeWatchDates.length}× first{' '}
                               {formatDate(episodeWatchDates[0])}
-                            </span>
+                            </div>
                             <ChevronDown
                               className={`h-3 w-3 transition-transform ${historyOpen ? 'rotate-180' : ''
                                 }`}
@@ -168,49 +169,57 @@ export function EpisodeModal({
                             type="button"
                             disabled={isPending}
                             onClick={() => setEditingIndex(0)}
-                            className="text-xs text-[#8a9bab] underline decoration-dotted underline-offset-2 hover:text-white disabled:pointer-events-none disabled:opacity-50"
+                            className="mt-4 text-sm text-[#8a9bab] underline decoration-dotted underline-offset-2 hover:text-white disabled:pointer-events-none disabled:opacity-50"
                           >
-                            Watched · {formatDate(episodeWatchDates[0])}
+                            <div className="flex items-center gap-1">
+                              <CalendarDaysIcon className="h-5 w-5" /> {formatDate(episodeWatchDates[0])}
+                            </div>
                           </button>
                         )}
-                        {historyOpen && episodeWatchDates.length > 1 ? (
-                          <ul className="mt-1 flex flex-col gap-0.5 pl-1">
-                            {episodeWatchDates.map((date, index) =>
-                              editingIndex === index ? (
-                                <li key={`${date}-${index}`}>
-                                  <input
-                                    type="date"
-                                    autoFocus
-                                    defaultValue={date}
-                                    max={todayIso()}
-                                    onBlur={(event) =>
-                                      handleDateInputCommit(
-                                        index,
-                                        event.target.value
-                                      )
-                                    }
-                                    onKeyDown={(event) => {
-                                      if (event.key === 'Escape') {
-                                        setEditingIndex(null);
+                        {episodeWatchDates.length > 1 ? (
+                          <div
+                            className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                              historyOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                            }`}
+                          >
+                            <ul className="mt-1 flex flex-col gap-0.5 overflow-hidden pl-1">
+                              {episodeWatchDates.map((date, index) =>
+                                editingIndex === index ? (
+                                  <li key={`${date}-${index}`}>
+                                    <input
+                                      type="date"
+                                      autoFocus
+                                      defaultValue={date}
+                                      max={todayIso()}
+                                      onBlur={(event) =>
+                                        handleDateInputCommit(
+                                          index,
+                                          event.target.value
+                                        )
                                       }
-                                    }}
-                                    className="rounded border border-white/10 bg-white/5 px-1 py-0.5 text-xs text-[#c2d0dd]"
-                                  />
-                                </li>
-                              ) : (
-                                <li key={`${date}-${index}`}>
-                                  <button
-                                    type="button"
-                                    disabled={isPending}
-                                    onClick={() => setEditingIndex(index)}
-                                    className="text-xs text-[#678] underline decoration-dotted underline-offset-2 hover:text-white disabled:pointer-events-none disabled:opacity-50"
-                                  >
-                                    {formatDate(date)}
-                                  </button>
-                                </li>
-                              )
-                            )}
-                          </ul>
+                                      onKeyDown={(event) => {
+                                        if (event.key === 'Escape') {
+                                          setEditingIndex(null);
+                                        }
+                                      }}
+                                      className="rounded border border-white/10 bg-white/5 px-1 py-0.5 text-xs text-[#c2d0dd]"
+                                    />
+                                  </li>
+                                ) : (
+                                  <li key={`${date}-${index}`}>
+                                    <button
+                                      type="button"
+                                      disabled={isPending}
+                                      onClick={() => setEditingIndex(index)}
+                                      className="text-xs text-[#678] underline decoration-dotted underline-offset-2 hover:text-white disabled:pointer-events-none disabled:opacity-50"
+                                    >
+                                      {formatDate(date)}
+                                    </button>
+                                  </li>
+                                )
+                              )}
+                            </ul>
+                          </div>
                         ) : null}
                       </div>
                     ) : null}

@@ -7,10 +7,10 @@
   --muted: #e4e4e7;
   --muted-foreground: #71717a;
   --destructive: #dc2626;
-  --accent-color: #5ed0e8;
+  --accent-color: #3ec6e0;
   --accent-foreground: #5d848f;
-  --dropped-color: #c97b7b;
-  --paused-color: #6fa8c9;
+  --dropped-color: #ef4444;
+  --paused-color: #28414a;
 }
 
 @theme inline {
@@ -100,10 +100,10 @@
     --muted: #27272a;
     --muted-foreground: #a1a1aa;
     --destructive: #ef4444;
-    --accent-color: #5ed0e8;
+    --accent-color: #3ec6e0;
     --accent-foreground: #5d848f;
-    --dropped-color: #c97b7b;
-    --paused-color: #6fa8c9;
+    --dropped-color: #ef4444;
+    --paused-color: #28414a;
   }
 }
 

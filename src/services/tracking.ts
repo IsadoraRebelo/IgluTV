@@ -92,17 +92,35 @@ export async function getRecentWatchedEpisodes(
     .select('id, tmdb_show_id, season_number, episode_number, watched_on')
     .order('watched_on', { ascending: false })
     .order('id', { ascending: false })
-    .limit(limit);
+    .limit(limit * 10);
 
   if (error) throw new ServiceError(error.message, error.code);
 
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    tmdbShowId: row.tmdb_show_id,
-    seasonNumber: row.season_number,
-    episodeNumber: row.episode_number,
-    watchedOn: row.watched_on,
-  }));
+  const seenEpisodes = new Set<string>();
+  const deduped: {
+    id: number;
+    tmdbShowId: number;
+    seasonNumber: number;
+    episodeNumber: number;
+    watchedOn: string;
+  }[] = [];
+
+  for (const row of data ?? []) {
+    const key = `${row.tmdb_show_id}-${row.season_number}-${row.episode_number}`;
+    if (seenEpisodes.has(key)) continue;
+    seenEpisodes.add(key);
+
+    deduped.push({
+      id: row.id,
+      tmdbShowId: row.tmdb_show_id,
+      seasonNumber: row.season_number,
+      episodeNumber: row.episode_number,
+      watchedOn: row.watched_on,
+    });
+    if (deduped.length >= limit) break;
+  }
+
+  return deduped;
 }
 
 export async function getMyShows(status?: ShowStatus): Promise<ShowTracking[]> {

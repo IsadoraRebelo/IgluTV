@@ -352,7 +352,7 @@ export default async function TrackingPage() {
   return (
     <div className="flex flex-1 flex-col bg-[#14181c] font-sans antialiased">
 
-      <main className="mx-auto w-full max-w-[950px] flex-1 px-5 pb-20 md:px-0">
+      <main className="mx-auto w-full max-w-[950px] flex-1 px-3 pb-20 md:px-0">
         <div className="mt-6 grid grid-cols-1 gap-10 md:mt-10 lg:grid-cols-[1fr_260px]">
 
           <div>

@@ -58,7 +58,7 @@ const SHOW_ACTIONS: {
       status: 'watch_later',
       icon: <ClockIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
       label: 'Add to watchlist',
-      activeColor: '[&_svg]:!text-accent',
+      activeColor: '[&_svg]:!text-accent-foreground',
     },
     {
       id: '2',
@@ -170,7 +170,7 @@ export default async function ShowPage({
             </div>
           </div>
 
-          <div className="relative z-10 mx-auto -mt-24 w-full max-w-[950px] px-2 px-5 sm:-mt-32 md:px-0">
+          <div className="relative z-10 mx-auto -mt-24 w-full max-w-[950px] px-3 sm:-mt-32 md:px-0">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
               <div className="relative hidden h-[345px] w-[230px] shrink-0 overflow-hidden rounded-md shadow-2xl ring-1 ring-white/10 md:block">
                 {details.posterUrl ? (
@@ -205,7 +205,7 @@ export default async function ShowPage({
           </div>
         </div>
 
-        <main className="mx-auto w-full max-w-[950px] flex-1 px-5 pb-20 md:px-0">
+        <main className="mx-auto w-full max-w-[950px] flex-1 px-3 pb-20 md:px-0">
           <div className="mt-6 grid grid-cols-1 gap-10 md:mt-10 lg:grid-cols-[1fr_260px]">
             <div>
               <ShowTabs
@@ -256,8 +256,8 @@ function HomeTab({
       />
 
       <section>
-        <h2 className="mb-4 text-lg font-semibold text-white">Details</h2>
-        <div className="flex flex-col divide-y divide-white/10 text-sm">
+        <h2 className="mb-3 px-1 text-lg font-semibold text-white">Details</h2>
+        <div className="px-1 flex flex-col divide-y divide-white/10 text-sm">
           <DetailRow label="Seasons" value={meta?.numberOfSeasons} />
           <DetailRow label="Episodes" value={meta?.numberOfEpisodes} />
           <DetailRow
