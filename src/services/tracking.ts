@@ -31,7 +31,8 @@ function codeToStatus(code: number): ShowStatus {
   return status;
 }
 
-export async function getShowTracking(
+export async function getShowTrackingForUser(
+  userId: string,
   showId: number
 ): Promise<ShowTracking | null> {
   const supabase = await createClient();
@@ -39,6 +40,7 @@ export async function getShowTracking(
   const { data, error } = await supabase
     .from('show_tracking')
     .select('tmdb_show_id, status, is_favourite, skip_catch_up_prompt')
+    .eq('user_id', userId)
     .eq('tmdb_show_id', showId)
     .maybeSingle();
 
@@ -53,7 +55,18 @@ export async function getShowTracking(
   };
 }
 
-export async function getWatchedEpisodes(
+export async function getShowTracking(
+  showId: number
+): Promise<ShowTracking | null> {
+  const supabase = await createClient();
+  const userId = await getOptionalUserId(supabase);
+  if (!userId) return null;
+
+  return getShowTrackingForUser(userId, showId);
+}
+
+export async function getWatchedEpisodesForUser(
+  userId: string,
   showId: number
 ): Promise<EpisodeWatch[]> {
   const supabase = await createClient();
@@ -61,6 +74,7 @@ export async function getWatchedEpisodes(
   const { data, error } = await supabase
     .from('episode_watches')
     .select('id, season_number, episode_number, watched_on')
+    .eq('user_id', userId)
     .eq('tmdb_show_id', showId)
     .order('watched_on', { ascending: true });
 
@@ -74,22 +88,34 @@ export async function getWatchedEpisodes(
   }));
 }
 
-export async function getRecentWatchedEpisodes(
+export async function getWatchedEpisodes(
+  showId: number
+): Promise<EpisodeWatch[]> {
+  const supabase = await createClient();
+  const userId = await getOptionalUserId(supabase);
+  if (!userId) return [];
+
+  return getWatchedEpisodesForUser(userId, showId);
+}
+
+type RecentWatchedEpisodeRow = {
+  id: number;
+  tmdbShowId: number;
+  seasonNumber: number;
+  episodeNumber: number;
+  watchedOn: string;
+};
+
+export async function getRecentWatchedEpisodesForUser(
+  userId: string,
   limit: number
-): Promise<
-  {
-    id: number;
-    tmdbShowId: number;
-    seasonNumber: number;
-    episodeNumber: number;
-    watchedOn: string;
-  }[]
-> {
+): Promise<RecentWatchedEpisodeRow[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('episode_watches')
     .select('id, tmdb_show_id, season_number, episode_number, watched_on')
+    .eq('user_id', userId)
     .order('watched_on', { ascending: false })
     .order('id', { ascending: false })
     .limit(limit * 10);
@@ -97,13 +123,7 @@ export async function getRecentWatchedEpisodes(
   if (error) throw new ServiceError(error.message, error.code);
 
   const seenEpisodes = new Set<string>();
-  const deduped: {
-    id: number;
-    tmdbShowId: number;
-    seasonNumber: number;
-    episodeNumber: number;
-    watchedOn: string;
-  }[] = [];
+  const deduped: RecentWatchedEpisodeRow[] = [];
 
   for (const row of data ?? []) {
     const key = `${row.tmdb_show_id}-${row.season_number}-${row.episode_number}`;
@@ -123,12 +143,114 @@ export async function getRecentWatchedEpisodes(
   return deduped;
 }
 
-export async function getMyShows(status?: ShowStatus): Promise<ShowTracking[]> {
+export async function getRecentWatchedEpisodes(
+  limit: number
+): Promise<RecentWatchedEpisodeRow[]> {
+  const supabase = await createClient();
+  const userId = await getOptionalUserId(supabase);
+  if (!userId) return [];
+
+  return getRecentWatchedEpisodesForUser(userId, limit);
+}
+
+// Like getRecentWatchedEpisodesForUser, but deduped by show instead of by
+// episode — each show appears once, with only its most recently watched
+// episode, for "recent activity" views that show one card per show.
+export async function getRecentWatchedShowsForUser(
+  userId: string,
+  limit: number
+): Promise<RecentWatchedEpisodeRow[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('episode_watches')
+    .select('id, tmdb_show_id, season_number, episode_number, watched_on')
+    .eq('user_id', userId)
+    .order('watched_on', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(limit * 20);
+
+  if (error) throw new ServiceError(error.message, error.code);
+
+  const seenShows = new Set<number>();
+  const deduped: RecentWatchedEpisodeRow[] = [];
+
+  for (const row of data ?? []) {
+    if (seenShows.has(row.tmdb_show_id)) continue;
+    seenShows.add(row.tmdb_show_id);
+
+    deduped.push({
+      id: row.id,
+      tmdbShowId: row.tmdb_show_id,
+      seasonNumber: row.season_number,
+      episodeNumber: row.episode_number,
+      watchedOn: row.watched_on,
+    });
+    if (deduped.length >= limit) break;
+  }
+
+  return deduped;
+}
+
+// Diary entries: one per show the user has marked 'completed', dated by
+// that show's most recently watched episode (its finishing date).
+export async function getFinishedShowsForUser(
+  userId: string
+): Promise<RecentWatchedEpisodeRow[]> {
+  const supabase = await createClient();
+
+  const { data: completedShows, error: completedError } = await supabase
+    .from('show_tracking')
+    .select('tmdb_show_id')
+    .eq('user_id', userId)
+    .eq('status', statusToCode('completed'));
+
+  if (completedError) {
+    throw new ServiceError(completedError.message, completedError.code);
+  }
+
+  const completedIds = (completedShows ?? []).map((row) => row.tmdb_show_id);
+  if (completedIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('episode_watches')
+    .select('id, tmdb_show_id, season_number, episode_number, watched_on')
+    .eq('user_id', userId)
+    .in('tmdb_show_id', completedIds)
+    .order('watched_on', { ascending: false })
+    .order('id', { ascending: false });
+
+  if (error) throw new ServiceError(error.message, error.code);
+
+  const seenShows = new Set<number>();
+  const deduped: RecentWatchedEpisodeRow[] = [];
+
+  for (const row of data ?? []) {
+    if (seenShows.has(row.tmdb_show_id)) continue;
+    seenShows.add(row.tmdb_show_id);
+
+    deduped.push({
+      id: row.id,
+      tmdbShowId: row.tmdb_show_id,
+      seasonNumber: row.season_number,
+      episodeNumber: row.episode_number,
+      watchedOn: row.watched_on,
+    });
+  }
+
+  return deduped;
+}
+
+export async function getShowsForUser(
+  userId: string,
+  status?: ShowStatus
+): Promise<ShowTracking[]> {
   const supabase = await createClient();
 
   let query = supabase
     .from('show_tracking')
-    .select('tmdb_show_id, status, is_favourite, skip_catch_up_prompt');
+    .select('tmdb_show_id, status, is_favourite, skip_catch_up_prompt')
+    .eq('user_id', userId);
 
   if (status) query = query.eq('status', statusToCode(status));
 
@@ -143,6 +265,85 @@ export async function getMyShows(status?: ShowStatus): Promise<ShowTracking[]> {
   }));
 }
 
+export async function getMyShows(status?: ShowStatus): Promise<ShowTracking[]> {
+  const supabase = await createClient();
+  const userId = await getOptionalUserId(supabase);
+  if (!userId) return [];
+
+  return getShowsForUser(userId, status);
+}
+
+export async function getFavouriteShowsForUser(
+  userId: string
+): Promise<ShowTracking[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('show_tracking')
+    .select('tmdb_show_id, status, is_favourite, skip_catch_up_prompt')
+    .eq('user_id', userId)
+    .eq('is_favourite', true);
+
+  if (error) throw new ServiceError(error.message, error.code);
+
+  return (data ?? []).map((row) => ({
+    tmdbShowId: row.tmdb_show_id,
+    status: codeToStatus(row.status),
+    isFavourite: row.is_favourite,
+    skipCatchUpPrompt: row.skip_catch_up_prompt,
+  }));
+}
+
+export async function getWatchStatsForUser(userId: string): Promise<{
+  totalShows: number;
+  totalEpisodes: number;
+  showsThisYear: number;
+  episodesThisYear: number;
+}> {
+  const supabase = await createClient();
+
+  const { count: totalShows, error: totalShowsError } = await supabase
+    .from('show_tracking')
+    .select('tmdb_show_id', { count: 'exact', head: true })
+    .eq('user_id', userId);
+  if (totalShowsError) {
+    throw new ServiceError(totalShowsError.message, totalShowsError.code);
+  }
+
+  const { count: totalEpisodes, error: totalEpisodesError } = await supabase
+    .from('episode_watches')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId);
+  if (totalEpisodesError) {
+    throw new ServiceError(
+      totalEpisodesError.message,
+      totalEpisodesError.code
+    );
+  }
+
+  const currentYear = new Date().getFullYear();
+  const { data: thisYearRows, error: thisYearError } = await supabase
+    .from('episode_watches')
+    .select('tmdb_show_id')
+    .eq('user_id', userId)
+    .gte('watched_on', `${currentYear}-01-01`)
+    .lte('watched_on', `${currentYear}-12-31`);
+  if (thisYearError) {
+    throw new ServiceError(thisYearError.message, thisYearError.code);
+  }
+
+  const distinctShowsThisYear = new Set(
+    (thisYearRows ?? []).map((row) => row.tmdb_show_id)
+  );
+
+  return {
+    totalShows: totalShows ?? 0,
+    totalEpisodes: totalEpisodes ?? 0,
+    showsThisYear: distinctShowsThisYear.size,
+    episodesThisYear: thisYearRows?.length ?? 0,
+  };
+}
+
 async function requireUserId(
   supabase: Awaited<ReturnType<typeof createClient>>
 ): Promise<string> {
@@ -153,6 +354,16 @@ async function requireUserId(
   if (!user) throw new ServiceError('Not authenticated', 'not_authenticated');
 
   return user.id;
+}
+
+async function getOptionalUserId(
+  supabase: Awaited<ReturnType<typeof createClient>>
+): Promise<string | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  return user?.id ?? null;
 }
 
 export async function setShowStatus(
@@ -210,6 +421,7 @@ export async function toggleFavourite(
   const { data: existing, error: selectError } = await supabase
     .from('show_tracking')
     .select('tmdb_show_id')
+    .eq('user_id', userId)
     .eq('tmdb_show_id', showId)
     .maybeSingle();
 

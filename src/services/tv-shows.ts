@@ -326,7 +326,6 @@ async function fetchTmdbWatchProviders(id: number): Promise<WatchProvider[]> {
       // about.
       preferredPriority: number | null;
       countries: Set<string>;
-      links: Record<string, string>;
     };
 
     const byProvider = new Map<number, Omit<ProviderAgg, 'providerId'>>();
@@ -347,7 +346,6 @@ async function fetchTmdbWatchProviders(id: number): Promise<WatchProvider[]> {
               provider.display_priority
             );
           }
-          if (data.link) existing.links[country] = data.link;
         } else {
           byProvider.set(provider.provider_id, {
             providerName: provider.provider_name,
@@ -359,7 +357,6 @@ async function fetchTmdbWatchProviders(id: number): Promise<WatchProvider[]> {
               ? provider.display_priority
               : null,
             countries: new Set([country]),
-            links: data.link ? { [country]: data.link } : {},
           });
         }
       }
@@ -380,9 +377,6 @@ async function fetchTmdbWatchProviders(id: number): Promise<WatchProvider[]> {
       }
 
       provider.countries.forEach((country) => existing.countries.add(country));
-      for (const [country, link] of Object.entries(provider.links)) {
-        if (!(country in existing.links)) existing.links[country] = link;
-      }
       if (provider.preferredPriority !== null) {
         existing.preferredPriority = Math.min(
           existing.preferredPriority ?? Infinity,
@@ -409,7 +403,6 @@ async function fetchTmdbWatchProviders(id: number): Promise<WatchProvider[]> {
         providerName: provider.providerName,
         logoUrl: provider.logoUrl,
         countries: Array.from(provider.countries),
-        links: provider.links,
       }));
   } catch (err) {
     console.warn('[tv-shows] watch providers fetch failed', err);

@@ -122,8 +122,6 @@ export type WatchProvider = {
   providerName: string;
   logoUrl: string | null;
   countries: string[];
-  // Country code -> JustWatch page for this show in that country.
-  links: Record<string, string>;
 };
 
 export type TMDBWatchProviderRaw = {
@@ -134,7 +132,7 @@ export type TMDBWatchProviderRaw = {
 };
 
 export type TMDBWatchProvidersRaw = {
-  results?: Record<string, { link?: string; flatrate?: TMDBWatchProviderRaw[] }>;
+  results?: Record<string, { flatrate?: TMDBWatchProviderRaw[] }>;
 };
 
 export type TMDBSeriesDetailsRaw = {

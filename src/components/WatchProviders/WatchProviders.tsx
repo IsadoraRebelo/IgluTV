@@ -96,11 +96,12 @@ export function WatchProviders({
               const countryLabel = availability.countries
                 .map((code) => getCountryDisplayName(code) ?? code)
                 .join(', ');
-              // Link to the JustWatch page for whichever country we're showing.
-              const href = provider.links[availability.countries[0]];
 
-              const content = (
-                <>
+              return (
+                <li
+                  key={provider.providerId}
+                  className="flex items-center gap-3 rounded-md bg-white/[0.03] px-3 py-2"
+                >
                   {provider.logoUrl ? (
                     <Image
                       src={provider.logoUrl}
@@ -120,31 +121,23 @@ export function WatchProviders({
                       {countryLabel}
                     </span>
                   </div>
-                </>
-              );
-
-              return (
-                <li key={provider.providerId}>
-                  {href ? (
-                    <a
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 rounded-md bg-white/[0.03] px-3 py-2 transition-colors hover:bg-white/[0.06]"
-                    >
-                      {content}
-                    </a>
-                  ) : (
-                    <div className="flex items-center gap-3 rounded-md bg-white/[0.03] px-3 py-2">
-                      {content}
-                    </div>
-                  )}
                 </li>
               );
             })}
           </ul>
 
-          <div className="mt-2 flex justify-end">
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <p className="text-xs text-[#678]">
+              Streaming data provided by{' '}
+              <a
+                href="https://www.justwatch.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-[#9ab0bf]"
+              >
+                JustWatch
+              </a>
+            </p>
             <select
               value={country}
               disabled={isSaving}
@@ -167,18 +160,6 @@ export function WatchProviders({
               </optgroup>
             </select>
           </div>
-
-          <p className="mt-2 text-xs text-[#678]">
-            Streaming data provided by{' '}
-            <a
-              href="https://www.justwatch.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline hover:text-[#9ab0bf]"
-            >
-              JustWatch
-            </a>
-          </p>
         </div>
       </div>
     </div>
