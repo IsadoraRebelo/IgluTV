@@ -13,7 +13,7 @@ import {
 } from '@/components/ShowTracker/utils';
 
 
-import type { CastMember, Season, SeasonEpisode } from '@/types';
+import type { CastMember, Season, SeasonEpisode, ShowStatus } from '@/types';
 
 function formatDate(dateStr: string | null): string | null {
   if (!dateStr) return null;
@@ -24,6 +24,21 @@ function formatDate(dateStr: string | null): string | null {
     day: 'numeric',
     year: 'numeric',
   });
+}
+
+function getSeasonStatusBackground(
+  showStatus: ShowStatus | null,
+  watchedCount: number,
+  markableCount: number
+): string {
+  if (showStatus === 'paused') return 'var(--color-paused)';
+  if (showStatus === 'dropped') return 'var(--color-dropped)';
+
+  if (markableCount === 0 || watchedCount === 0) return 'var(--color-muted)';
+  if (watchedCount >= markableCount) return 'var(--color-accent)';
+
+  const percent = (watchedCount / markableCount) * 100;
+  return `linear-gradient(to right, var(--color-accent) ${percent}%, var(--color-muted) ${percent}%)`;
 }
 
 export function SeasonAccordion({
@@ -38,6 +53,7 @@ export function SeasonAccordion({
   onRewatchSeason,
   onRemoveLastSeasonRewatch,
   isLoggedIn,
+  showStatus,
 }: {
   seasons: Season[];
   cast: CastMember[];
@@ -53,6 +69,7 @@ export function SeasonAccordion({
   onRewatchSeason: (season: Season) => void;
   onRemoveLastSeasonRewatch: (season: Season) => void;
   isLoggedIn: boolean;
+  showStatus: ShowStatus | null;
 }) {
   const [expandedSeason, setExpandedSeason] = useState<number | null>(null);
   const [selected, setSelected] = useState<{
@@ -85,13 +102,19 @@ export function SeasonAccordion({
           markableEpisodes.length === 0
             ? 0
             : Math.min(
-              ...markableEpisodes.map((ep) =>
-                getRewatchCount(
-                  watchedDates,
-                  episodeKey(season.seasonNumber, ep.episodeNumber)
+                ...markableEpisodes.map((ep) =>
+                  getRewatchCount(
+                    watchedDates,
+                    episodeKey(season.seasonNumber, ep.episodeNumber)
+                  )
                 )
-              )
-            );
+              );
+
+        const statusBackground = getSeasonStatusBackground(
+          showStatus,
+          seasonWatchedCount,
+          markableEpisodes.length
+        );
 
         return (
           <div
@@ -117,8 +140,9 @@ export function SeasonAccordion({
                   ) : null}
                 </div>
                 <ChevronDown
-                  className={`h-6 w-6 shrink-0 text-[#678] transition-transform duration-300 ease-in-out ${isExpanded ? 'rotate-180' : ''
-                    }`}
+                  className={`h-6 w-6 shrink-0 text-[#678] transition-transform duration-300 ease-in-out ${
+                    isExpanded ? 'rotate-180' : ''
+                  }`}
                 />
               </button>
 
@@ -147,11 +171,16 @@ export function SeasonAccordion({
             </div>
 
             <div
-              className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-                }`}
+              className="h-1 w-full"
+              style={{ background: statusBackground }}
+            />
+
+            <div
+              className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+              }`}
             >
               <div className="overflow-hidden">
-                <div className="bg-accent h-1 w-full" />
                 <div className="flex flex-col gap-2 p-2">
                   {season.episodes.map((episode) => {
                     const daysUntilAir = getDaysUntilAir(episode.airDate);
@@ -199,8 +228,8 @@ export function SeasonAccordion({
                               />
                             ) : null}
                           </div>
-                          <div className="flex min-w-0 flex-1 py-4 flex-col justify-center gap-0.5">
-                            <p className="truncate text-md font-semibold text-[#c2d0dd]">
+                          <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 py-4">
+                            <p className="text-md truncate font-semibold text-[#c2d0dd]">
                               {String(episode.episodeNumber)}. {episode.name}
                             </p>
                             {formatDate(episode.airDate) ? (
