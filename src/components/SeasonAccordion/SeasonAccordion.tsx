@@ -199,13 +199,9 @@ export function SeasonAccordion({
                               />
                             ) : null}
                           </div>
-                          <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 py-2">
-                            <p className="text-sm font-semibold text-white">
-                              S{String(season.seasonNumber).padStart(2, '0')} |
-                              E{String(episode.episodeNumber).padStart(2, '0')}
-                            </p>
-                            <p className="truncate text-sm text-[#c2d0dd]">
-                              {episode.name}
+                          <div className="flex min-w-0 flex-1 py-4 flex-col justify-center gap-0.5">
+                            <p className="truncate text-md font-semibold text-[#c2d0dd]">
+                              {String(episode.episodeNumber)}. {episode.name}
                             </p>
                             {formatDate(episode.airDate) ? (
                               <p className="text-xs text-[#678]">

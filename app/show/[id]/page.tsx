@@ -1,14 +1,17 @@
 import {
+  ClockIcon,
   EyeIcon,
+  HeartIcon,
   PauseIcon,
   PlayIcon,
   RocketLaunchIcon,
   TrashIcon,
 } from '@heroicons/react/24/solid';
-import { Clock, Image as ImageIcon, ImagePlus } from 'lucide-react';
+import { Image as ImageIcon, ImagePlus } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
+import type { ReactNode } from 'react';
 import {
   ShowActionsMenu,
   ShowActionsSidebar,
@@ -24,7 +27,6 @@ import { getTmdbShowFullDetails } from '@/services/tv-shows';
 import { createClient } from '@/supabase/server';
 
 import type { ShowDetails, ShowMeta, ShowStatus } from '@/types';
-import type { ReactNode } from 'react';
 
 const SHOW_ACTIONS: {
   id?: string;
@@ -35,46 +37,52 @@ const SHOW_ACTIONS: {
   label: string;
   activeColor?: string;
 }[] = [
-  {
-    id: 'mark-watched',
-    icon: <EyeIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-    reviveIcon: <PlayIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-    finishedIcon: (
-      <RocketLaunchIcon className="h-4 w-4 text-yellow-500 md:h-5 md:w-5" />
-    ),
-    label: 'Mark watched',
-    activeColor: '[&_svg]:!text-green-500',
-  },
-  {
-    id: '1',
-    status: 'watch_later',
-    icon: <Clock className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-    label: 'Add to watchlist',
-    activeColor: '[&_svg]:!text-green-500',
-  },
-  {
-    id: '2',
-    status: 'paused',
-    icon: <PauseIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-    label: 'Pause',
-    activeColor: '[&_svg]:!text-red-500',
-  },
-  {
-    id: '3',
-    status: 'dropped',
-    icon: <TrashIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-    label: 'Drop',
-    activeColor: '[&_svg]:!text-gray-200',
-  },
-  {
-    icon: <ImageIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-    label: 'Change poster',
-  },
-  {
-    icon: <ImagePlus className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-    label: 'Change banner',
-  },
-];
+    {
+      id: 'mark-watched',
+      icon: <EyeIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+      reviveIcon: <PlayIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+      finishedIcon: (
+        <RocketLaunchIcon className="h-4 w-4 text-yellow-500 md:h-5 md:w-5" />
+      ),
+      label: 'Mark watched',
+      activeColor: '[&_svg]:!text-accent',
+    },
+    {
+      id: 'favourite',
+      icon: <HeartIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+      label: 'Favourite',
+      activeColor: '[&_svg]:!text-red-500',
+    },
+    {
+      id: '1',
+      status: 'watch_later',
+      icon: <ClockIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+      label: 'Add to watchlist',
+      activeColor: '[&_svg]:!text-accent',
+    },
+    {
+      id: '2',
+      status: 'paused',
+      icon: <PauseIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+      label: 'Pause',
+      activeColor: '[&_svg]:!text-paused',
+    },
+    {
+      id: '3',
+      status: 'dropped',
+      icon: <TrashIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+      label: 'Drop',
+      activeColor: '[&_svg]:!text-dropped',
+    },
+    {
+      icon: <ImageIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+      label: 'Change poster',
+    },
+    {
+      icon: <ImagePlus className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+      label: 'Change banner',
+    },
+  ];
 
 function formatDate(dateStr: string | null | undefined): string | null {
   if (!dateStr) return null;
@@ -132,6 +140,7 @@ export default async function ShowPage({
       watchedEpisodes={watchedEpisodes}
       skipCatchUpPrompt={tracking?.skipCatchUpPrompt ?? false}
       initialStatus={tracking?.status ?? null}
+      initialIsFavourite={tracking?.isFavourite ?? false}
       tmdbStatus={details.status}
       isLoggedIn={isLoggedIn}
     >
@@ -360,16 +369,6 @@ function SimilarTab({ shows }: { shows: ShowMeta['similar'] }) {
                 sizes="(max-width: 640px) 33vw, 20vw"
                 className="object-cover"
               />
-            ) : null}
-          </div>
-          <div className="flex items-center justify-between gap-2">
-            <p className="truncate text-xs text-[#c2d0dd]">
-              {similarShow.name}
-            </p>
-            {similarShow.matchPercentage !== null ? (
-              <span className="shrink-0 text-xs text-[#8a9bab]">
-                {similarShow.matchPercentage}%
-              </span>
             ) : null}
           </div>
         </Link>

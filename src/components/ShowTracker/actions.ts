@@ -10,8 +10,10 @@ import {
   rewatchSeason,
   setShowStatus,
   setSkipCatchUpPrompt,
+  toggleFavourite,
   unmarkEpisodeWatched,
   unmarkSeasonWatched,
+  updateEpisodeWatchDate,
 } from '@/services/tracking';
 
 import type { ShowStatus } from '@/types';
@@ -104,4 +106,23 @@ export async function removeShowTrackingAction(
   showId: number
 ): Promise<TrackingActionResult> {
   return toResult(removeShowTracking(showId));
+}
+
+export async function toggleFavouriteAction(
+  showId: number,
+  next: boolean
+): Promise<TrackingActionResult> {
+  return toResult(toggleFavourite(showId, next));
+}
+
+export async function updateEpisodeWatchDateAction(
+  showId: number,
+  season: number,
+  episode: number,
+  previousDate: string,
+  nextDate: string
+): Promise<TrackingActionResult> {
+  return toResult(
+    updateEpisodeWatchDate(showId, season, episode, previousDate, nextDate)
+  );
 }

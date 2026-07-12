@@ -1,12 +1,17 @@
 'use client';
 
-
+import type { ReactNode } from 'react';
 import type { ShowStatus } from '@/types';
 
 import { cn } from '@/utils/cn';
 
+import {
+  getFavouritePresentation,
+  getMarkWatchedPresentation,
+  getStatusActionLabel,
+  getVisibleActions,
+} from './show-actions';
 import { useShowTrackingContext } from './ShowTrackingContext';
-import type { ReactNode } from 'react';
 
 export function ShowActionsSidebar({
   actions,
@@ -31,9 +36,20 @@ export function ShowActionsSidebar({
     showStatus,
     onSetShowStatus,
     isSettingShowStatus,
+    isFavourite,
+    onToggleFavourite,
+    isTogglingFavourite,
     isLoggedIn,
     openAuthDialog,
   } = useShowTrackingContext();
+
+  const visibleActions = getVisibleActions(actions, {
+    showStatus,
+    isShowCompleted,
+    isShowCaughtUp,
+    isShowFullyWatched,
+    watchedDatesCount: watchedDates.size,
+  });
 
   if (!isLoggedIn) {
     return (
@@ -47,34 +63,17 @@ export function ShowActionsSidebar({
     );
   }
 
-  const visibleActions = actions.filter((action) => {
-    if (action.status === undefined) return true;
-    if (isShowCompleted) return false;
-    if (action.status === 'watch_later') {
-      return showStatus === null || showStatus === 'watch_later';
-    }
-    return watchedDates.size > 0;
-  });
-
   return (
     <>
       {visibleActions.map((action) => {
         if (action.id === 'mark-watched') {
-          const isRevivingToWatching =
-            showStatus === 'paused' || showStatus === 'dropped';
-          const isFinished = isShowCompleted && !isRevivingToWatching;
-          const label = isRevivingToWatching
-            ? 'Back to watching'
-            : isFinished
-              ? 'Finished'
-              : isShowCaughtUp
-                ? 'All caught up'
-                : action.label;
-          const icon = isRevivingToWatching
-            ? (action.reviveIcon ?? action.icon)
-            : isFinished
-              ? (action.finishedIcon ?? action.icon)
-              : action.icon;
+          const { label, icon, shouldUseActiveColor } =
+            getMarkWatchedPresentation(action, {
+              showStatus,
+              isShowCompleted,
+              isShowCaughtUp,
+              isShowFullyWatched,
+            });
 
           return (
             <button
@@ -86,9 +85,31 @@ export function ShowActionsSidebar({
             >
               <span
                 className={cn(
-                  !isRevivingToWatching &&
-                    (isShowCaughtUp || isShowFullyWatched) &&
-                    action.activeColor
+                  shouldUseActiveColor && action.activeColor
+                )}
+              >
+                {icon}
+              </span>
+              {label}
+            </button>
+          );
+        }
+
+        if (action.id === 'favourite') {
+          const { label, icon, shouldUseActiveColor } =
+            getFavouritePresentation(action, isFavourite);
+
+          return (
+            <button
+              key={action.label}
+              type="button"
+              disabled={isTogglingFavourite}
+              onClick={onToggleFavourite}
+              className="text-md flex items-center gap-3 rounded-md px-3 py-2.5 text-left text-[#c2d0dd] hover:bg-white/5 disabled:pointer-events-none disabled:opacity-50"
+            >
+              <span
+                className={cn(
+                  shouldUseActiveColor && action.activeColor
                 )}
               >
                 {icon}
@@ -100,14 +121,8 @@ export function ShowActionsSidebar({
 
         if (action.status) {
           const isActive = showStatus === action.status;
+          const label = getStatusActionLabel(action, showStatus);
           const isWatchLater = action.status === 'watch_later';
-          const label = isActive
-            ? isWatchLater
-              ? 'Remove from watchlist'
-              : action.status === 'paused'
-                ? 'Paused'
-                : 'Dropped'
-            : action.label;
 
           return (
             <button

@@ -3,8 +3,8 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { ChevronDown, X } from 'lucide-react';
 import Image from 'next/image';
-import { useState } from 'react';
 
+import { useState } from 'react';
 import { WatchedToggleButton } from '@/components';
 import { useShowTrackingContext } from '@/components/ShowTracker/ShowTrackingContext';
 import {
@@ -27,26 +27,38 @@ function formatDate(dateStr: string | null): string | null {
   });
 }
 
+function todayIso(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export function EpisodeModal({
   episode,
   seasonNumber,
   cast,
   open,
   onOpenChange,
+  closeOnMark = false,
 }: {
   episode: SeasonEpisode | null;
   seasonNumber: number;
   cast: CastMember[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  closeOnMark?: boolean;
 }) {
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const {
     watchedDates,
     pendingKeys,
     onToggleEpisode,
     onRewatchEpisode,
     onRemoveLastEpisodeRewatch,
+    onUpdateEpisodeWatchDate,
     isLoggedIn,
   } = useShowTrackingContext();
 
@@ -59,11 +71,22 @@ export function EpisodeModal({
   const rewatchCount = Math.max(0, episodeWatchDates.length - 1);
   const isPending = key !== null && pendingKeys.has(key);
 
+  function handleDateInputCommit(index: number, value: string) {
+    setEditingIndex(null);
+    if (!value || episodeNumber === null) return;
+    const previousDate = episodeWatchDates[index];
+    if (!previousDate || value === previousDate) return;
+    onUpdateEpisodeWatchDate(seasonNumber, episodeNumber, previousDate, value);
+  }
+
   return (
     <DialogPrimitive.Root
       open={open}
       onOpenChange={(nextOpen) => {
-        if (!nextOpen) setHistoryOpen(false);
+        if (!nextOpen) {
+          setHistoryOpen(false);
+          setEditingIndex(null);
+        }
         onOpenChange(nextOpen);
       }}
     >
@@ -91,10 +114,10 @@ export function EpisodeModal({
                 </DialogPrimitive.Close>
               </div>
 
-              <div className="flex flex-col gap-3 p-5">
+              <div className="flex flex-col gap-3 p-5 pt-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <DialogPrimitive.Title className="text-md font-semibold text-white">
+                    <DialogPrimitive.Title className="text-sm font-semibold text-accent-foreground">
                       S{String(seasonNumber).padStart(2, '0')} | E
                       {String(episode.episodeNumber).padStart(2, '0')}
                     </DialogPrimitive.Title>
@@ -122,26 +145,71 @@ export function EpisodeModal({
                               {formatDate(episodeWatchDates[0])}
                             </span>
                             <ChevronDown
-                              className={`h-3 w-3 transition-transform ${
-                                historyOpen ? 'rotate-180' : ''
-                              }`}
+                              className={`h-3 w-3 transition-transform ${historyOpen ? 'rotate-180' : ''
+                                }`}
                             />
                           </button>
+                        ) : editingIndex === 0 ? (
+                          <input
+                            type="date"
+                            autoFocus
+                            defaultValue={episodeWatchDates[0]}
+                            max={todayIso()}
+                            onBlur={(event) =>
+                              handleDateInputCommit(0, event.target.value)
+                            }
+                            onKeyDown={(event) => {
+                              if (event.key === 'Escape') setEditingIndex(null);
+                            }}
+                            className="rounded border border-white/10 bg-white/5 px-1 py-0.5 text-xs text-[#c2d0dd]"
+                          />
                         ) : (
-                          <p className="text-xs text-[#8a9bab]">
+                          <button
+                            type="button"
+                            disabled={isPending}
+                            onClick={() => setEditingIndex(0)}
+                            className="text-xs text-[#8a9bab] underline decoration-dotted underline-offset-2 hover:text-white disabled:pointer-events-none disabled:opacity-50"
+                          >
                             Watched · {formatDate(episodeWatchDates[0])}
-                          </p>
+                          </button>
                         )}
                         {historyOpen && episodeWatchDates.length > 1 ? (
                           <ul className="mt-1 flex flex-col gap-0.5 pl-1">
-                            {episodeWatchDates.map((date, index) => (
-                              <li
-                                key={`${date}-${index}`}
-                                className="text-xs text-[#678]"
-                              >
-                                {formatDate(date)}
-                              </li>
-                            ))}
+                            {episodeWatchDates.map((date, index) =>
+                              editingIndex === index ? (
+                                <li key={`${date}-${index}`}>
+                                  <input
+                                    type="date"
+                                    autoFocus
+                                    defaultValue={date}
+                                    max={todayIso()}
+                                    onBlur={(event) =>
+                                      handleDateInputCommit(
+                                        index,
+                                        event.target.value
+                                      )
+                                    }
+                                    onKeyDown={(event) => {
+                                      if (event.key === 'Escape') {
+                                        setEditingIndex(null);
+                                      }
+                                    }}
+                                    className="rounded border border-white/10 bg-white/5 px-1 py-0.5 text-xs text-[#c2d0dd]"
+                                  />
+                                </li>
+                              ) : (
+                                <li key={`${date}-${index}`}>
+                                  <button
+                                    type="button"
+                                    disabled={isPending}
+                                    onClick={() => setEditingIndex(index)}
+                                    className="text-xs text-[#678] underline decoration-dotted underline-offset-2 hover:text-white disabled:pointer-events-none disabled:opacity-50"
+                                  >
+                                    {formatDate(date)}
+                                  </button>
+                                </li>
+                              )
+                            )}
                           </ul>
                         ) : null}
                       </div>
@@ -163,7 +231,7 @@ export function EpisodeModal({
                       onMark={() => {
                         if (episodeNumber === null) return;
                         onToggleEpisode(seasonNumber, episodeNumber);
-                        onOpenChange(false);
+                        if (closeOnMark) onOpenChange(false);
                       }}
                       onRewatch={() => {
                         if (episodeNumber === null) return;

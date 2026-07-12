@@ -12,7 +12,7 @@ import {
   useShowTrackingContext,
 } from '@/components';
 
-import { episodeKey } from '@/components/ShowTracker/utils';
+import { episodeKey, getWatchCount } from '@/components/ShowTracker/utils';
 
 import type {
   CastMember,
@@ -34,6 +34,7 @@ export function WatchListRow(props: {
   initialStatus: ShowStatus | null;
   tmdbStatus: string | null;
   cast: CastMember[];
+  faded?: boolean;
 }) {
   const {
     showId,
@@ -47,6 +48,7 @@ export function WatchListRow(props: {
     initialStatus,
     tmdbStatus,
     cast,
+    faded,
   } = props;
 
   return (
@@ -56,6 +58,7 @@ export function WatchListRow(props: {
       watchedEpisodes={watchedEpisodes}
       skipCatchUpPrompt={skipCatchUpPrompt}
       initialStatus={initialStatus}
+      initialIsFavourite={false}
       tmdbStatus={tmdbStatus}
       isLoggedIn
     >
@@ -66,6 +69,7 @@ export function WatchListRow(props: {
         backlogCount={backlogCount}
         badge={badge}
         cast={cast}
+        faded={faded}
       />
     </ShowTrackingProvider>
   );
@@ -78,6 +82,7 @@ function WatchListRowContent({
   backlogCount,
   badge,
   cast,
+  faded,
 }: {
   showId: number;
   showName: string;
@@ -85,18 +90,15 @@ function WatchListRowContent({
   backlogCount: number;
   badge: 'new' | 'premiere' | null;
   cast: CastMember[];
+  faded?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<'idle' | 'exiting' | 'entering'>('idle');
   const router = useRouter();
   const [isRefreshing, startTransition] = useTransition();
-  const { onToggleEpisode, pendingKeys } = useShowTrackingContext();
+  const { onToggleEpisode, pendingKeys, watchedDates } =
+    useShowTrackingContext();
 
-  // Any tracking mutation started from this row (the quick-mark button below,
-  // or the same "mark watched" button inside the EpisodeModal) settles by
-  // clearing pendingKeys. Once it does, play a slide-out transition; once
-  // that finishes, refresh so the server-computed list (which show is caught
-  // up, the new next episode, backlog counts, etc.) reflects the change.
   const prevPendingSizeRef = useRef(0);
   useEffect(() => {
     const prevSize = prevPendingSizeRef.current;
@@ -106,11 +108,6 @@ function WatchListRowContent({
     prevPendingSizeRef.current = pendingKeys.size;
   }, [pendingKeys]);
 
-  // router.refresh() is async — wrapping it in a transition lets us know
-  // when the refreshed data has actually landed and re-rendered, instead of
-  // resetting the phase immediately (which left the row permanently hidden:
-  // the exit animation is `forwards`-filled, so without this it stayed
-  // translated off-screen even once fresh content arrived).
   const wasRefreshingRef = useRef(false);
   useEffect(() => {
     if (wasRefreshingRef.current && !isRefreshing) {
@@ -130,9 +127,15 @@ function WatchListRowContent({
     }
   }
 
-  const isPending = pendingKeys.has(
-    episodeKey(episode.seasonNumber, episode.episodeNumber)
+  const episodeKeyValue = episodeKey(
+    episode.seasonNumber,
+    episode.episodeNumber
   );
+  const isPending = pendingKeys.has(episodeKeyValue);
+  const isWatched = getWatchCount(watchedDates, episodeKeyValue) > 0;
+
+  const baseRowClassName = `flex cursor-pointer items-stretch overflow-hidden rounded-lg bg-white/[0.03] hover:bg-white/[0.06] ${faded ? 'opacity-60 hover:opacity-100' : ''
+    }`;
 
   return (
     <>
@@ -149,13 +152,13 @@ function WatchListRowContent({
         onAnimationEnd={handleAnimationEnd}
         className={
           phase === 'exiting'
-            ? 'animate-slide-out-left flex cursor-pointer items-stretch overflow-hidden rounded-lg bg-white/[0.03] hover:bg-white/[0.06]'
+            ? `animate-slide-out-left ${baseRowClassName}`
             : phase === 'entering'
-              ? 'animate-slide-in-right flex cursor-pointer items-stretch overflow-hidden rounded-lg bg-white/[0.03] hover:bg-white/[0.06]'
-              : 'flex cursor-pointer items-stretch overflow-hidden rounded-lg bg-white/[0.03] hover:bg-white/[0.06]'
+              ? `animate-slide-in-right ${baseRowClassName}`
+              : baseRowClassName
         }
       >
-        <div className="relative aspect-square w-32 shrink-0 overflow-hidden bg-[#2c3440] sm:w-40">
+        <div className="relative aspect-square w-25 shrink-0 overflow-hidden bg-[#2c3440] sm:w-30">
           {episode.imageUrl ? (
             <Image
               src={episode.imageUrl}
@@ -165,20 +168,31 @@ function WatchListRowContent({
               className="object-cover"
             />
           ) : null}
+          {badge ? (
+            <span
+              className={
+                badge === 'premiere'
+                  ? 'absolute top-1 left-1 w-fit rounded-md bg-white px-2 py-0.5 text-xs font-semibold tracking-wide text-[#14181c] uppercase'
+                  : 'absolute top-1 left-1 w-fit rounded-md bg-yellow-400 px-2 py-0.5 text-xs font-semibold tracking-wide text-[#14181c] uppercase'
+              }
+            >
+              {badge === 'premiere' ? 'Premiere' : 'New'}
+            </span>
+          ) : null}
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 p-3">
+        <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 p-4">
           <Link
             href={`/show/${showId}`}
             onClick={(event) => event.stopPropagation()}
-            className="inline-flex w-fit items-center gap-1 self-start rounded-full border border-white/20 px-3 py-1 text-xs font-semibold tracking-wide text-white uppercase"
+            className="inline-flex max-w-full items-center gap-1 self-start rounded-full border border-white/20 px-3 py-1 text-xs font-semibold tracking-wide text-white uppercase"
           >
-            {showName}
-            <ChevronRight className="h-3 w-3" />
+            <span className="truncate">{showName}</span>
+            <ChevronRight className="h-3 w-3 shrink-0" />
           </Link>
 
           <div>
-            <p className="text-sm font-semibold text-white">
+            <p className="text-sm font-semibold text-accent-foreground pb-1">
               S{String(episode.seasonNumber).padStart(2, '0')} | E
               {String(episode.episodeNumber).padStart(2, '0')}
               {backlogCount > 0 ? (
@@ -189,30 +203,23 @@ function WatchListRowContent({
             </p>
             <p className="truncate text-sm text-[#c2d0dd]">{episode.name}</p>
           </div>
-
-          {badge ? (
-            <span
-              className={
-                badge === 'premiere'
-                  ? 'w-fit rounded-md bg-white px-2 py-0.5 text-xs font-semibold tracking-wide text-[#14181c] uppercase'
-                  : 'w-fit rounded-md bg-yellow-400 px-2 py-0.5 text-xs font-semibold tracking-wide text-[#14181c] uppercase'
-              }
-            >
-              {badge === 'premiere' ? 'Premiere' : 'New'}
-            </span>
-          ) : null}
         </div>
 
         <div className="flex shrink-0 items-center pr-3 pl-1">
           <button
             type="button"
-            aria-label="Mark episode as watched"
+            aria-label={
+              isWatched
+                ? 'Unmark episode as watched'
+                : 'Mark episode as watched'
+            }
             disabled={isPending}
             onClick={(event) => {
               event.stopPropagation();
               onToggleEpisode(episode.seasonNumber, episode.episodeNumber);
             }}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-white transition-colors disabled:opacity-50"
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition-colors disabled:opacity-50 ${isWatched ? 'bg-accent' : 'bg-muted-foreground'
+              }`}
           >
             <Check className="h-4 w-4 text-white" />
           </button>
@@ -232,6 +239,7 @@ function WatchListRowContent({
         cast={cast}
         open={open}
         onOpenChange={setOpen}
+        closeOnMark
       />
     </>
   );

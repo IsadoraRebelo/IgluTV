@@ -3,5 +3,18 @@
     "deny": [
       "Bash(git commit*)"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cmd=$(jq -r '.tool_input.command // empty'); if printf '%s' \"$cmd\" | grep -Eiq '(^|[;&|[:space:]])git[[:space:]]+commit([[:space:]]|$)'; then printf '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Commits are reserved for the user \\u2014 Claude must not run git commit in this repo. Ask the user to run it themselves.\"}}'; fi"
+          }
+        ]
+      }
+    ]
   }
 }

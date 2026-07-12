@@ -74,6 +74,37 @@ export async function getWatchedEpisodes(
   }));
 }
 
+export async function getRecentWatchedEpisodes(
+  limit: number
+): Promise<
+  {
+    id: number;
+    tmdbShowId: number;
+    seasonNumber: number;
+    episodeNumber: number;
+    watchedOn: string;
+  }[]
+> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('episode_watches')
+    .select('id, tmdb_show_id, season_number, episode_number, watched_on')
+    .order('watched_on', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(limit);
+
+  if (error) throw new ServiceError(error.message, error.code);
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    tmdbShowId: row.tmdb_show_id,
+    seasonNumber: row.season_number,
+    episodeNumber: row.episode_number,
+    watchedOn: row.watched_on,
+  }));
+}
+
 export async function getMyShows(status?: ShowStatus): Promise<ShowTracking[]> {
   const supabase = await createClient();
 
@@ -176,6 +207,8 @@ export async function toggleFavourite(
       .eq('tmdb_show_id', showId);
 
     if (error) throw new ServiceError(error.message, error.code);
+
+    if (!next) await pruneIfUntracked(supabase, userId, showId);
     return;
   }
 
@@ -216,6 +249,42 @@ export async function markEpisodeWatched(
   if (error) throw new ServiceError(error.message, error.code);
 
   await autoUpdateStatus(supabase, userId, showId);
+}
+
+export async function updateEpisodeWatchDate(
+  showId: number,
+  season: number,
+  episode: number,
+  previousDate: string,
+  nextDate: string
+): Promise<void> {
+  const supabase = await createClient();
+  const userId = await requireUserId(supabase);
+
+  const { data: rows, error: selectError } = await supabase
+    .from('episode_watches')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('tmdb_show_id', showId)
+    .eq('season_number', season)
+    .eq('episode_number', episode)
+    .eq('watched_on', previousDate)
+    .limit(1);
+
+  if (selectError) {
+    throw new ServiceError(selectError.message, selectError.code);
+  }
+  if (!rows || rows.length === 0) {
+    throw new ServiceError('Watch date not found', 'not_found');
+  }
+
+  const { error } = await supabase
+    .from('episode_watches')
+    .update({ watched_on: nextDate })
+    .eq('id', rows[0].id)
+    .eq('user_id', userId);
+
+  if (error) throw new ServiceError(error.message, error.code);
 }
 
 async function autoUpdateStatus(

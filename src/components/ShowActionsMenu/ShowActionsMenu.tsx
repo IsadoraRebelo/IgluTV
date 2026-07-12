@@ -3,10 +3,16 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { MoreHorizontal } from 'lucide-react';
 
-import { useShowTrackingContext } from '@/components';
-
-import type { ShowStatus } from '@/types';
 import type { ReactNode } from 'react';
+import { useShowTrackingContext } from '@/components';
+import {
+  getFavouritePresentation,
+  getMarkWatchedPresentation,
+  getStatusActionLabel,
+  getVisibleActions,
+} from '@/components/ShowTracker/show-actions';
+import type { ShowStatus } from '@/types';
+import { cn } from '@/utils/cn';
 
 export function ShowActionsMenu({
   actions,
@@ -15,8 +21,10 @@ export function ShowActionsMenu({
     id?: string;
     status?: ShowStatus;
     icon: ReactNode;
+    reviveIcon?: ReactNode;
     finishedIcon?: ReactNode;
     label: string;
+    activeColor?: string;
   }[];
 }) {
   const {
@@ -29,17 +37,19 @@ export function ShowActionsMenu({
     showStatus,
     onSetShowStatus,
     isSettingShowStatus,
+    isFavourite,
+    onToggleFavourite,
+    isTogglingFavourite,
     isLoggedIn,
     openAuthDialog,
   } = useShowTrackingContext();
 
-  const visibleActions = actions.filter((action) => {
-    if (action.status === undefined) return true;
-    if (isShowCompleted) return false;
-    if (action.status === 'watch_later') {
-      return showStatus === null || showStatus === 'watch_later';
-    }
-    return watchedDates.size > 0;
+  const visibleActions = getVisibleActions(actions, {
+    showStatus,
+    isShowCompleted,
+    isShowCaughtUp,
+    isShowFullyWatched,
+    watchedDatesCount: watchedDates.size,
   });
 
   return (
@@ -57,7 +67,7 @@ export function ShowActionsMenu({
         <DropdownMenu.Content
           align="end"
           sideOffset={8}
-          className="data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out z-50 w-64 rounded-lg bg-[#1c232b] p-2 shadow-2xl ring-1 ring-white/10"
+          className="data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out z-50 w-64 rounded-lg bg-muted p-2 shadow-2xl ring-1 ring-white/10"
         >
           {!isLoggedIn ? (
             <DropdownMenu.Item
@@ -68,20 +78,15 @@ export function ShowActionsMenu({
             </DropdownMenu.Item>
           ) : (
             visibleActions.map((action) => {
-              const { icon, label, id, status } = action;
+              const { icon, label, id, status, activeColor } = action;
               const isMarkWatched = id === 'mark-watched';
+              const isFavouriteAction = id === 'favourite';
               const isActiveStatus =
                 status !== undefined && showStatus === status;
               const isWatchLater = status === 'watch_later';
 
               if (status !== undefined) {
-                const displayLabel = isActiveStatus
-                  ? isWatchLater
-                    ? 'Remove from watchlist'
-                    : status === 'paused'
-                      ? 'Paused'
-                      : 'Dropped'
-                  : label;
+                const displayLabel = getStatusActionLabel(action, showStatus);
 
                 return (
                   <DropdownMenu.Item
@@ -90,54 +95,59 @@ export function ShowActionsMenu({
                       isSettingShowStatus || (isActiveStatus && !isWatchLater)
                     }
                     onSelect={() => onSetShowStatus(status)}
-                    className={
-                      isActiveStatus
-                        ? 'flex items-center gap-3 rounded-md bg-white/10 px-3 py-2.5 text-sm font-medium text-white outline-none'
-                        : 'flex items-center gap-3 rounded-md px-3 py-2.5 text-[#c2d0dd] outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-white/5'
-                    }
+                    className="flex items-center text-sm gap-3 rounded-md px-3 py-2.5 text-[#c2d0dd] outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-white/5"
                   >
-                    {icon}
+                    <span className={cn(isActiveStatus && activeColor)}>{icon}</span>
                     {displayLabel}
                   </DropdownMenu.Item>
                 );
               }
 
-              const isRevivingToWatching =
-                showStatus === 'paused' || showStatus === 'dropped';
-              const isDone =
-                isMarkWatched && isShowFullyWatched && !isRevivingToWatching;
-              const isFinished =
-                isMarkWatched && isShowCompleted && !isRevivingToWatching;
+              const markWatched = getMarkWatchedPresentation(action, {
+                showStatus,
+                isShowCompleted,
+                isShowCaughtUp,
+                isShowFullyWatched,
+              });
+              const favourite = getFavouritePresentation(action, isFavourite);
               const displayLabel = isMarkWatched
-                ? isRevivingToWatching
-                  ? 'Back to watching'
-                  : isFinished
-                    ? 'Finished'
-                    : isShowCaughtUp
-                      ? 'All caught up'
-                      : label
-                : label;
-              const displayIcon = isFinished
-                ? (action.finishedIcon ?? icon)
-                : icon;
+                ? markWatched.label
+                : isFavouriteAction
+                  ? favourite.label
+                  : label;
+              const displayIcon = isMarkWatched
+                ? markWatched.icon
+                : isFavouriteAction
+                  ? favourite.icon
+                  : icon;
+              const shouldUseActiveColor = isMarkWatched
+                ? markWatched.shouldUseActiveColor
+                : isFavouriteAction
+                  ? favourite.shouldUseActiveColor
+                  : false;
+              const isInteractive = isMarkWatched || isFavouriteAction;
 
               return (
                 <DropdownMenu.Item
                   key={label}
                   disabled={
-                    isMarkWatched &&
-                    (isMarkingShowWatched || isSettingShowStatus)
+                    (isMarkWatched &&
+                      (isMarkingShowWatched || isSettingShowStatus)) ||
+                    (isFavouriteAction && isTogglingFavourite)
                   }
-                  onSelect={isMarkWatched ? onMarkShowWatched : undefined}
-                  className={
-                    isDone
-                      ? 'flex items-center gap-3 rounded-md bg-[#66cc24] px-3 py-2.5 text-sm text-[#14181c] outline-none'
-                      : `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#c2d0dd] outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-white/5 ${
-                          isMarkWatched ? '' : 'cursor-default'
-                        }`
+                  onSelect={
+                    isMarkWatched
+                      ? onMarkShowWatched
+                      : isFavouriteAction
+                        ? onToggleFavourite
+                        : undefined
                   }
+                  className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#c2d0dd] outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-white/5 ${isInteractive ? '' : 'cursor-default'
+                    }`}
                 >
-                  {displayIcon}
+                  <span className={cn(shouldUseActiveColor && activeColor)}>
+                    {displayIcon}
+                  </span>
                   {displayLabel}
                 </DropdownMenu.Item>
               );

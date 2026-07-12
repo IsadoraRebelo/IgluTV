@@ -24,8 +24,10 @@ import {
   rewatchSeasonAction,
   setShowStatusAction,
   setSkipCatchUpPromptAction,
+  toggleFavouriteAction,
   unmarkEpisodeWatchedAction,
   unmarkSeasonWatchedAction,
+  updateEpisodeWatchDateAction,
 } from './actions';
 import {
   buildWatchedDatesMap,
@@ -40,6 +42,7 @@ import type { EpisodeRef } from './utils';
 
 const MARK_SHOW_WATCHED_KEY = 'mark-show-watched';
 const SHOW_STATUS_KEY = 'show-status';
+const FAVOURITE_KEY = 'favourite';
 
 function todayIso(): string {
   const now = new Date();
@@ -58,6 +61,12 @@ type ShowTrackingContextValue = {
     seasonNumber: number,
     episodeNumber: number
   ) => void;
+  onUpdateEpisodeWatchDate: (
+    seasonNumber: number,
+    episodeNumber: number,
+    previousDate: string,
+    nextDate: string
+  ) => void;
   onToggleSeason: (season: Season) => void;
   onRewatchSeason: (season: Season) => void;
   onRemoveLastSeasonRewatch: (season: Season) => void;
@@ -69,6 +78,9 @@ type ShowTrackingContextValue = {
   showStatus: ShowStatus | null;
   onSetShowStatus: (status: ShowStatus) => void;
   isSettingShowStatus: boolean;
+  isFavourite: boolean;
+  onToggleFavourite: () => void;
+  isTogglingFavourite: boolean;
   isLoggedIn: boolean;
   openAuthDialog: () => void;
 };
@@ -210,6 +222,7 @@ export function ShowTrackingProvider({
   watchedEpisodes,
   skipCatchUpPrompt,
   initialStatus,
+  initialIsFavourite,
   tmdbStatus,
   isLoggedIn,
   children,
@@ -219,6 +232,7 @@ export function ShowTrackingProvider({
   watchedEpisodes: EpisodeWatch[];
   skipCatchUpPrompt: boolean;
   initialStatus: ShowStatus | null;
+  initialIsFavourite: boolean;
   tmdbStatus: string | null;
   isLoggedIn: boolean;
   children: ReactNode;
@@ -234,6 +248,7 @@ export function ShowTrackingProvider({
   const [showStatus, setShowStatusState] = useState<ShowStatus | null>(
     initialStatus
   );
+  const [isFavourite, setIsFavourite] = useState(initialIsFavourite);
 
   // Regular seasons (season 0 excluded) that have at least one markable
   // (aired) episode — the target set for both the bulk mark and bulk
@@ -528,6 +543,56 @@ export function ShowTrackingProvider({
 
         toast.error(result.message);
         return;
+      }
+    } finally {
+      setPendingKeys((prev) => {
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      });
+    }
+  }
+
+  async function handleUpdateEpisodeWatchDate(
+    seasonNumber: number,
+    episodeNumber: number,
+    previousDate: string,
+    nextDate: string
+  ) {
+    const key = episodeKey(seasonNumber, episodeNumber);
+    if (pendingKeys.has(key) || previousDate === nextDate) return;
+
+    const previousDates = getWatchedDates(watchedDates, key);
+    const index = previousDates.indexOf(previousDate);
+    if (index === -1) return;
+
+    const nextDates = [...previousDates];
+    nextDates[index] = nextDate;
+
+    setPendingKeys((prev) => new Set(prev).add(key));
+    setWatchedDates((prev) => {
+      const next = new Map(prev);
+      next.set(key, nextDates);
+      return next;
+    });
+
+    try {
+      const result = await updateEpisodeWatchDateAction(
+        showId,
+        seasonNumber,
+        episodeNumber,
+        previousDate,
+        nextDate
+      );
+
+      if (!result.ok) {
+        setWatchedDates((prev) => {
+          const next = new Map(prev);
+          next.set(key, previousDates);
+          return next;
+        });
+
+        toast.error(result.message);
       }
     } finally {
       setPendingKeys((prev) => {
@@ -1032,12 +1097,46 @@ export function ShowTrackingProvider({
     }
   }
 
+  async function handleToggleFavourite() {
+    if (pendingKeys.has(FAVOURITE_KEY)) return;
+
+    const previousIsFavourite = isFavourite;
+    const previousStatus = showStatus;
+    const next = !isFavourite;
+    // Unfavouriting a show with no watched episodes drops its tracking
+    // entirely (see toggleFavourite -> pruneIfUntracked), so mirror that
+    // locally instead of leaving a stale status behind.
+    const willUntrack = !next && watchedDates.size === 0;
+
+    setPendingKeys((prev) => new Set(prev).add(FAVOURITE_KEY));
+    setIsFavourite(next);
+    if (willUntrack) setShowStatusState(null);
+
+    try {
+      const result = await toggleFavouriteAction(showId, next);
+
+      if (!result.ok) {
+        setIsFavourite(previousIsFavourite);
+        if (willUntrack) setShowStatusState(previousStatus);
+
+        toast.error(result.message);
+      }
+    } finally {
+      setPendingKeys((prev) => {
+        const next = new Set(prev);
+        next.delete(FAVOURITE_KEY);
+        return next;
+      });
+    }
+  }
+
   const value: ShowTrackingContextValue = {
     watchedDates,
     pendingKeys,
     onToggleEpisode: handleToggleEpisode,
     onRewatchEpisode: handleRewatchEpisode,
     onRemoveLastEpisodeRewatch: handleRemoveLastEpisodeRewatch,
+    onUpdateEpisodeWatchDate: handleUpdateEpisodeWatchDate,
     onToggleSeason: handleToggleSeason,
     onRewatchSeason: handleRewatchSeason,
     onRemoveLastSeasonRewatch: handleRemoveLastSeasonRewatch,
@@ -1049,6 +1148,9 @@ export function ShowTrackingProvider({
     showStatus: displayedShowStatus,
     onSetShowStatus: handleSetShowStatus,
     isSettingShowStatus: pendingKeys.has(SHOW_STATUS_KEY),
+    isFavourite,
+    onToggleFavourite: handleToggleFavourite,
+    isTogglingFavourite: pendingKeys.has(FAVOURITE_KEY),
     isLoggedIn,
     openAuthDialog: () => setAuthDialogOpen(true),
   };

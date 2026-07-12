@@ -1,3 +1,4 @@
+export * from './AccordionSection/AccordionSection';
 export * from './atoms';
 export * from './Auth/AuthButton';
 export * from './Auth/AuthDialog';
@@ -6,6 +7,7 @@ export * from './Auth/WatchListLink';
 export * from './EpisodeModal/EpisodeModal';
 export * from './Form/Form';
 export * from './LatestEpisodeCard/LatestEpisodeCard';
+export * from './RecentlyWatchedAccordion/RecentlyWatchedAccordion';
 export * from './SeasonAccordion/SeasonAccordion';
 export * from './ShowActionsMenu/ShowActionsMenu';
 export * from './ShowOverview/ShowOverview';

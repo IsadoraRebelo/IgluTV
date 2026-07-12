@@ -29,8 +29,10 @@ export function WatchedToggleButton({
   onRemove: () => void;
   onRemoveRewatches: () => void;
 }) {
-  const buttonClassName = `flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#14181c] transition-colors disabled:opacity-50 ${isWatched ? 'bg-[#66cc24]' : 'bg-accent'
+  const buttonClassName = `flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#14181c] transition-colors disabled:opacity-50 ${isWatched ? 'bg-accent' : 'bg-muted-foreground'
     }`;
+
+  const buttonItemClassName = "flex cursor-default cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#c2d0dd] outline-none data-[highlighted]:bg-white/5"
 
   if (!isWatched) {
     return (
@@ -77,7 +79,7 @@ export function WatchedToggleButton({
         >
           <DropdownMenu.Item
             onClick={onRewatch}
-            className="flex cursor-default cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#c2d0dd] outline-none data-[highlighted]:bg-white/5"
+            className={buttonItemClassName}
           >
             <RotateCcw className="h-4 w-4" />
             {rewatchLabel}
@@ -85,7 +87,7 @@ export function WatchedToggleButton({
           {rewatchCount > 0 ? (
             <DropdownMenu.Item
               onClick={onRemoveRewatches}
-              className="flex cursor-default cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#c2d0dd] outline-none data-[highlighted]:bg-white/5"
+              className={buttonItemClassName}
             >
               <Undo2 className="h-4 w-4" />
               {removeRewatchesLabel}
@@ -93,7 +95,7 @@ export function WatchedToggleButton({
           ) : null}
           <DropdownMenu.Item
             onClick={onRemove}
-            className="flex cursor-default cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#c2d0dd] outline-none data-[highlighted]:bg-white/5"
+            className={buttonItemClassName}
           >
             <EyeSlashIcon className="h-4 w-4" />
             {removeLabel}

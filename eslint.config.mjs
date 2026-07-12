@@ -51,7 +51,6 @@ const eslintConfig = defineConfig([
             'internal',
             ['parent', 'sibling'],
             'index',
-            'type',
           ],
           pathGroups: [
             { pattern: '@/components', group: 'internal', position: 'before' },
@@ -72,7 +71,7 @@ const eslintConfig = defineConfig([
           ],
           pathGroupsExcludedImportTypes: ['builtin'],
           alphabetize: {
-            order: 'asc',
+            order: 'ignore',
             caseInsensitive: true,
           },
         },

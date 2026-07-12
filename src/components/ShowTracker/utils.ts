@@ -63,6 +63,17 @@ export function hasEpisodeAired(airDate: string | null): boolean {
   return date.getTime() <= today.getTime();
 }
 
+export function isOlderThanDays(dateStr: string, days: number): boolean {
+  const date = new Date(`${dateStr}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diffDays = Math.floor(
+    (today.getTime() - date.getTime()) / 86_400_000
+  );
+  return diffDays > days;
+}
+
 export type EpisodeRef = { seasonNumber: number; episodeNumber: number };
 
 export function getPriorUnwatchedAiredEpisodes(
