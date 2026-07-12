@@ -20,3 +20,4 @@ export * from './Toaster/Toaster';
 export * from './TvShowCard/TvShowCard';
 export * from './WatchList/WatchListRow';
 export * from './WatchNextCard/WatchNextCard';
+export * from './WatchProviders/WatchProviders';

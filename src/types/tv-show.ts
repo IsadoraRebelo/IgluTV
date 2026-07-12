@@ -117,6 +117,26 @@ export type TMDBSeasonDetailRaw = {
   episodes?: TMDBSeasonEpisodeRaw[];
 };
 
+export type WatchProvider = {
+  providerId: number;
+  providerName: string;
+  logoUrl: string | null;
+  countries: string[];
+  // Country code -> JustWatch page for this show in that country.
+  links: Record<string, string>;
+};
+
+export type TMDBWatchProviderRaw = {
+  provider_id: number;
+  provider_name: string;
+  logo_path: string | null;
+  display_priority: number;
+};
+
+export type TMDBWatchProvidersRaw = {
+  results?: Record<string, { link?: string; flatrate?: TMDBWatchProviderRaw[] }>;
+};
+
 export type TMDBSeriesDetailsRaw = {
   name: string;
   overview: string;

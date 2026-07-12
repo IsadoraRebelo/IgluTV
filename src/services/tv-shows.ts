@@ -7,6 +7,8 @@ import {
   TMDB_BACKDROP_BASE_URL,
   TMDB_BACKDROP_LARGE_BASE_URL,
   TMDB_IMAGE_BASE_URL,
+  TMDB_PROVIDER_LOGO_BASE_URL,
+  WATCH_PROVIDER_PRIORITY_COUNTRIES,
 } from '@/consts';
 
 import type {
@@ -16,7 +18,9 @@ import type {
   TMDBSeasonDetailRaw,
   TMDBSeriesDetailsRaw,
   TMDBTvShowRaw,
+  TMDBWatchProvidersRaw,
   TvShow,
+  WatchProvider,
 } from '@/types';
 
 import { getCountryDisplayName, getLanguageDisplayName } from '@/utils';
@@ -250,4 +254,171 @@ export const getTmdbShowFullDetails = unstable_cache(
   fetchTmdbShowFullDetails,
   ['tmdb-show-full-details'],
   { revalidate: 3600, tags: ['tmdb-show-full-details'] }
+);
+
+// TMDB/JustWatch list ad-supported or channel-billed tiers as separate
+// providers (e.g. "Netflix" and "Netflix Standard with Ads"). Stripping these
+// known suffixes gives a stable key to merge those variants back into one.
+const PROVIDER_VARIANT_SUFFIXES = [
+  'standard with ads',
+  'basic with ads',
+  'with ads',
+  'amazon channel',
+  'apple tv channel',
+  'roku premium channel',
+  'premium',
+  'standard',
+  'basic',
+];
+
+function normalizeProviderName(name: string): string {
+  let result = name.trim();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const suffix of PROVIDER_VARIANT_SUFFIXES) {
+      if (
+        result.length > suffix.length &&
+        result.toLowerCase().endsWith(suffix)
+      ) {
+        result = result.slice(0, result.length - suffix.length).trim();
+        changed = true;
+        break;
+      }
+    }
+  }
+  return result.toLowerCase();
+}
+
+// TMDB returns flatrate (subscription) providers per country in one response
+// (sourced from JustWatch); we invert that into provider -> countries so the
+// UI can show "Netflix - US, UK" instead of a wall of per-country sections.
+async function fetchTmdbWatchProviders(id: number): Promise<WatchProvider[]> {
+  const apiKey = process.env.TMDB_API_KEY;
+  if (!apiKey) {
+    console.warn('[tv-shows] TMDB_API_KEY not set');
+    return [];
+  }
+
+  try {
+    const res = await fetch(
+      `${TMDB_API_BASE_URL}/tv/${id}/watch/providers?api_key=${apiKey}`,
+      { cache: 'no-store' }
+    );
+
+    if (!res.ok) {
+      console.warn(
+        `[tv-shows] TMDB watch providers ${res.status}: ${res.statusText}`
+      );
+      return [];
+    }
+
+    const json: TMDBWatchProvidersRaw = await res.json();
+
+    type ProviderAgg = {
+      providerId: number;
+      providerName: string;
+      logoUrl: string | null;
+      priority: number;
+      // Lowest display_priority among our preferred countries only, so a
+      // provider that's merely obscure-but-prominent in some other market
+      // doesn't outrank major services in the markets we actually care
+      // about.
+      preferredPriority: number | null;
+      countries: Set<string>;
+      links: Record<string, string>;
+    };
+
+    const byProvider = new Map<number, Omit<ProviderAgg, 'providerId'>>();
+
+    for (const [country, data] of Object.entries(json.results ?? {})) {
+      const isPreferredCountry = (
+        WATCH_PROVIDER_PRIORITY_COUNTRIES as readonly string[]
+      ).includes(country);
+
+      for (const provider of data.flatrate ?? []) {
+        const existing = byProvider.get(provider.provider_id);
+        if (existing) {
+          existing.countries.add(country);
+          existing.priority = Math.min(existing.priority, provider.display_priority);
+          if (isPreferredCountry) {
+            existing.preferredPriority = Math.min(
+              existing.preferredPriority ?? Infinity,
+              provider.display_priority
+            );
+          }
+          if (data.link) existing.links[country] = data.link;
+        } else {
+          byProvider.set(provider.provider_id, {
+            providerName: provider.provider_name,
+            logoUrl: provider.logo_path
+              ? `${TMDB_PROVIDER_LOGO_BASE_URL}${provider.logo_path}`
+              : null,
+            priority: provider.display_priority,
+            preferredPriority: isPreferredCountry
+              ? provider.display_priority
+              : null,
+            countries: new Set([country]),
+            links: data.link ? { [country]: data.link } : {},
+          });
+        }
+      }
+    }
+
+    // Merge same-brand variants (e.g. "Netflix" + "Netflix Standard with
+    // Ads") into a single entry, keeping the more prominent variant's
+    // name/logo/id but pooling their country coverage and links.
+    const deduped = new Map<string, ProviderAgg>();
+
+    for (const [providerId, provider] of byProvider.entries()) {
+      const key = normalizeProviderName(provider.providerName);
+      const existing = deduped.get(key);
+
+      if (!existing) {
+        deduped.set(key, { ...provider, providerId });
+        continue;
+      }
+
+      provider.countries.forEach((country) => existing.countries.add(country));
+      for (const [country, link] of Object.entries(provider.links)) {
+        if (!(country in existing.links)) existing.links[country] = link;
+      }
+      if (provider.preferredPriority !== null) {
+        existing.preferredPriority = Math.min(
+          existing.preferredPriority ?? Infinity,
+          provider.preferredPriority
+        );
+      }
+      if (provider.priority < existing.priority) {
+        existing.providerId = providerId;
+        existing.providerName = provider.providerName;
+        existing.logoUrl = provider.logoUrl;
+      }
+      existing.priority = Math.min(existing.priority, provider.priority);
+    }
+
+    return Array.from(deduped.values())
+      .sort((a, b) => {
+        const aRank = a.preferredPriority ?? Infinity;
+        const bRank = b.preferredPriority ?? Infinity;
+        if (aRank !== bRank) return aRank - bRank;
+        return a.priority - b.priority;
+      })
+      .map((provider) => ({
+        providerId: provider.providerId,
+        providerName: provider.providerName,
+        logoUrl: provider.logoUrl,
+        countries: Array.from(provider.countries),
+        links: provider.links,
+      }));
+  } catch (err) {
+    console.warn('[tv-shows] watch providers fetch failed', err);
+    return [];
+  }
+}
+
+export const getTmdbWatchProviders = unstable_cache(
+  fetchTmdbWatchProviders,
+  ['tmdb-watch-providers'],
+  { revalidate: 3600, tags: ['tmdb-watch-providers'] }
 );

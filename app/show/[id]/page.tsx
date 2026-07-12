@@ -19,10 +19,12 @@ import {
   ShowTabs,
   ShowTracker,
   ShowTrackingProvider,
+  WatchProviders,
 } from '@/components';
 
+import { getUserCountry } from '@/services/profile';
 import { getShowTracking, getWatchedEpisodes } from '@/services/tracking';
-import { getTmdbShowFullDetails } from '@/services/tv-shows';
+import { getTmdbShowFullDetails, getTmdbWatchProviders } from '@/services/tv-shows';
 
 import { createClient } from '@/supabase/server';
 
@@ -108,12 +110,15 @@ export default async function ShowPage({
   }
 
   const supabase = await createClient();
-  const [tmdbFull, watchedEpisodes, tracking, userResult] = await Promise.all([
-    getTmdbShowFullDetails(numericId),
-    getWatchedEpisodes(numericId),
-    getShowTracking(numericId),
-    supabase.auth.getUser(),
-  ]);
+  const [tmdbFull, watchedEpisodes, tracking, userResult, watchProviders, userCountry] =
+    await Promise.all([
+      getTmdbShowFullDetails(numericId),
+      getWatchedEpisodes(numericId),
+      getShowTracking(numericId),
+      supabase.auth.getUser(),
+      getTmdbWatchProviders(numericId),
+      getUserCountry(),
+    ]);
   const isLoggedIn = userResult.data.user !== null;
 
   if (!tmdbFull) {
@@ -200,6 +205,11 @@ export default async function ShowPage({
                 {details.overview ? (
                   <ShowOverview text={details.overview} />
                 ) : null}
+                <WatchProviders
+                  providers={watchProviders}
+                  initialCountry={userCountry}
+                  isLoggedIn={isLoggedIn}
+                />
               </div>
             </div>
           </div>

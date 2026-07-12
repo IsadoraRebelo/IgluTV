@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation';
 
+import { BookmarkIcon, ClockIcon, FilmIcon } from '@heroicons/react/24/solid';
+
 import {
   AccordionSection,
   RecentlyWatchedAccordion,
@@ -43,6 +45,7 @@ type WatchListEntry = {
   posterUrl: string | null;
   episode: LatestEpisode;
   backlogCount: number;
+  unwatchedRuntimeMinutes: number;
   sortKey: string | null;
   seasons: Season[];
   watchedEpisodes: EpisodeWatch[];
@@ -79,15 +82,25 @@ async function buildWatchListEntry(
   }
 
   const episode = section.episode;
-  const backlogCount =
+  const backlogRefs =
     section.kind === 'next'
       ? getPriorUnwatchedAiredEpisodes(
         meta.seasons,
         watchedDates,
         episode.seasonNumber,
         episode.episodeNumber
-      ).length
-      : 0;
+      )
+      : [];
+  const backlogCount = backlogRefs.length;
+  const unwatchedRuntimeMinutes =
+    backlogRefs.reduce((sum, ref) => {
+      const backlogEpisode = findEpisode(
+        meta.seasons,
+        ref.seasonNumber,
+        ref.episodeNumber
+      );
+      return sum + (backlogEpisode?.runtime ?? 0);
+    }, 0) + (episode.runtime ?? 0);
 
   let sortKey: string | null = null;
   for (const dates of watchedDates.values()) {
@@ -102,6 +115,7 @@ async function buildWatchListEntry(
     posterUrl: details.posterUrl,
     episode,
     backlogCount,
+    unwatchedRuntimeMinutes,
     sortKey,
     seasons: meta.seasons,
     watchedEpisodes,
@@ -195,6 +209,15 @@ function getFirstEpisode(seasons: Season[]): LatestEpisode | null {
   return null;
 }
 
+function formatRuntime(minutes: number): string {
+  if (minutes <= 0) return '0m';
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours === 0) return `${mins}m`;
+  if (mins === 0) return `${hours}h`;
+  return `${hours}h ${mins}m`;
+}
+
 async function buildWishlistEntry(
   tracked: ShowTracking
 ): Promise<WatchListEntry | null> {
@@ -221,6 +244,7 @@ async function buildWishlistEntry(
     posterUrl: details.posterUrl,
     episode,
     backlogCount: 0,
+    unwatchedRuntimeMinutes: 0,
     sortKey: null,
     seasons: meta.seasons,
     watchedEpisodes,
@@ -338,9 +362,10 @@ export default async function TrackingPage() {
     staleShowIds.has(entry.showId)
   );
 
+  const wishlistShows = await getMyShows('watch_later');
+
   let wishlistEntries: WatchListEntry[] = [];
   if (staleEntries.length === 0) {
-    const wishlistShows = await getMyShows('watch_later');
     const wishlistResults = await Promise.all(
       wishlistShows.map((tracked) => buildWishlistEntry(tracked))
     );
@@ -348,6 +373,17 @@ export default async function TrackingPage() {
       .filter((entry): entry is WatchListEntry => entry !== null)
       .sort((a, b) => a.showName.localeCompare(b.showName));
   }
+
+  const watchlistCount = wishlistShows.length;
+
+  const totalEpisodesLeft = activeEntries.reduce(
+    (sum, entry) => sum + entry.backlogCount + 1,
+    0
+  );
+  const totalRuntimeMinutes = activeEntries.reduce(
+    (sum, entry) => sum + entry.unwatchedRuntimeMinutes,
+    0
+  );
 
   return (
     <div className="flex flex-1 flex-col bg-[#14181c] font-sans antialiased">
@@ -372,8 +408,22 @@ export default async function TrackingPage() {
           </div>
 
           <aside className="hidden h-fit flex-col gap-1 rounded-lg bg-white/[0.03] p-2 lg:flex">
-            <div className="rounded-md px-3 py-2.5 text-sm text-[#678]">
-              Menu coming soon
+            <div className="flex items-center gap-2 rounded-md px-3 py-2.5 text-sm text-foreground">
+              <FilmIcon className="h-4 w-4 shrink-0" />
+              <span>
+                {totalEpisodesLeft} episode{totalEpisodesLeft === 1 ? '' : 's'} to
+                watch
+              </span>
+            </div>
+            <div className="flex items-center gap-2 rounded-md px-3 py-2.5 text-sm text-foreground">
+              <ClockIcon className="h-4 w-4 shrink-0" />
+              <span>{formatRuntime(totalRuntimeMinutes)} to catch up</span>
+            </div>
+            <div className="flex items-center gap-2 rounded-md px-3 py-2.5 text-sm text-foreground">
+              <BookmarkIcon className="h-4 w-4 shrink-0" />
+              <span>
+                {watchlistCount} show{watchlistCount === 1 ? '' : 's'} on watchlist
+              </span>
             </div>
           </aside>
         </div>
