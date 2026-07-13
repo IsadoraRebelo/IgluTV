@@ -5,17 +5,19 @@ export const loginFormSchema = z.object({
   password: z.string(),
 });
 
+export const usernameSchema = z
+  .string()
+  .trim()
+  .min(3, { message: 'Username must contain at least 3 characters' })
+  .max(20, { message: 'Username can have a max of 20 characters' })
+  .regex(/^[a-zA-Z\s]*$/, { message: 'Username can only contain letters' });
+
 export const signupFormSchema = z.object({
   email: z.email(),
   password: z
     .string()
     .min(6, { message: 'Password must be at least 6 characters' }),
-  name: z
-    .string()
-    .trim()
-    .min(3, { message: 'Username must contain at least 3 characters' })
-    .max(20, { message: 'Username can have a max of 20 characters' })
-    .regex(/^[a-zA-Z\s]*$/, { message: 'Username can only contain letters' }),
+  name: usernameSchema,
   invite_code: z
     .string()
     .trim()
@@ -39,3 +41,8 @@ export const changePasswordFormSchema = z.object({
 });
 
 export type PasswordUserInput = z.TypeOf<typeof changePasswordFormSchema>;
+
+export const profileSettingsFormSchema = z.object({
+  username: usernameSchema,
+});
+export type ProfileSettingsInput = z.TypeOf<typeof profileSettingsFormSchema>;

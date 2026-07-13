@@ -7,16 +7,20 @@ import {
   TMDB_BACKDROP_BASE_URL,
   TMDB_BACKDROP_LARGE_BASE_URL,
   TMDB_IMAGE_BASE_URL,
+  TMDB_POSTER_LARGE_BASE_URL,
   TMDB_PROVIDER_LOGO_BASE_URL,
   WATCH_PROVIDER_PRIORITY_COUNTRIES,
 } from '@/consts';
 
 import type {
   SeasonEpisode,
+  ShowBackdropImage,
   ShowDetails,
   ShowMeta,
+  ShowSummary,
   TMDBSeasonDetailRaw,
   TMDBSeriesDetailsRaw,
+  TMDBShowImagesRaw,
   TMDBTvShowRaw,
   TMDBWatchProvidersRaw,
   TvShow,
@@ -256,6 +260,71 @@ export const getTmdbShowFullDetails = unstable_cache(
   { revalidate: 3600, tags: ['tmdb-show-full-details'] }
 );
 
+export async function resolveShowSummaries(
+  showIds: number[]
+): Promise<Map<number, ShowSummary>> {
+  const uniqueIds = Array.from(new Set(showIds));
+  const results = await Promise.all(
+    uniqueIds.map((id) => getTmdbShowFullDetails(id))
+  );
+
+  const map = new Map<number, ShowSummary>();
+  uniqueIds.forEach((id, i) => {
+    const full = results[i];
+    if (!full) return;
+    map.set(id, {
+      id,
+      name: full.details.name,
+      posterUrl:
+        full.details.posterUrl?.replace(
+          TMDB_IMAGE_BASE_URL,
+          TMDB_POSTER_LARGE_BASE_URL
+        ) ?? null,
+      bannerUrl: full.details.bannerUrl,
+    });
+  });
+  return map;
+}
+
+async function fetchTmdbShowImages(
+  showId: number
+): Promise<ShowBackdropImage[]> {
+  const apiKey = process.env.TMDB_API_KEY;
+  if (!apiKey) {
+    console.warn('[tv-shows] TMDB_API_KEY not set');
+    return [];
+  }
+
+  try {
+    const res = await fetch(
+      `${TMDB_API_BASE_URL}/tv/${showId}/images?api_key=${apiKey}&include_image_language=en,null`,
+      { cache: 'no-store' }
+    );
+
+    if (!res.ok) {
+      console.warn(`[tv-shows] TMDB images ${res.status}: ${res.statusText}`);
+      return [];
+    }
+
+    const json: TMDBShowImagesRaw = await res.json();
+
+    return (json.backdrops ?? []).map((image) => ({
+      filePath: image.file_path,
+      thumbnailUrl: `${TMDB_BACKDROP_BASE_URL}${image.file_path}`,
+      fullUrl: `${TMDB_BACKDROP_LARGE_BASE_URL}${image.file_path}`,
+    }));
+  } catch (err) {
+    console.warn('[tv-shows] images fetch failed', err);
+    return [];
+  }
+}
+
+export const getTmdbShowImages = unstable_cache(
+  fetchTmdbShowImages,
+  ['tmdb-show-images'],
+  { revalidate: 3600, tags: ['tmdb-show-images'] }
+);
+
 // TMDB/JustWatch list ad-supported or channel-billed tiers as separate
 // providers (e.g. "Netflix" and "Netflix Standard with Ads"). Stripping these
 // known suffixes gives a stable key to merge those variants back into one.
@@ -339,7 +408,10 @@ async function fetchTmdbWatchProviders(id: number): Promise<WatchProvider[]> {
         const existing = byProvider.get(provider.provider_id);
         if (existing) {
           existing.countries.add(country);
-          existing.priority = Math.min(existing.priority, provider.display_priority);
+          existing.priority = Math.min(
+            existing.priority,
+            provider.display_priority
+          );
           if (isPreferredCountry) {
             existing.preferredPriority = Math.min(
               existing.preferredPriority ?? Infinity,

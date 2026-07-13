@@ -183,8 +183,8 @@ function WatchListRowContent({
             <span
               className={
                 badge === 'premiere'
-                  ? 'absolute top-1 left-1 w-fit rounded-md bg-white px-2 py-0.5 text-xs font-semibold tracking-wide text-[#14181c] uppercase'
-                  : 'absolute top-1 left-1 w-fit rounded-md bg-yellow-400 px-2 py-0.5 text-xs font-semibold tracking-wide text-[#14181c] uppercase'
+                  ? 'absolute bottom-1 left-1 w-fit rounded-md bg-white px-2 py-0.5 text-xs font-semibold tracking-wide text-[#14181c] uppercase'
+                  : 'absolute bottom-1 left-1 w-fit rounded-md bg-yellow-400 px-2 py-0.5 text-xs font-semibold tracking-wide text-[#14181c] uppercase'
               }
             >
               {badge === 'premiere' ? 'Premiere' : 'New'}

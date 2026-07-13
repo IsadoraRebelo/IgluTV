@@ -1,7 +1,7 @@
 import { Inter, Bricolage_Grotesque } from 'next/font/google';
 
-import { Toaster } from '@/components';
 import type { Metadata } from 'next';
+import { NavBar, Toaster } from '@/components';
 
 import './globals.css';
 
@@ -32,6 +32,7 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col">
         <Toaster />
+        <NavBar />
         {children}
       </body>
     </html>

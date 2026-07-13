@@ -46,7 +46,7 @@ const SHOW_ACTIONS: {
       finishedIcon: (
         <RocketLaunchIcon className="h-4 w-4 text-yellow-500 md:h-5 md:w-5" />
       ),
-      label: 'Mark watched',
+      label: 'Watched',
       activeColor: '[&_svg]:!text-accent',
     },
     {
@@ -164,13 +164,7 @@ export default async function ShowPage({
             ) : null}
             <div className="absolute inset-0 bg-gradient-to-t from-[#14181c] via-[#14181c]/40 to-[#14181c]/10" />
             <div className="absolute inset-0 bg-gradient-to-r from-[#14181c] via-transparent to-[#14181c]" />
-            <Link
-              href="/"
-              className="absolute top-4 left-4 z-10 text-sm text-white/70 transition-colors hover:text-white sm:top-6 sm:left-6"
-            >
-              ← Back to home
-            </Link>
-            <div className="absolute top-4 right-4 z-10 sm:top-6 sm:right-6 lg:hidden">
+            <div className="absolute top-20 right-4 z-10 sm:top-24 sm:right-6 lg:hidden">
               <ShowActionsMenu actions={SHOW_ACTIONS} />
             </div>
           </div>
@@ -327,11 +321,11 @@ function CastTab({ cast }: { cast: ShowDetails['cast'] }) {
   }
 
   return (
-    <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-5">
+    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
       {cast.map((member) => (
         <div
           key={`${member.actorName}-${member.character}`}
-          className="relative aspect-[2/3] w-full overflow-hidden rounded-md bg-[#2c3440]"
+          className="relative aspect-[2/3] w-full overflow-hidden rounded-sm bg-[#2c3440]"
         >
           {member.imageUrl ? (
             <Image

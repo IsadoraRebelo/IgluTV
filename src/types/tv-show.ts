@@ -117,6 +117,27 @@ export type TMDBSeasonDetailRaw = {
   episodes?: TMDBSeasonEpisodeRaw[];
 };
 
+export type ShowSummary = {
+  id: number;
+  name: string;
+  posterUrl: string | null;
+  bannerUrl: string | null;
+};
+
+export type ShowBackdropImage = {
+  filePath: string;
+  thumbnailUrl: string;
+  fullUrl: string;
+};
+
+export type TMDBImageRaw = {
+  file_path: string;
+};
+
+export type TMDBShowImagesRaw = {
+  backdrops?: TMDBImageRaw[];
+};
+
 export type WatchProvider = {
   providerId: number;
   providerName: string;

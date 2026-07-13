@@ -7,6 +7,8 @@ export * from './Auth/WatchListLink';
 export * from './EpisodeModal/EpisodeModal';
 export * from './Form/Form';
 export * from './LatestEpisodeCard/LatestEpisodeCard';
+export * from './NavBar/NavBar';
+export * from './ProfileSettings/ProfileSettingsButton';
 export * from './RecentlyWatchedAccordion/RecentlyWatchedAccordion';
 export * from './SeasonAccordion/SeasonAccordion';
 export * from './ShowActionsMenu/ShowActionsMenu';

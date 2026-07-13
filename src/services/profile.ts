@@ -79,3 +79,38 @@ export async function getProfileByUsername(username: string): Promise<{
     bannerUrl: data.banner_url,
   };
 }
+
+export async function updateUsername(username: string): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new ServiceError('Not authenticated', 'not_authenticated');
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ username })
+    .eq('id', user.id);
+
+  if (error) {
+    if (error.code === '23505') {
+      throw new ServiceError('Username is already taken', error.code);
+    }
+    throw new ServiceError(error.message, error.code);
+  }
+}
+
+export async function updateBannerUrl(bannerUrl: string): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new ServiceError('Not authenticated', 'not_authenticated');
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ banner_url: bannerUrl })
+    .eq('id', user.id);
+
+  if (error) throw new ServiceError(error.message, error.code);
+}
