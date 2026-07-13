@@ -164,7 +164,7 @@ export default async function ShowPage({
             ) : null}
             <div className="absolute inset-0 bg-gradient-to-t from-[#14181c] via-[#14181c]/40 to-[#14181c]/10" />
             <div className="absolute inset-0 bg-gradient-to-r from-[#14181c] via-transparent to-[#14181c]" />
-            <div className="absolute top-20 right-4 z-10 sm:top-24 sm:right-6 lg:hidden">
+            <div className="absolute top-15 right-4 z-10 sm:top-24 sm:right-6 lg:hidden">
               <ShowActionsMenu actions={SHOW_ACTIONS} />
             </div>
           </div>

@@ -193,7 +193,7 @@ export default async function ProfilePage({
               fill
               sizes="(max-width: 950px) 100vw, 950px"
               priority
-              className="object-cover object-center"
+              className="object-cover object-top"
             />
           ) : null}
           <div className="absolute inset-0 bg-gradient-to-t from-[#14181c] via-[#14181c]/40 to-[#14181c]/10" />

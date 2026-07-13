@@ -58,9 +58,9 @@ export function ShowActionsMenu({
         <button
           type="button"
           aria-label="More options"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60"
+          className="flex h-6 w-6 md:h-9 md:w-9 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60"
         >
-          <MoreHorizontal className="h-5 w-5" />
+          <MoreHorizontal className="h-3 w-3 md:h-5 md:w-5" />
         </button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>

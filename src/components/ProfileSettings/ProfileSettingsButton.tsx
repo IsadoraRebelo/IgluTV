@@ -47,7 +47,7 @@ export function ProfileSettingsButton({
         <button
           type="button"
           aria-label="Profile settings"
-          className="absolute top-20 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60"
+          className="absolute bottom-0 right-2 md:right-25 z-10 flex h-5 w-5 md:h-9 md:w-9 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60"
         >
           <Settings className="h-5 w-5" />
         </button>
