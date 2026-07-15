@@ -12,7 +12,6 @@ import {
   useShowTrackingContext,
   WatchedToggleButton,
 } from '@/components';
-
 import {
   episodeKey,
   getRewatchCount,
@@ -145,8 +144,9 @@ function WatchListRowContent({
   const isWatched = getWatchCount(watchedDates, episodeKeyValue) > 0;
   const rewatchCount = getRewatchCount(watchedDates, episodeKeyValue);
 
-  const baseRowClassName = `flex cursor-pointer items-stretch overflow-hidden rounded-lg bg-white/[0.03] hover:bg-white/[0.06] ${faded ? 'opacity-60 hover:opacity-100' : ''
-    }`;
+  const baseRowClassName = `flex cursor-pointer items-stretch overflow-hidden rounded-lg bg-white/[0.03] hover:bg-white/[0.06] ${
+    faded ? 'opacity-60 hover:opacity-100' : ''
+  }`;
 
   return (
     <>
@@ -203,7 +203,7 @@ function WatchListRowContent({
           </Link>
 
           <div>
-            <p className="text-sm font-semibold text-accent-foreground pb-1">
+            <p className="text-accent-foreground pb-1 text-sm font-semibold">
               S{String(episode.seasonNumber).padStart(2, '0')} | E
               {String(episode.episodeNumber).padStart(2, '0')}
               {backlogCount > 0 ? (
@@ -255,6 +255,7 @@ function WatchListRowContent({
           runtime: episode.runtime,
           airDate: episode.airDate,
           imageUrl: episode.imageUrl,
+          arcName: null,
         }}
         seasonNumber={episode.seasonNumber}
         cast={cast}

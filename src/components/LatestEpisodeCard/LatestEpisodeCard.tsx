@@ -7,7 +7,6 @@ import { useState } from 'react';
 import { EpisodeModal } from '@/components';
 import { getDaysUntilAir } from '@/components/ShowTracker/utils';
 
-
 import type { CastMember, LatestEpisode } from '@/types';
 
 function formatDate(dateStr: string | null): string | null {
@@ -88,8 +87,9 @@ export function LatestEpisodeCard({
               }
               disabled={isPending}
               onClick={onToggleWatched}
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#14181c] transition-colors disabled:opacity-50 ${isWatched ? 'bg-accent' : 'bg-muted-foreground'
-                }`}
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#14181c] transition-colors disabled:opacity-50 ${
+                isWatched ? 'bg-accent' : 'bg-muted-foreground'
+              }`}
             >
               <Check className="h-4 w-4 text-white" />
             </button>
@@ -105,6 +105,7 @@ export function LatestEpisodeCard({
           runtime: episode.runtime,
           airDate: episode.airDate,
           imageUrl: episode.imageUrl,
+          arcName: null,
         }}
         seasonNumber={episode.seasonNumber}
         cast={cast}

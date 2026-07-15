@@ -13,7 +13,6 @@ import {
   getWatchStatusBackground,
 } from '@/components/ShowTracker/utils';
 
-
 import type { CastMember, Season, SeasonEpisode, ShowStatus } from '@/types';
 
 function formatDate(dateStr: string | null): string | null {
@@ -168,108 +167,126 @@ export function SeasonAccordion({
             >
               <div className="overflow-hidden">
                 <div className="flex flex-col gap-2 p-2">
-                  {season.episodes.map((episode) => {
-                    const daysUntilAir = getDaysUntilAir(episode.airDate);
-                    const key = episodeKey(
-                      season.seasonNumber,
-                      episode.episodeNumber
-                    );
-                    const isEpisodeWatched =
-                      getWatchCount(watchedDates, key) > 0;
-                    const episodeRewatchCount = getRewatchCount(
-                      watchedDates,
-                      key
-                    );
-                    const isEpisodePending = pendingKeys.has(key);
+                  {(() => {
+                    let previousArcName: string | null = null;
 
-                    return (
-                      <div
-                        key={episode.episodeNumber}
-                        className="flex items-stretch overflow-hidden rounded-md bg-white/[0.03] hover:bg-white/[0.06]"
-                      >
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setSelected({
-                              episode: {
-                                ...episode,
-                                imageUrl:
-                                  episode.imageUrl ??
-                                  season.episodes[0]?.imageUrl ??
-                                  null,
-                              },
-                              seasonNumber: season.seasonNumber,
-                            })
-                          }
-                          className="flex min-w-0 flex-1 items-stretch gap-3 text-left"
-                        >
-                          <div className="relative aspect-square shrink-0 overflow-hidden bg-[#2c3440]">
-                            {episode.imageUrl ? (
-                              <Image
-                                src={episode.imageUrl}
-                                alt={episode.name}
-                                fill
-                                sizes="96px"
-                                className="object-cover"
-                              />
-                            ) : null}
+                    return season.episodes.map((episode) => {
+                      const daysUntilAir = getDaysUntilAir(episode.airDate);
+                      const key = episodeKey(
+                        season.seasonNumber,
+                        episode.episodeNumber
+                      );
+                      const isEpisodeWatched =
+                        getWatchCount(watchedDates, key) > 0;
+                      const episodeRewatchCount = getRewatchCount(
+                        watchedDates,
+                        key
+                      );
+                      const isEpisodePending = pendingKeys.has(key);
+
+                      const showArcDivider =
+                        episode.arcName !== null &&
+                        episode.arcName !== previousArcName &&
+                        episode.arcName.toLowerCase() !==
+                          season.name.toLowerCase();
+                      if (episode.arcName !== null) {
+                        previousArcName = episode.arcName;
+                      }
+
+                      return (
+                        <div key={episode.episodeNumber} className="contents">
+                          {showArcDivider ? (
+                            <div className="mt-2 px-1 text-xs font-semibold tracking-wide text-[#8a9bab] uppercase first:mt-0">
+                              {episode.arcName}
+                            </div>
+                          ) : null}
+                          <div className="flex items-stretch overflow-hidden rounded-md bg-white/[0.03] hover:bg-white/[0.06]">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSelected({
+                                  episode: {
+                                    ...episode,
+                                    imageUrl:
+                                      episode.imageUrl ??
+                                      season.episodes[0]?.imageUrl ??
+                                      null,
+                                  },
+                                  seasonNumber: season.seasonNumber,
+                                })
+                              }
+                              className="flex min-w-0 flex-1 items-stretch gap-3 text-left"
+                            >
+                              <div className="relative aspect-square shrink-0 overflow-hidden bg-[#2c3440]">
+                                {episode.imageUrl ? (
+                                  <Image
+                                    src={episode.imageUrl}
+                                    alt={episode.name}
+                                    fill
+                                    sizes="96px"
+                                    className="object-cover"
+                                  />
+                                ) : null}
+                              </div>
+                              <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 py-4">
+                                <p className="text-md truncate font-semibold text-[#c2d0dd]">
+                                  {String(episode.episodeNumber)}.{' '}
+                                  {episode.name}
+                                </p>
+                                {formatDate(episode.airDate) ? (
+                                  <p className="text-xs text-[#678]">
+                                    {formatDate(episode.airDate)}
+                                  </p>
+                                ) : null}
+                              </div>
+                            </button>
+                            <div className="flex shrink-0 items-center pr-3 pl-2">
+                              {daysUntilAir !== null ? (
+                                <span className="w-16 text-right text-xs text-[#8a9bab]">
+                                  In {daysUntilAir} day
+                                  {daysUntilAir === 1 ? '' : 's'}
+                                </span>
+                              ) : !isLoggedIn ? null : (
+                                <WatchedToggleButton
+                                  isWatched={isEpisodeWatched}
+                                  isPending={isEpisodePending}
+                                  rewatchCount={episodeRewatchCount}
+                                  markLabel="Mark episode as watched"
+                                  rewatchLabel="+1 Rewatched"
+                                  removeLabel="Not watched"
+                                  removeRewatchesLabel="Remove last rewatch"
+                                  onMark={() =>
+                                    onToggleEpisode(
+                                      season.seasonNumber,
+                                      episode.episodeNumber
+                                    )
+                                  }
+                                  onRewatch={() =>
+                                    onRewatchEpisode(
+                                      season.seasonNumber,
+                                      episode.episodeNumber
+                                    )
+                                  }
+                                  onRemove={() =>
+                                    onToggleEpisode(
+                                      season.seasonNumber,
+                                      episode.episodeNumber
+                                    )
+                                  }
+                                  onRemoveRewatches={() =>
+                                    onRemoveLastEpisodeRewatch(
+                                      season.seasonNumber,
+                                      episode.episodeNumber
+                                    )
+                                  }
+                                />
+                              )}
+                            </div>
                           </div>
-                          <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 py-4">
-                            <p className="text-md truncate font-semibold text-[#c2d0dd]">
-                              {String(episode.episodeNumber)}. {episode.name}
-                            </p>
-                            {formatDate(episode.airDate) ? (
-                              <p className="text-xs text-[#678]">
-                                {formatDate(episode.airDate)}
-                              </p>
-                            ) : null}
-                          </div>
-                        </button>
-                        <div className="flex shrink-0 items-center pr-3 pl-2">
-                          {daysUntilAir !== null ? (
-                            <span className="w-16 text-right text-xs text-[#8a9bab]">
-                              In {daysUntilAir} day
-                              {daysUntilAir === 1 ? '' : 's'}
-                            </span>
-                          ) : !isLoggedIn ? null : (
-                            <WatchedToggleButton
-                              isWatched={isEpisodeWatched}
-                              isPending={isEpisodePending}
-                              rewatchCount={episodeRewatchCount}
-                              markLabel="Mark episode as watched"
-                              rewatchLabel="+1 Rewatched"
-                              removeLabel="Not watched"
-                              removeRewatchesLabel="Remove last rewatch"
-                              onMark={() =>
-                                onToggleEpisode(
-                                  season.seasonNumber,
-                                  episode.episodeNumber
-                                )
-                              }
-                              onRewatch={() =>
-                                onRewatchEpisode(
-                                  season.seasonNumber,
-                                  episode.episodeNumber
-                                )
-                              }
-                              onRemove={() =>
-                                onToggleEpisode(
-                                  season.seasonNumber,
-                                  episode.episodeNumber
-                                )
-                              }
-                              onRemoveRewatches={() =>
-                                onRemoveLastEpisodeRewatch(
-                                  season.seasonNumber,
-                                  episode.episodeNumber
-                                )
-                              }
-                            />
-                          )}
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             </div>

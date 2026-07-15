@@ -3,6 +3,7 @@
 import { unstable_cache } from 'next/cache';
 
 import { getDaysUntilAir } from '@/components/ShowTracker/utils';
+
 import {
   TMDB_API_BASE_URL,
   TMDB_BACKDROP_BASE_URL,
@@ -19,6 +20,8 @@ import type {
   ShowDetails,
   ShowMeta,
   ShowSummary,
+  TMDBEpisodeGroupDetail,
+  TMDBEpisodeGroupListEntry,
   TMDBSeasonDetailRaw,
   TMDBSeriesDetailsRaw,
   TMDBShowImagesRaw,
@@ -28,7 +31,11 @@ import type {
   WatchProvider,
 } from '@/types';
 
-import { getCountryDisplayName, getLanguageDisplayName } from '@/utils';
+import {
+  getCountryDisplayName,
+  getLanguageDisplayName,
+  isAnime,
+} from '@/utils';
 
 async function fetchPopularTvShows(): Promise<TvShow[]> {
   const apiKey = process.env.TMDB_API_KEY;
@@ -108,6 +115,7 @@ async function fetchTmdbSeasonEpisodes(
       imageUrl: episode.still_path
         ? `${TMDB_BACKDROP_BASE_URL}${episode.still_path}`
         : null,
+      arcName: null,
     }));
   } catch (err) {
     console.warn('[tv-shows] season fetch failed', err);
@@ -119,6 +127,81 @@ export const getTmdbSeasonEpisodes = unstable_cache(
   fetchTmdbSeasonEpisodes,
   ['tmdb-season-episodes'],
   { revalidate: 3600, tags: ['tmdb-season-episodes'] }
+);
+
+async function fetchTmdbAnimeArcNames(
+  showId: number
+): Promise<Map<string, string> | null> {
+  const apiKey = process.env.TMDB_API_KEY;
+  if (!apiKey) {
+    console.warn('[tv-shows] TMDB_API_KEY not set');
+    return null;
+  }
+
+  try {
+    const listRes = await fetch(
+      `${TMDB_API_BASE_URL}/tv/${showId}/episode_groups?api_key=${apiKey}`,
+      { cache: 'no-store' }
+    );
+
+    if (!listRes.ok) {
+      console.warn(
+        `[tv-shows] TMDB episode groups ${listRes.status}: ${listRes.statusText}`
+      );
+      return null;
+    }
+
+    const listJson: { results?: TMDBEpisodeGroupListEntry[] } =
+      await listRes.json();
+    const airedOrderGroups = (listJson.results ?? []).filter(
+      (group) => group.type === 1
+    );
+
+    if (airedOrderGroups.length === 0) return null;
+
+    const chosen =
+      airedOrderGroups.find((group) =>
+        group.name.toLowerCase().includes('tvdb')
+      ) ??
+      airedOrderGroups.reduce((best, group) =>
+        group.episode_count > best.episode_count ? group : best
+      );
+
+    const detailRes = await fetch(
+      `${TMDB_API_BASE_URL}/tv/episode_group/${chosen.id}?api_key=${apiKey}`,
+      { cache: 'no-store' }
+    );
+
+    if (!detailRes.ok) {
+      console.warn(
+        `[tv-shows] TMDB episode group detail ${detailRes.status}: ${detailRes.statusText}`
+      );
+      return null;
+    }
+
+    const detailJson: TMDBEpisodeGroupDetail = await detailRes.json();
+    const arcNames = new Map<string, string>();
+
+    for (const group of detailJson.groups ?? []) {
+      for (const episode of group.episodes ?? []) {
+        arcNames.set(
+          `${episode.season_number}-${episode.episode_number}`,
+          group.name
+        );
+      }
+    }
+
+    return arcNames;
+  } catch (err) {
+    console.warn('[tv-shows] episode groups fetch failed', err);
+    return null;
+  }
+}
+
+export const getTmdbAnimeArcNames = unstable_cache(
+  fetchTmdbAnimeArcNames,
+  ['tmdb-anime-arc-names'],
+  { revalidate: 3600, tags: ['tmdb-anime-arc-names'] }
 );
 
 // Fetched unconditionally for every show detail page: `details` covers
@@ -179,6 +262,16 @@ async function fetchTmdbShowFullDetails(
       nextEpisodeDate: json.next_episode_to_air?.air_date ?? null,
     };
 
+    // Arc-name dividers (SeasonAccordion) are opt-in per show: only fetched
+    // for anime, and only actually used if TMDB has a community-maintained
+    // "aired order" episode group for it (getTmdbAnimeArcNames returns null
+    // otherwise, e.g. for Breaking Bad, which has no such group at all).
+    const showIsAnime = isAnime(
+      (json.genres ?? []).map((genre) => genre.id),
+      json.origin_country ?? []
+    );
+    const arcNames = showIsAnime ? await getTmdbAnimeArcNames(id) : null;
+
     const lastEpisode = json.last_episode_to_air;
     const nextEpisode = json.next_episode_to_air;
 
@@ -199,7 +292,15 @@ async function fetchTmdbShowFullDetails(
         posterUrl: season.poster_path
           ? `${TMDB_IMAGE_BASE_URL}${season.poster_path}`
           : null,
-        episodes: await getTmdbSeasonEpisodes(id, season.season_number),
+        episodes: (await getTmdbSeasonEpisodes(id, season.season_number)).map(
+          (episode) => ({
+            ...episode,
+            arcName:
+              arcNames?.get(
+                `${season.season_number}-${episode.episodeNumber}`
+              ) ?? null,
+          })
+        ),
       }))
     );
 

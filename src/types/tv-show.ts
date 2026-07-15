@@ -49,6 +49,7 @@ export type SeasonEpisode = {
   runtime: number | null;
   airDate: string | null;
   imageUrl: string | null;
+  arcName: string | null;
 };
 
 export type Season = {
@@ -170,7 +171,7 @@ export type TMDBSeriesDetailsRaw = {
   episode_run_time?: number[];
   original_language?: string;
   origin_country?: string[];
-  genres?: { name: string }[];
+  genres?: { id: number; name: string }[];
   networks?: { name: string }[];
   seasons?: TMDBSeasonRaw[];
   next_episode_to_air?: TMDBEpisodeRaw | null;
@@ -189,4 +190,27 @@ export type TMDBSeriesDetailsRaw = {
       vote_average: number;
     }[];
   };
+};
+
+export type TMDBEpisodeGroupListEntry = {
+  id: string;
+  name: string;
+  type: number;
+  episode_count: number;
+  group_count: number;
+};
+
+export type TMDBEpisodeGroupDetailEpisode = {
+  season_number: number;
+  episode_number: number;
+};
+
+export type TMDBEpisodeGroupDetailGroup = {
+  name: string;
+  order: number;
+  episodes: TMDBEpisodeGroupDetailEpisode[];
+};
+
+export type TMDBEpisodeGroupDetail = {
+  groups: TMDBEpisodeGroupDetailGroup[];
 };
