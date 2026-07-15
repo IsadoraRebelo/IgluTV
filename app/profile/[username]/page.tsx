@@ -1,12 +1,14 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { ProfileSettingsButton } from '@/components';
+import { ProfileSettingsButton, WatchProgressBar } from '@/components';
 import {
   getFavouriteShowsForUser,
+  getFinishedSeasonsForUser,
   getFinishedShowsForUser,
   getRecentWatchedShowsForUser,
   getShowsForUser,
+  getWatchedEpisodeCountsForUser,
   getWatchStatsForUser,
 } from '@/services/tracking';
 import { getProfileByUsername } from '@/services/profile';
@@ -14,7 +16,7 @@ import { resolveShowSummaries } from '@/services/tv-shows';
 
 import { createClient } from '@/supabase/server';
 
-import type { ShowSummary } from '@/types';
+import type { ShowStatus, ShowSummary } from '@/types';
 import { cn } from '@/utils';
 
 const RECENT_ACTIVITY_LIMIT = 15;
@@ -28,23 +30,32 @@ function formatDiaryDate(dateStr: string): { month: string; day: string } {
   };
 }
 
-type DiaryEntry = { show: ShowSummary; watchedOn: string };
-type DiaryMonthGroup = { key: string; month: string; entries: DiaryEntry[] };
+type DiaryEntry =
+  | { kind: 'show'; show: ShowSummary; watchedOn: string }
+  | { kind: 'season'; show: ShowSummary; seasonNumber: number; watchedOn: string };
+type DiaryDayGroup = { day: string; entries: DiaryEntry[] };
+type DiaryMonthGroup = { key: string; month: string; days: DiaryDayGroup[] };
 
 function groupDiaryEntriesByMonth(entries: DiaryEntry[]): DiaryMonthGroup[] {
   const groups: DiaryMonthGroup[] = [];
 
   for (const entry of entries) {
-    const { month } = formatDiaryDate(entry.watchedOn);
+    const { month, day } = formatDiaryDate(entry.watchedOn);
     const date = new Date(`${entry.watchedOn}T00:00:00`);
-    const key = `${date.getFullYear()}-${date.getMonth()}`;
+    const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
 
-    const lastGroup = groups[groups.length - 1];
-    if (lastGroup && lastGroup.key === key) {
-      lastGroup.entries.push(entry);
-    } else {
-      groups.push({ key, month, entries: [entry] });
+    let monthGroup = groups[groups.length - 1];
+    if (!monthGroup || monthGroup.key !== monthKey) {
+      monthGroup = { key: monthKey, month, days: [] };
+      groups.push(monthGroup);
     }
+
+    let dayGroup = monthGroup.days[monthGroup.days.length - 1];
+    if (!dayGroup || dayGroup.day !== day) {
+      dayGroup = { day, entries: [] };
+      monthGroup.days.push(dayGroup);
+    }
+    dayGroup.entries.push(entry);
   }
 
   return groups;
@@ -55,14 +66,16 @@ function PosterCard({
   caption,
   className,
   sizes = '128px',
+  progress,
 }: {
   show: ShowSummary;
   caption?: string;
   className?: string;
   sizes?: string;
+  progress?: { watchedCount: number; showStatus: ShowStatus | null };
 }) {
   return (
-    <Link href={`/show/${show.id}`} className={cn('flex flex-col gap-2', className)}>
+    <Link href={`/show/${show.id}`} className={cn('flex flex-col gap-1', className)}>
       <div className="relative aspect-[2/3] w-full overflow-hidden rounded-sm bg-[#2c3440]">
         {show.posterUrl ? (
           <Image
@@ -74,6 +87,15 @@ function PosterCard({
           />
         ) : null}
       </div>
+      {progress ? (
+        <WatchProgressBar
+          watchedCount={progress.watchedCount}
+          markableCount={show.markableEpisodeCount}
+          showStatus={progress.showStatus}
+          showCount={false}
+          className="h-1.5 rounded-sm"
+        />
+      ) : null}
       {caption ? (
         <p className="truncate text-xs text-[#8a9bab]">{caption}</p>
       ) : null}
@@ -122,22 +144,46 @@ export default async function ProfilePage({
   } = await supabase.auth.getUser();
   const isOwner = viewer?.id === profile.id;
 
-  const [stats, favouriteShows, watchlistShows, recentRows, finishedRows] =
-    await Promise.all([
-      getWatchStatsForUser(profile.id),
-      getFavouriteShowsForUser(profile.id),
-      getShowsForUser(profile.id, 'watch_later'),
-      getRecentWatchedShowsForUser(profile.id, RECENT_ACTIVITY_LIMIT),
-      getFinishedShowsForUser(profile.id),
-    ]);
+  const [
+    stats,
+    favouriteShows,
+    watchlistShows,
+    recentRows,
+    finishedRows,
+    finishedSeasonRows,
+    allTrackedShows,
+  ] = await Promise.all([
+    getWatchStatsForUser(profile.id),
+    getFavouriteShowsForUser(profile.id),
+    getShowsForUser(profile.id, 'watch_later'),
+    getRecentWatchedShowsForUser(profile.id, RECENT_ACTIVITY_LIMIT),
+    getFinishedShowsForUser(profile.id),
+    getFinishedSeasonsForUser(profile.id),
+    getShowsForUser(profile.id),
+  ]);
+
+  const statusByShowId = new Map(
+    allTrackedShows.map((s) => [s.tmdbShowId, s.status])
+  );
 
   const allShowIds = [
     ...favouriteShows.map((s) => s.tmdbShowId),
     ...watchlistShows.map((s) => s.tmdbShowId),
     ...recentRows.map((r) => r.tmdbShowId),
     ...finishedRows.map((r) => r.tmdbShowId),
+    ...finishedSeasonRows.map((r) => r.tmdbShowId),
   ];
-  const summaries = await resolveShowSummaries(allShowIds);
+  const progressShowIds = Array.from(
+    new Set([
+      ...favouriteShows.map((s) => s.tmdbShowId),
+      ...recentRows.map((r) => r.tmdbShowId),
+    ])
+  );
+
+  const [summaries, watchedCounts] = await Promise.all([
+    resolveShowSummaries(allShowIds),
+    getWatchedEpisodeCountsForUser(profile.id, progressShowIds),
+  ]);
 
   const favouriteSummaries = favouriteShows
     .map((s) => summaries.get(s.tmdbShowId))
@@ -172,13 +218,33 @@ export default async function ProfilePage({
 
   const bannerUrl = profile.bannerUrl ?? recentActivity[0]?.show.bannerUrl ?? null;
 
-  const finishedEntries = finishedRows
-    .map((row) => {
+  const finishedShowEntries = finishedRows
+    .map((row): DiaryEntry | null => {
       const show = summaries.get(row.tmdbShowId);
       if (!show) return null;
-      return { show, watchedOn: row.watchedOn };
+      return { kind: 'show', show, watchedOn: row.watchedOn };
     })
     .filter((entry): entry is DiaryEntry => entry !== null);
+
+  const finishedSeasonEntries = finishedSeasonRows
+    .map((row): DiaryEntry | null => {
+      const show = summaries.get(row.tmdbShowId);
+      if (!show) return null;
+      return {
+        kind: 'season',
+        show,
+        seasonNumber: row.seasonNumber,
+        watchedOn: row.watchedOn,
+      };
+    })
+    .filter((entry): entry is DiaryEntry => entry !== null);
+
+  const finishedEntries = [
+    ...finishedShowEntries,
+    ...finishedSeasonEntries,
+  ].sort((a, b) =>
+    a.watchedOn < b.watchedOn ? 1 : a.watchedOn > b.watchedOn ? -1 : 0
+  );
 
   const diaryGroups = groupDiaryEntriesByMonth(finishedEntries);
 
@@ -260,6 +326,10 @@ export default async function ProfilePage({
                       show={show}
                       className="w-full"
                       sizes="(max-width: 640px) 30vw, (max-width: 1024px) 22vw, 155px"
+                      progress={{
+                        watchedCount: watchedCounts.get(show.id) ?? 0,
+                        showStatus: statusByShowId.get(show.id) ?? null,
+                      }}
                     />
                   ))}
                 </div>
@@ -280,6 +350,10 @@ export default async function ProfilePage({
                         show={entry.show}
                         className="w-32 shrink-0"
                         caption={`S${String(entry.seasonNumber).padStart(2, '0')}E${String(entry.episodeNumber).padStart(2, '0')} · ${month} ${day}`}
+                        progress={{
+                          watchedCount: watchedCounts.get(entry.show.id) ?? 0,
+                          showStatus: statusByShowId.get(entry.show.id) ?? null,
+                        }}
                       />
                     );
                   })}
@@ -328,37 +402,48 @@ export default async function ProfilePage({
                     Diary
                   </h2>
                   <span className="text-xs text-muted-foreground">
-                    {finishedRows.length}
+                    {finishedEntries.length}
                   </span>
                 </div>
                 <div className="mt-1 border-t border-muted-foreground" />
                 <div className="flex flex-col">
                   {diaryGroups.map((group, i) => (
                     <div key={group.key}>
-                      <div className="flex gap-3 py-3">
-                        <div className="px-3 pb-1 rounded-md bg-white/[0.06]">
+                      <div className="flex items-start gap-3 py-3">
+                        <div className="shrink-0 rounded-md bg-white/[0.06] px-3 pb-1">
                           <span className="text-[10px] font-bold tracking-wide text-[#8a9bab] uppercase">
                             {group.month}
                           </span>
                         </div>
-                        <div className="flex flex-1 flex-col justify-center gap-2">
-                          {group.entries.map((entry) => {
-                            const { day } = formatDiaryDate(entry.watchedOn);
-                            return (
-                              <Link
-                                key={entry.show.id}
-                                href={`/show/${entry.show.id}`}
-                                className="text-sm"
-                              >
-                                <span className="text-accent-foreground mr-1">
-                                  {day}
-                                </span>
-                                <span className="truncate font-semibold text-muted-foreground">
-                                  {entry.show.name}
-                                </span>
-                              </Link>
-                            );
-                          })}
+                        <div className="flex flex-1 flex-col gap-2">
+                          {group.days.map((dayGroup) => (
+                            <div key={dayGroup.day} className="flex gap-2">
+                              <span className="shrink-0 text-sm text-accent-foreground">
+                                {dayGroup.day}
+                              </span>
+                              <div className="flex min-w-0 flex-col gap-1">
+                                {dayGroup.entries.map((entry) => {
+                                  const key =
+                                    entry.kind === 'season'
+                                      ? `${entry.show.id}-s${entry.seasonNumber}`
+                                      : `${entry.show.id}-show`;
+                                  const label =
+                                    entry.kind === 'season'
+                                      ? `S${entry.seasonNumber} · ${entry.show.name}`
+                                      : entry.show.name;
+                                  return (
+                                    <Link
+                                      key={key}
+                                      href={`/show/${entry.show.id}`}
+                                      className="truncate text-sm font-semibold text-muted-foreground"
+                                    >
+                                      {label}
+                                    </Link>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                       {i < diaryGroups.length - 1 ? (

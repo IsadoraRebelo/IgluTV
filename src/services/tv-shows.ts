@@ -2,6 +2,7 @@
 
 import { unstable_cache } from 'next/cache';
 
+import { getDaysUntilAir } from '@/components/ShowTracker/utils';
 import {
   TMDB_API_BASE_URL,
   TMDB_BACKDROP_BASE_URL,
@@ -272,6 +273,17 @@ export async function resolveShowSummaries(
   uniqueIds.forEach((id, i) => {
     const full = results[i];
     if (!full) return;
+
+    const markableEpisodeCount = full.meta.seasons
+      .filter((season) => season.seasonNumber > 0)
+      .reduce(
+        (sum, season) =>
+          sum +
+          season.episodes.filter((ep) => getDaysUntilAir(ep.airDate) === null)
+            .length,
+        0
+      );
+
     map.set(id, {
       id,
       name: full.details.name,
@@ -281,6 +293,7 @@ export async function resolveShowSummaries(
           TMDB_POSTER_LARGE_BASE_URL
         ) ?? null,
       bannerUrl: full.details.bannerUrl,
+      markableEpisodeCount,
     });
   });
   return map;

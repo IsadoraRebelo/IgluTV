@@ -4,6 +4,7 @@ import type {
   Season,
   ShowDetails,
   ShowMeta,
+  ShowStatus,
 } from '@/types';
 
 export function episodeKey(season: number, episode: number): string {
@@ -12,8 +13,8 @@ export function episodeKey(season: number, episode: number): string {
 
 export function buildWatchedDatesMap(
   watched: EpisodeWatch[]
-): Map<string, string[]> {
-  const dates = new Map<string, string[]>();
+): Map<string, (string | null)[]> {
+  const dates = new Map<string, (string | null)[]>();
   for (const w of watched) {
     const key = episodeKey(w.seasonNumber, w.episodeNumber);
     const existing = dates.get(key);
@@ -24,24 +25,44 @@ export function buildWatchedDatesMap(
 }
 
 export function getWatchCount(
-  watchedDates: Map<string, string[]>,
+  watchedDates: Map<string, (string | null)[]>,
   key: string
 ): number {
   return (watchedDates.get(key) ?? []).length;
 }
 
 export function getRewatchCount(
-  watchedDates: Map<string, string[]>,
+  watchedDates: Map<string, (string | null)[]>,
   key: string
 ): number {
   return Math.max(0, getWatchCount(watchedDates, key) - 1);
 }
 
 export function getWatchedDates(
-  watchedDates: Map<string, string[]>,
+  watchedDates: Map<string, (string | null)[]>,
   key: string
-): string[] {
+): (string | null)[] {
   return watchedDates.get(key) ?? [];
+}
+
+export function getWatchStatusBackground(
+  showStatus: ShowStatus | null,
+  watchedCount: number,
+  markableCount: number
+): string {
+  if (markableCount === 0 || watchedCount === 0) return 'var(--color-muted)';
+
+  const fillColor =
+    showStatus === 'paused'
+      ? 'var(--color-paused)'
+      : showStatus === 'dropped'
+        ? 'var(--color-dropped)'
+        : 'var(--color-accent)';
+
+  if (watchedCount >= markableCount) return fillColor;
+
+  const percent = (watchedCount / markableCount) * 100;
+  return `linear-gradient(to right, ${fillColor} ${percent}%, var(--color-muted) ${percent}%)`;
 }
 
 export function getDaysUntilAir(dateStr: string | null): number | null {
@@ -78,7 +99,7 @@ export type EpisodeRef = { seasonNumber: number; episodeNumber: number };
 
 export function getPriorUnwatchedAiredEpisodes(
   seasons: Season[],
-  watchedDates: Map<string, string[]>,
+  watchedDates: Map<string, (string | null)[]>,
   cutoffSeason: number,
   cutoffEpisode: number | null
 ): EpisodeRef[] {
@@ -111,7 +132,7 @@ export function getPriorUnwatchedAiredEpisodes(
 
 export function getWatchNextEpisode(
   seasons: Season[],
-  watchedDates: Map<string, string[]>
+  watchedDates: Map<string, (string | null)[]>
 ): LatestEpisode | null {
   let furthest: { seasonNumber: number; episodeNumber: number } | null = null;
 
@@ -181,7 +202,7 @@ export type EpisodeSectionState =
 export function getEpisodeSectionState(
   meta: ShowMeta | null,
   details: ShowDetails,
-  watchedDates: Map<string, string[]>
+  watchedDates: Map<string, (string | null)[]>
 ): EpisodeSectionState {
   if (watchedDates.size === 0) {
     return meta?.latestEpisode

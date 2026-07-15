@@ -10,6 +10,7 @@ import {
   getDaysUntilAir,
   getRewatchCount,
   getWatchCount,
+  getWatchStatusBackground,
 } from '@/components/ShowTracker/utils';
 
 
@@ -24,21 +25,6 @@ function formatDate(dateStr: string | null): string | null {
     day: 'numeric',
     year: 'numeric',
   });
-}
-
-function getSeasonStatusBackground(
-  showStatus: ShowStatus | null,
-  watchedCount: number,
-  markableCount: number
-): string {
-  if (showStatus === 'paused') return 'var(--color-paused)';
-  if (showStatus === 'dropped') return 'var(--color-dropped)';
-
-  if (markableCount === 0 || watchedCount === 0) return 'var(--color-muted)';
-  if (watchedCount >= markableCount) return 'var(--color-accent)';
-
-  const percent = (watchedCount / markableCount) * 100;
-  return `linear-gradient(to right, var(--color-accent) ${percent}%, var(--color-muted) ${percent}%)`;
 }
 
 export function SeasonAccordion({
@@ -57,7 +43,7 @@ export function SeasonAccordion({
 }: {
   seasons: Season[];
   cast: CastMember[];
-  watchedDates: Map<string, string[]>;
+  watchedDates: Map<string, (string | null)[]>;
   pendingKeys: Set<string>;
   onToggleEpisode: (seasonNumber: number, episodeNumber: number) => void;
   onRewatchEpisode: (seasonNumber: number, episodeNumber: number) => void;
@@ -110,7 +96,7 @@ export function SeasonAccordion({
                 )
               );
 
-        const statusBackground = getSeasonStatusBackground(
+        const statusBackground = getWatchStatusBackground(
           showStatus,
           seasonWatchedCount,
           markableEpisodes.length

@@ -28,6 +28,10 @@ function formatDate(dateStr: string | null): string | null {
   });
 }
 
+function formatDateOrUnknown(dateStr: string | null): string {
+  return formatDate(dateStr) ?? 'Date unknown';
+}
+
 function todayIso(): string {
   const now = new Date();
   const year = now.getFullYear();
@@ -76,8 +80,16 @@ export function EpisodeModal({
     setEditingIndex(null);
     if (!value || episodeNumber === null) return;
     const previousDate = episodeWatchDates[index];
-    if (!previousDate || value === previousDate) return;
+    if (value === previousDate) return;
     onUpdateEpisodeWatchDate(seasonNumber, episodeNumber, previousDate, value);
+  }
+
+  function handleClearDate(index: number) {
+    setEditingIndex(null);
+    if (episodeNumber === null) return;
+    const previousDate = episodeWatchDates[index];
+    if (previousDate === null) return;
+    onUpdateEpisodeWatchDate(seasonNumber, episodeNumber, previousDate, null);
   }
 
   return (
@@ -143,7 +155,7 @@ export function EpisodeModal({
                           >
                             <div className="flex items-center gap-1">
                               <CalendarDaysIcon className="h-5 w-5" /> {episodeWatchDates.length}× first{' '}
-                              {formatDate(episodeWatchDates[0])}
+                              {formatDateOrUnknown(episodeWatchDates[0])}
                             </div>
                             <ChevronDown
                               className={`h-3 w-3 transition-transform ${historyOpen ? 'rotate-180' : ''
@@ -151,19 +163,29 @@ export function EpisodeModal({
                             />
                           </button>
                         ) : editingIndex === 0 ? (
-                          <input
-                            type="date"
-                            autoFocus
-                            defaultValue={episodeWatchDates[0]}
-                            max={todayIso()}
-                            onBlur={(event) =>
-                              handleDateInputCommit(0, event.target.value)
-                            }
-                            onKeyDown={(event) => {
-                              if (event.key === 'Escape') setEditingIndex(null);
-                            }}
-                            className="rounded border border-white/10 bg-white/5 px-1 py-0.5 text-xs text-[#c2d0dd]"
-                          />
+                          <div className="flex flex-col items-start gap-1">
+                            <input
+                              type="date"
+                              autoFocus
+                              defaultValue={episodeWatchDates[0] ?? undefined}
+                              max={todayIso()}
+                              onBlur={(event) =>
+                                handleDateInputCommit(0, event.target.value)
+                              }
+                              onKeyDown={(event) => {
+                                if (event.key === 'Escape') setEditingIndex(null);
+                              }}
+                              className="rounded border border-white/10 bg-white/5 px-1 py-0.5 text-xs text-[#c2d0dd]"
+                            />
+                            <button
+                              type="button"
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => handleClearDate(0)}
+                              className="text-[10px] text-[#678] underline decoration-dotted underline-offset-2 hover:text-white"
+                            >
+                              I don&apos;t remember the date
+                            </button>
+                          </div>
                         ) : (
                           <button
                             type="button"
@@ -172,7 +194,7 @@ export function EpisodeModal({
                             className="mt-4 text-sm text-[#8a9bab] underline decoration-dotted underline-offset-2 hover:text-white disabled:pointer-events-none disabled:opacity-50"
                           >
                             <div className="flex items-center gap-1">
-                              <CalendarDaysIcon className="h-5 w-5" /> {formatDate(episodeWatchDates[0])}
+                              <CalendarDaysIcon className="h-5 w-5" /> {formatDateOrUnknown(episodeWatchDates[0])}
                             </div>
                           </button>
                         )}
@@ -185,11 +207,14 @@ export function EpisodeModal({
                             <ul className="mt-1 flex flex-col gap-0.5 overflow-hidden pl-1">
                               {episodeWatchDates.map((date, index) =>
                                 editingIndex === index ? (
-                                  <li key={`${date}-${index}`}>
+                                  <li
+                                    key={`${date}-${index}`}
+                                    className="flex flex-col items-start gap-1"
+                                  >
                                     <input
                                       type="date"
                                       autoFocus
-                                      defaultValue={date}
+                                      defaultValue={date ?? undefined}
                                       max={todayIso()}
                                       onBlur={(event) =>
                                         handleDateInputCommit(
@@ -204,6 +229,16 @@ export function EpisodeModal({
                                       }}
                                       className="rounded border border-white/10 bg-white/5 px-1 py-0.5 text-xs text-[#c2d0dd]"
                                     />
+                                    <button
+                                      type="button"
+                                      onMouseDown={(event) =>
+                                        event.preventDefault()
+                                      }
+                                      onClick={() => handleClearDate(index)}
+                                      className="text-[10px] text-[#678] underline decoration-dotted underline-offset-2 hover:text-white"
+                                    >
+                                      I don&apos;t remember the date
+                                    </button>
                                   </li>
                                 ) : (
                                   <li key={`${date}-${index}`}>
@@ -213,7 +248,7 @@ export function EpisodeModal({
                                       onClick={() => setEditingIndex(index)}
                                       className="text-xs text-[#678] underline decoration-dotted underline-offset-2 hover:text-white disabled:pointer-events-none disabled:opacity-50"
                                     >
-                                      {formatDate(date)}
+                                      {formatDateOrUnknown(date)}
                                     </button>
                                   </li>
                                 )

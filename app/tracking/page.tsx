@@ -105,6 +105,7 @@ async function buildWatchListEntry(
   let sortKey: string | null = null;
   for (const dates of watchedDates.values()) {
     for (const date of dates) {
+      if (date === null) continue;
       if (sortKey === null || date > sortKey) sortKey = date;
     }
   }

@@ -16,6 +16,7 @@ import {
   ShowActionsMenu,
   ShowActionsSidebar,
   ShowOverview,
+  ShowProgressBar,
   ShowTabs,
   ShowTracker,
   ShowTrackingProvider,
@@ -206,6 +207,11 @@ export default async function ShowPage({
                 />
               </div>
             </div>
+
+            <ShowProgressBar
+              seasons={meta?.seasons ?? []}
+              className="mt-2 w-full md:w-[230px]"
+            />
           </div>
         </div>
 
@@ -285,6 +291,10 @@ function HomeTab({
             value={formatDate(details.lastAiredDate)}
           />
           <DetailRow label="Status" value={details.status} />
+          <DetailRow
+            label="Genres"
+            value={details.genres.length ? details.genres.join(', ') : null}
+          />
           <DetailRow label="Network" value={details.network} />
           <DetailRow
             label="Original language"

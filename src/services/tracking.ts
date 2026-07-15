@@ -73,18 +73,31 @@ export async function getWatchedEpisodesForUser(
 
   const { data, error } = await supabase
     .from('episode_watches')
-    .select('id, season_number, episode_number, watched_on')
+    .select('id, season_number, episode_number, watched_on, created_at')
     .eq('user_id', userId)
-    .eq('tmdb_show_id', showId)
-    .order('watched_on', { ascending: true });
+    .eq('tmdb_show_id', showId);
 
   if (error) throw new ServiceError(error.message, error.code);
 
-  return (data ?? []).map((row) => ({
+  const watched = (data ?? []).map((row) => ({
     id: row.id,
     seasonNumber: row.season_number,
     episodeNumber: row.episode_number,
     watchedOn: row.watched_on,
+    createdAt: row.created_at,
+  }));
+
+  watched.sort((a, b) => {
+    const aKey = a.watchedOn ?? a.createdAt.slice(0, 10);
+    const bKey = b.watchedOn ?? b.createdAt.slice(0, 10);
+    return aKey < bKey ? -1 : aKey > bKey ? 1 : 0;
+  });
+
+  return watched.map(({ id, seasonNumber, episodeNumber, watchedOn }) => ({
+    id,
+    seasonNumber,
+    episodeNumber,
+    watchedOn,
   }));
 }
 
@@ -116,6 +129,7 @@ export async function getRecentWatchedEpisodesForUser(
     .from('episode_watches')
     .select('id, tmdb_show_id, season_number, episode_number, watched_on')
     .eq('user_id', userId)
+    .not('watched_on', 'is', null)
     .order('watched_on', { ascending: false })
     .order('id', { ascending: false })
     .limit(limit * 10);
@@ -126,6 +140,7 @@ export async function getRecentWatchedEpisodesForUser(
   const deduped: RecentWatchedEpisodeRow[] = [];
 
   for (const row of data ?? []) {
+    if (row.watched_on === null) continue;
     const key = `${row.tmdb_show_id}-${row.season_number}-${row.episode_number}`;
     if (seenEpisodes.has(key)) continue;
     seenEpisodes.add(key);
@@ -162,13 +177,19 @@ export async function getRecentWatchedShowsForUser(
 ): Promise<RecentWatchedEpisodeRow[]> {
   const supabase = await createClient();
 
+  // No row cap here: a single bulk "mark watched" action can insert
+  // hundreds of rows for one show under the same date, which would starve
+  // out a fixed-size window before it ever reaches other, genuinely more
+  // recent shows. Dedup is by show, so fetching this user's full dated
+  // watch history (cheap — indexed by user_id, at most a few thousand rows
+  // even for heavy use) is what guarantees correctness.
   const { data, error } = await supabase
     .from('episode_watches')
     .select('id, tmdb_show_id, season_number, episode_number, watched_on')
     .eq('user_id', userId)
+    .not('watched_on', 'is', null)
     .order('watched_on', { ascending: false })
-    .order('id', { ascending: false })
-    .limit(limit * 20);
+    .order('id', { ascending: false });
 
   if (error) throw new ServiceError(error.message, error.code);
 
@@ -176,6 +197,7 @@ export async function getRecentWatchedShowsForUser(
   const deduped: RecentWatchedEpisodeRow[] = [];
 
   for (const row of data ?? []) {
+    if (row.watched_on === null) continue;
     if (seenShows.has(row.tmdb_show_id)) continue;
     seenShows.add(row.tmdb_show_id);
 
@@ -217,6 +239,7 @@ export async function getFinishedShowsForUser(
     .select('id, tmdb_show_id, season_number, episode_number, watched_on')
     .eq('user_id', userId)
     .in('tmdb_show_id', completedIds)
+    .not('watched_on', 'is', null)
     .order('watched_on', { ascending: false })
     .order('id', { ascending: false });
 
@@ -226,6 +249,7 @@ export async function getFinishedShowsForUser(
   const deduped: RecentWatchedEpisodeRow[] = [];
 
   for (const row of data ?? []) {
+    if (row.watched_on === null) continue;
     if (seenShows.has(row.tmdb_show_id)) continue;
     seenShows.add(row.tmdb_show_id);
 
@@ -239,6 +263,110 @@ export async function getFinishedShowsForUser(
   }
 
   return deduped;
+}
+
+type FinishedSeasonRow = {
+  tmdbShowId: number;
+  seasonNumber: number;
+  watchedOn: string;
+};
+
+// Diary entries: one per regular season the user has fully watched on a
+// show marked 'completed', dated by the first time that season's last
+// episode was watched. `show_tracking.status` never downgrades
+// automatically (e.g. after unmarking a single episode post-completion),
+// so per-season completeness is always rechecked here rather than assumed
+// from the show's status.
+export async function getFinishedSeasonsForUser(
+  userId: string
+): Promise<FinishedSeasonRow[]> {
+  const supabase = await createClient();
+
+  const { data: completedShows, error: completedError } = await supabase
+    .from('show_tracking')
+    .select('tmdb_show_id')
+    .eq('user_id', userId)
+    .eq('status', statusToCode('completed'));
+
+  if (completedError) {
+    throw new ServiceError(completedError.message, completedError.code);
+  }
+
+  const completedIds = (completedShows ?? []).map((row) => row.tmdb_show_id);
+  if (completedIds.length === 0) return [];
+
+  const [fullDetailsList, watchesResult] = await Promise.all([
+    Promise.all(completedIds.map((id) => getTmdbShowFullDetails(id))),
+    supabase
+      .from('episode_watches')
+      .select('tmdb_show_id, season_number, episode_number, watched_on')
+      .eq('user_id', userId)
+      .in('tmdb_show_id', completedIds)
+      .gt('season_number', 0),
+  ]);
+
+  const { data: watchRows, error: watchesError } = watchesResult;
+  if (watchesError) {
+    throw new ServiceError(watchesError.message, watchesError.code);
+  }
+
+  const seasonKey = (showId: number, seasonNumber: number) =>
+    `${showId}-${seasonNumber}`;
+
+  const seasons = new Map<
+    string,
+    { tmdbShowId: number; seasonNumber: number; lastEpisodeNumber: number }
+  >();
+
+  completedIds.forEach((showId, i) => {
+    const full = fullDetailsList[i];
+    if (!full) return;
+    for (const season of full.meta.seasons) {
+      if (season.seasonNumber <= 0 || !season.episodeCount) continue;
+      seasons.set(seasonKey(showId, season.seasonNumber), {
+        tmdbShowId: showId,
+        seasonNumber: season.seasonNumber,
+        lastEpisodeNumber: season.episodeCount,
+      });
+    }
+  });
+
+  const watchedCounts = new Map<string, Set<number>>();
+  const lastEpisodeDates = new Map<string, string[]>();
+
+  for (const row of watchRows ?? []) {
+    const key = seasonKey(row.tmdb_show_id, row.season_number);
+    const season = seasons.get(key);
+    if (!season) continue;
+
+    const watched = watchedCounts.get(key) ?? new Set<number>();
+    watched.add(row.episode_number);
+    watchedCounts.set(key, watched);
+
+    if (row.episode_number === season.lastEpisodeNumber && row.watched_on) {
+      const dates = lastEpisodeDates.get(key) ?? [];
+      dates.push(row.watched_on);
+      lastEpisodeDates.set(key, dates);
+    }
+  }
+
+  const result: FinishedSeasonRow[] = [];
+
+  for (const [key, season] of seasons) {
+    const watchedCount = watchedCounts.get(key)?.size ?? 0;
+    if (watchedCount < season.lastEpisodeNumber) continue;
+
+    const dates = lastEpisodeDates.get(key);
+    if (!dates || dates.length === 0) continue;
+
+    result.push({
+      tmdbShowId: season.tmdbShowId,
+      seasonNumber: season.seasonNumber,
+      watchedOn: dates.sort()[0],
+    });
+  }
+
+  return result;
 }
 
 export async function getShowsForUser(
@@ -292,6 +420,38 @@ export async function getFavouriteShowsForUser(
     isFavourite: row.is_favourite,
     skipCatchUpPrompt: row.skip_catch_up_prompt,
   }));
+}
+
+// Per-show watched-episode count for a batch of shows, deduped by
+// season+episode so rewatches don't inflate the count — matches the
+// "markable episodes watched" semantics used by the progress bars.
+export async function getWatchedEpisodeCountsForUser(
+  userId: string,
+  showIds: number[]
+): Promise<Map<number, number>> {
+  const counts = new Map<number, number>();
+  if (showIds.length === 0) return counts;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('episode_watches')
+    .select('tmdb_show_id, season_number, episode_number')
+    .eq('user_id', userId)
+    .in('tmdb_show_id', showIds);
+
+  if (error) throw new ServiceError(error.message, error.code);
+
+  const seenByShow = new Map<number, Set<string>>();
+  for (const row of data ?? []) {
+    const seen = seenByShow.get(row.tmdb_show_id) ?? new Set<string>();
+    seen.add(`${row.season_number}-${row.episode_number}`);
+    seenByShow.set(row.tmdb_show_id, seen);
+  }
+  for (const [showId, seen] of seenByShow) {
+    counts.set(showId, seen.size);
+  }
+
+  return counts;
 }
 
 export async function getWatchStatsForUser(userId: string): Promise<{
@@ -485,21 +645,25 @@ export async function updateEpisodeWatchDate(
   showId: number,
   season: number,
   episode: number,
-  previousDate: string,
-  nextDate: string
+  previousDate: string | null,
+  nextDate: string | null
 ): Promise<void> {
   const supabase = await createClient();
   const userId = await requireUserId(supabase);
 
-  const { data: rows, error: selectError } = await supabase
+  let query = supabase
     .from('episode_watches')
     .select('id')
     .eq('user_id', userId)
     .eq('tmdb_show_id', showId)
     .eq('season_number', season)
-    .eq('episode_number', episode)
-    .eq('watched_on', previousDate)
-    .limit(1);
+    .eq('episode_number', episode);
+  query =
+    previousDate === null
+      ? query.is('watched_on', null)
+      : query.eq('watched_on', previousDate);
+
+  const { data: rows, error: selectError } = await query.limit(1);
 
   if (selectError) {
     throw new ServiceError(selectError.message, selectError.code);
@@ -680,7 +844,8 @@ export async function removeLastEpisodeRewatch(
 export async function markSeasonWatched(
   showId: number,
   season: number,
-  episodeNumbers: number[]
+  episodeNumbers: number[],
+  watchedOn: string | null
 ): Promise<void> {
   const supabase = await createClient();
   const userId = await requireUserId(supabase);
@@ -708,6 +873,7 @@ export async function markSeasonWatched(
         tmdb_show_id: showId,
         season_number: season,
         episode_number: episodeNumber,
+        watched_on: watchedOn,
       }))
     );
 

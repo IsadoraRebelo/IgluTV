@@ -59,8 +59,8 @@ export const AuthDialog = ({
         </DialogPrimitive.Trigger>
       ) : null}
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50" />
-        <DialogPrimitive.Content className="bg-background border-muted fixed top-1/2 left-1/2 z-50 flex w-[90vw] max-w-sm -translate-x-1/2 -translate-y-1/2 flex-col gap-5 rounded-lg border p-6 shadow-lg">
+        <DialogPrimitive.Overlay className="max-sm:data-[state=open]:animate-fade-in max-sm:data-[state=closed]:animate-fade-out fixed inset-0 z-50 bg-black/50" />
+        <DialogPrimitive.Content className="max-sm:data-[state=open]:animate-slide-up max-sm:data-[state=closed]:animate-slide-down bg-background border-muted fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] w-full flex-col gap-5 overflow-y-auto rounded-t-lg border p-6 shadow-lg sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-[90vw] sm:max-w-sm sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg">
           <div className="flex items-center justify-between">
             <DialogPrimitive.Title className="text-foreground text-lg font-semibold">
               {title}

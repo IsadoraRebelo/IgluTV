@@ -12,5 +12,5 @@ export type EpisodeWatch = {
   id: number;
   seasonNumber: number;
   episodeNumber: number;
-  watchedOn: string;
+  watchedOn: string | null;
 };

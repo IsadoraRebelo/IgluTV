@@ -52,9 +52,12 @@ export async function unmarkEpisodeWatchedAction(
 export async function markSeasonWatchedAction(
   showId: number,
   season: number,
-  episodeNumbers: number[]
+  episodeNumbers: number[],
+  watchedOn: string | null
 ): Promise<TrackingActionResult> {
-  return toResult(markSeasonWatched(showId, season, episodeNumbers));
+  return toResult(
+    markSeasonWatched(showId, season, episodeNumbers, watchedOn)
+  );
 }
 
 export async function unmarkSeasonWatchedAction(
@@ -119,8 +122,8 @@ export async function updateEpisodeWatchDateAction(
   showId: number,
   season: number,
   episode: number,
-  previousDate: string,
-  nextDate: string
+  previousDate: string | null,
+  nextDate: string | null
 ): Promise<TrackingActionResult> {
   return toResult(
     updateEpisodeWatchDate(showId, season, episode, previousDate, nextDate)

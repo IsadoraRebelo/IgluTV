@@ -53,7 +53,7 @@ function todayIso(): string {
 }
 
 type ShowTrackingContextValue = {
-  watchedDates: Map<string, string[]>;
+  watchedDates: Map<string, (string | null)[]>;
   pendingKeys: Set<string>;
   onToggleEpisode: (seasonNumber: number, episodeNumber: number) => void;
   onRewatchEpisode: (seasonNumber: number, episodeNumber: number) => void;
@@ -64,8 +64,8 @@ type ShowTrackingContextValue = {
   onUpdateEpisodeWatchDate: (
     seasonNumber: number,
     episodeNumber: number,
-    previousDate: string,
-    nextDate: string
+    previousDate: string | null,
+    nextDate: string | null
   ) => void;
   onToggleSeason: (season: Season) => void;
   onRewatchSeason: (season: Season) => void;
@@ -100,11 +100,13 @@ export function useShowTrackingContext(): ShowTrackingContextValue {
 }
 
 function CatchUpDialog({
-  onYes,
+  onYesToday,
+  onYesNoDate,
   onNo,
   onNever,
 }: {
-  onYes: () => void;
+  onYesToday: () => void;
+  onYesNoDate: () => void;
   onNo: () => void;
   onNever: () => void;
 }) {
@@ -116,8 +118,8 @@ function CatchUpDialog({
       }}
     >
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50" />
-        <DialogPrimitive.Content className="bg-primary-foreground border-muted fixed top-1/2 left-1/2 z-50 flex w-xs max-w-[250px] -translate-x-1/2 -translate-y-1/2 flex-col gap-1 rounded-lg border text-center shadow-lg">
+        <DialogPrimitive.Overlay className="max-sm:data-[state=open]:animate-fade-in max-sm:data-[state=closed]:animate-fade-out fixed inset-0 z-50 bg-black/50" />
+        <DialogPrimitive.Content className="max-sm:data-[state=open]:animate-slide-up max-sm:data-[state=closed]:animate-slide-down bg-primary-foreground border-muted fixed inset-x-0 bottom-0 z-50 flex w-full flex-col gap-1 rounded-t-lg border text-center shadow-lg sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-xs sm:max-w-[250px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg">
           <DialogPrimitive.Title className="text-foreground text-md pt-4 font-semibold">
             Mark previous episodes?
           </DialogPrimitive.Title>
@@ -130,9 +132,19 @@ function CatchUpDialog({
                 variant="primary"
                 className="text-accent w-full font-bold"
                 size="sm"
-                onClick={onYes}
+                onClick={onYesToday}
               >
-                Yes
+                Yes, today
+              </Button>
+            </div>
+            <div className="border-t border-white/10 py-1">
+              <Button
+                variant="primary"
+                className="text-accent w-full font-bold"
+                size="sm"
+                onClick={onYesNoDate}
+              >
+                Yes, no date
               </Button>
             </div>
             <div className="border-t border-white/10 py-1">
@@ -162,6 +174,74 @@ function CatchUpDialog({
   );
 }
 
+// Offered before any bulk mark-as-watched action (whole show, full season)
+// to let the user choose whether the newly-marked episodes are logged with
+// today's date or with no date at all.
+function DateChoiceDialog({
+  title,
+  onPickToday,
+  onPickNoDate,
+  onCancel,
+}: {
+  title: string;
+  onPickToday: () => void;
+  onPickNoDate: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <DialogPrimitive.Root
+      open
+      onOpenChange={(open) => {
+        if (!open) onCancel();
+      }}
+    >
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="max-sm:data-[state=open]:animate-fade-in max-sm:data-[state=closed]:animate-fade-out fixed inset-0 z-50 bg-black/50" />
+        <DialogPrimitive.Content className="max-sm:data-[state=open]:animate-slide-up max-sm:data-[state=closed]:animate-slide-down bg-primary-foreground border-muted fixed inset-x-0 bottom-0 z-50 flex w-full flex-col gap-1 rounded-t-lg border text-center shadow-lg sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-xs sm:max-w-[250px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg">
+          <DialogPrimitive.Title className="text-foreground text-md pt-4 font-semibold">
+            {title}
+          </DialogPrimitive.Title>
+          <DialogPrimitive.Description className="text-muted-foreground px-4 text-xs">
+            Log these episodes with today&apos;s date, or without a date?
+          </DialogPrimitive.Description>
+          <div className="flex flex-col pt-4">
+            <div className="border-t border-white/10 py-1">
+              <Button
+                variant="primary"
+                className="text-accent w-full font-bold"
+                size="sm"
+                onClick={onPickToday}
+              >
+                Today
+              </Button>
+            </div>
+            <div className="border-t border-white/10 py-1">
+              <Button
+                variant="primary"
+                className="text-accent w-full font-bold"
+                size="sm"
+                onClick={onPickNoDate}
+              >
+                No date
+              </Button>
+            </div>
+            <div className="border-t border-white/10 py-1">
+              <Button
+                variant="primary"
+                className="text-accent w-full font-bold"
+                size="sm"
+                onClick={onCancel}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
+  );
+}
+
 // Offered when clicking "Mark watched" while the show is already fully
 // watched — lets the user unmark the whole show instead of the click
 // silently doing nothing.
@@ -180,8 +260,8 @@ function UnmarkShowDialog({
       }}
     >
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50" />
-        <DialogPrimitive.Content className="bg-primary-foreground border-muted fixed top-1/2 left-1/2 z-50 flex w-xs max-w-[250px] -translate-x-1/2 -translate-y-1/2 flex-col gap-1 rounded-lg border text-center shadow-lg">
+        <DialogPrimitive.Overlay className="max-sm:data-[state=open]:animate-fade-in max-sm:data-[state=closed]:animate-fade-out fixed inset-0 z-50 bg-black/50" />
+        <DialogPrimitive.Content className="max-sm:data-[state=open]:animate-slide-up max-sm:data-[state=closed]:animate-slide-down bg-primary-foreground border-muted fixed inset-x-0 bottom-0 z-50 flex w-full flex-col gap-1 rounded-t-lg border text-center shadow-lg sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-xs sm:max-w-[250px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg">
           <DialogPrimitive.Title className="text-foreground text-md pt-4 font-semibold">
             Mark show as unwatched?
           </DialogPrimitive.Title>
@@ -237,14 +317,17 @@ export function ShowTrackingProvider({
   isLoggedIn: boolean;
   children: ReactNode;
 }) {
-  const [watchedDates, setWatchedDates] = useState<Map<string, string[]>>(
-    () => buildWatchedDatesMap(watchedEpisodes)
-  );
+  const [watchedDates, setWatchedDates] = useState<
+    Map<string, (string | null)[]>
+  >(() => buildWatchedDatesMap(watchedEpisodes));
   const [pendingKeys, setPendingKeys] = useState<Set<string>>(new Set());
   const [authDialogOpen, setAuthDialogOpen] = useState(false);
   const [catchUpDisabled, setCatchUpDisabled] = useState(skipCatchUpPrompt);
   const [catchUpOffer, setCatchUpOffer] = useState<EpisodeRef[] | null>(null);
   const [unmarkShowConfirmOpen, setUnmarkShowConfirmOpen] = useState(false);
+  const [pendingDateChoice, setPendingDateChoice] = useState<
+    { kind: 'show' } | { kind: 'season'; season: Season } | null
+  >(null);
   const [showStatus, setShowStatusState] = useState<ShowStatus | null>(
     initialStatus
   );
@@ -302,7 +385,10 @@ export function ShowTrackingProvider({
     catchUpDisabledRef.current = catchUpDisabled;
   }, [catchUpDisabled]);
 
-  async function handleMarkPriorEpisodes(priorEpisodes: EpisodeRef[]) {
+  async function handleMarkPriorEpisodes(
+    priorEpisodes: EpisodeRef[],
+    watchedOn: string | null
+  ) {
     const toMark = priorEpisodes.filter(
       (ep) =>
         !pendingKeysRef.current.has(
@@ -331,7 +417,7 @@ export function ShowTrackingProvider({
     });
     setWatchedDates((prev) => {
       const next = new Map(prev);
-      allKeys.forEach((key) => next.set(key, [todayIso()]));
+      allKeys.forEach((key) => next.set(key, [watchedOn]));
       return next;
     });
 
@@ -342,7 +428,8 @@ export function ShowTrackingProvider({
           markSeasonWatchedAction(
             showId,
             seasonNumber,
-            episodes.map((ep) => ep.episodeNumber)
+            episodes.map((ep) => ep.episodeNumber),
+            watchedOn
           )
         )
       );
@@ -556,8 +643,8 @@ export function ShowTrackingProvider({
   async function handleUpdateEpisodeWatchDate(
     seasonNumber: number,
     episodeNumber: number,
-    previousDate: string,
-    nextDate: string
+    previousDate: string | null,
+    nextDate: string | null
   ) {
     const key = episodeKey(seasonNumber, episodeNumber);
     if (pendingKeys.has(key) || previousDate === nextDate) return;
@@ -621,15 +708,79 @@ export function ShowTrackingProvider({
     ).length;
     const isFullyWatched = watchedCount === markableEpisodes.length;
 
-    const episodesToToggle = isFullyWatched
-      ? markableEpisodes
-      : markableEpisodes.filter(
-        (ep) =>
-          getWatchCount(
-            watchedDates,
-            episodeKey(season.seasonNumber, ep.episodeNumber)
-          ) === 0
+    if (!isFullyWatched) {
+      setPendingDateChoice({ kind: 'season', season });
+      return;
+    }
+
+    const episodeKeysToLock = markableEpisodes.map((ep) =>
+      episodeKey(season.seasonNumber, ep.episodeNumber)
+    );
+    if (episodeKeysToLock.some((key) => pendingKeys.has(key))) return;
+
+    const previousDatesByKey = new Map(
+      markableEpisodes.map((ep) => {
+        const key = episodeKey(season.seasonNumber, ep.episodeNumber);
+        return [key, getWatchedDates(watchedDates, key)] as const;
+      })
+    );
+
+    setPendingKeys((prev) => {
+      const next = new Set(prev);
+      next.add(seasonKey);
+      episodeKeysToLock.forEach((key) => next.add(key));
+      return next;
+    });
+    setWatchedDates((prev) => {
+      const next = new Map(prev);
+      episodeKeysToLock.forEach((key) => next.delete(key));
+      return next;
+    });
+
+    try {
+      const result = await unmarkSeasonWatchedAction(
+        showId,
+        season.seasonNumber
       );
+
+      if (!result.ok) {
+        setWatchedDates((prev) => {
+          const next = new Map(prev);
+          for (const [key, dates] of previousDatesByKey) {
+            if (dates.length > 0) next.set(key, dates);
+            else next.delete(key);
+          }
+          return next;
+        });
+
+        toast.error(result.message);
+      }
+    } finally {
+      setPendingKeys((prev) => {
+        const next = new Set(prev);
+        next.delete(seasonKey);
+        episodeKeysToLock.forEach((key) => next.delete(key));
+        return next;
+      });
+    }
+  }
+
+  async function performMarkSeason(season: Season, watchedOn: string | null) {
+    const seasonKey = `season-${season.seasonNumber}`;
+    if (pendingKeys.has(seasonKey)) return;
+
+    const markableEpisodes = season.episodes.filter(
+      (ep) => getDaysUntilAir(ep.airDate) === null
+    );
+    if (markableEpisodes.length === 0) return;
+
+    const episodesToToggle = markableEpisodes.filter(
+      (ep) =>
+        getWatchCount(
+          watchedDates,
+          episodeKey(season.seasonNumber, ep.episodeNumber)
+        ) === 0
+    );
 
     const episodeKeysToLock = episodesToToggle.map((ep) =>
       episodeKey(season.seasonNumber, ep.episodeNumber)
@@ -653,20 +804,18 @@ export function ShowTrackingProvider({
       const next = new Map(prev);
       for (const ep of episodesToToggle) {
         const key = episodeKey(season.seasonNumber, ep.episodeNumber);
-        if (isFullyWatched) next.delete(key);
-        else next.set(key, [todayIso()]);
+        next.set(key, [watchedOn]);
       }
       return next;
     });
 
     try {
-      const result = isFullyWatched
-        ? await unmarkSeasonWatchedAction(showId, season.seasonNumber)
-        : await markSeasonWatchedAction(
-          showId,
-          season.seasonNumber,
-          markableEpisodes.map((ep) => ep.episodeNumber)
-        );
+      const result = await markSeasonWatchedAction(
+        showId,
+        season.seasonNumber,
+        markableEpisodes.map((ep) => ep.episodeNumber),
+        watchedOn
+      );
 
       if (!result.ok) {
         setWatchedDates((prev) => {
@@ -679,7 +828,7 @@ export function ShowTrackingProvider({
         });
 
         toast.error(result.message);
-      } else if (!isFullyWatched) {
+      } else {
         offerToMarkPriorEpisodes(
           getPriorUnwatchedAiredEpisodes(
             seasons,
@@ -832,7 +981,7 @@ export function ShowTrackingProvider({
     }
   }
 
-  async function handleMarkShowWatched() {
+  async function handleMarkShowWatched(watchedOn: string | null) {
     if (pendingKeys.has(MARK_SHOW_WATCHED_KEY) || isShowFullyWatched) return;
 
     const episodeKeysToLock: string[] = [];
@@ -861,7 +1010,7 @@ export function ShowTrackingProvider({
     setWatchedDates((prev) => {
       const next = new Map(prev);
       episodeKeysToLock.forEach((key) => {
-        if (!next.has(key)) next.set(key, [todayIso()]);
+        if (!next.has(key)) next.set(key, [watchedOn]);
       });
       return next;
     });
@@ -872,7 +1021,8 @@ export function ShowTrackingProvider({
           markSeasonWatchedAction(
             showId,
             season.seasonNumber,
-            markableEpisodes.map((ep) => ep.episodeNumber)
+            markableEpisodes.map((ep) => ep.episodeNumber),
+            watchedOn
           )
         )
       );
@@ -1039,7 +1189,7 @@ export function ShowTrackingProvider({
     if (isShowFullyWatched) {
       setUnmarkShowConfirmOpen(true);
     } else {
-      handleMarkShowWatched();
+      setPendingDateChoice({ kind: 'show' });
     }
   }
 
@@ -1161,8 +1311,12 @@ export function ShowTrackingProvider({
       <AuthDialog open={authDialogOpen} onOpenChange={setAuthDialogOpen} />
       {catchUpOffer !== null ? (
         <CatchUpDialog
-          onYes={() => {
-            handleMarkPriorEpisodes(catchUpOffer);
+          onYesToday={() => {
+            handleMarkPriorEpisodes(catchUpOffer, todayIso());
+            setCatchUpOffer(null);
+          }}
+          onYesNoDate={() => {
+            handleMarkPriorEpisodes(catchUpOffer, null);
             setCatchUpOffer(null);
           }}
           onNo={() => setCatchUpOffer(null)}
@@ -1176,6 +1330,32 @@ export function ShowTrackingProvider({
             setUnmarkShowConfirmOpen(false);
           }}
           onNo={() => setUnmarkShowConfirmOpen(false)}
+        />
+      ) : null}
+      {pendingDateChoice !== null ? (
+        <DateChoiceDialog
+          title={
+            pendingDateChoice.kind === 'show'
+              ? 'Mark show as watched?'
+              : 'Mark season as watched?'
+          }
+          onPickToday={() => {
+            if (pendingDateChoice.kind === 'show') {
+              handleMarkShowWatched(todayIso());
+            } else {
+              performMarkSeason(pendingDateChoice.season, todayIso());
+            }
+            setPendingDateChoice(null);
+          }}
+          onPickNoDate={() => {
+            if (pendingDateChoice.kind === 'show') {
+              handleMarkShowWatched(null);
+            } else {
+              performMarkSeason(pendingDateChoice.season, null);
+            }
+            setPendingDateChoice(null);
+          }}
+          onCancel={() => setPendingDateChoice(null)}
         />
       ) : null}
     </ShowTrackingContext.Provider>

@@ -122,6 +122,7 @@ export type ShowSummary = {
   name: string;
   posterUrl: string | null;
   bannerUrl: string | null;
+  markableEpisodeCount: number;
 };
 
 export type ShowBackdropImage = {

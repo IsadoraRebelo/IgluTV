@@ -22,7 +22,7 @@ export type Database = {
           season_number: number;
           tmdb_show_id: number;
           user_id: string;
-          watched_on: string;
+          watched_on: string | null;
         };
         Insert: {
           created_at?: string;
@@ -31,7 +31,7 @@ export type Database = {
           season_number: number;
           tmdb_show_id: number;
           user_id: string;
-          watched_on?: string;
+          watched_on?: string | null;
         };
         Update: {
           created_at?: string;
@@ -40,7 +40,7 @@ export type Database = {
           season_number?: number;
           tmdb_show_id?: number;
           user_id?: string;
-          watched_on?: string;
+          watched_on?: string | null;
         };
         Relationships: [];
       };
