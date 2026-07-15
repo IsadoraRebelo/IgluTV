@@ -17,7 +17,7 @@ import { resolveShowSummaries } from '@/services/tv-shows';
 import { createClient } from '@/supabase/server';
 
 import type { ShowStatus, ShowSummary } from '@/types';
-import { cn } from '@/utils';
+import { cn, formatWatchDuration } from '@/utils';
 
 const RECENT_ACTIVITY_LIMIT = 15;
 const WATCHLIST_PREVIEW_LIMIT = 5;
@@ -103,7 +103,7 @@ function PosterCard({
   );
 }
 
-function StatTile({ label, value }: { label: string; value: number }) {
+function StatTile({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="flex flex-col items-center rounded-md bg-white/[0.03] py-3 text-center">
       <span className="text-2xl font-semibold text-accent">{value}</span>
@@ -300,16 +300,16 @@ export default async function ProfilePage({
 
       <main className="mx-auto w-full max-w-[950px] flex-1 px-3 pb-20 md:px-0">
         <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
-          <StatTile label="Shows" value={stats.totalShows} />
-          <StatTile label="Episodes" value={stats.totalEpisodes} />
           <StatTile
-            label="Shows this year"
-            value={stats.showsThisYear}
+            label="Time Watching"
+            value={formatWatchDuration(stats.totalWatchMinutes)}
           />
+          <StatTile label="Episodes" value={stats.totalEpisodes} />
           <StatTile
             label="Episodes this year"
             value={stats.episodesThisYear}
           />
+          <StatTile label="Finished Shows" value={stats.finishedShowsCount} />
         </div>
 
         <div className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_260px]">
