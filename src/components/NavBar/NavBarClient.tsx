@@ -2,9 +2,11 @@
 
 import { Search } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 import { AuthDialog } from '@/components';
+
 import { cn } from '@/utils';
 
 type NavBarClientProps = {
@@ -13,22 +15,30 @@ type NavBarClientProps = {
 
 export function NavBarClient({ username }: NavBarClientProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [query, setQuery] = useState('');
   const isOverlay =
     pathname.startsWith('/show/') ||
     (pathname.startsWith('/profile/') && pathname !== '/profile');
+
+  function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    router.push(`/search?q=${encodeURIComponent(trimmed)}`);
+  }
 
   return (
     <header
       className={cn(
         'flex h-16 items-center',
-        isOverlay ? 'bg-transparent absolute inset-x-0 top-0 z-50 ' : 'bg-background text-foreground'
+        isOverlay
+          ? 'absolute inset-x-0 top-0 z-50 bg-transparent'
+          : 'bg-background text-foreground'
       )}
     >
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-6 px-4 md:px-15">
-        <Link
-          href="/"
-          className="text-lg font-bold tracking-tight text-accent"
-        >
+        <Link href="/" className="text-accent text-lg font-bold tracking-tight">
           Iglu <span className="font-normal">tv</span>
         </Link>
 
@@ -47,25 +57,35 @@ export function NavBarClient({ username }: NavBarClientProps) {
         </nav>
 
         <div className="ml-auto flex items-center gap-4">
-          <div className="relative hidden sm:block">
-            <Search
+          <form
+            onSubmit={handleSearchSubmit}
+            className="relative hidden sm:block"
+          >
+            <button
+              type="submit"
+              aria-label="Search"
               className={cn(
-                'pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2',
-                isOverlay ? 'text-white/50' : 'text-foreground/50'
+                'absolute top-1/2 left-3 -translate-y-1/2 border-0 bg-transparent p-0',
+                isOverlay
+                  ? 'text-white/50 hover:text-white/80'
+                  : 'text-foreground/50 hover:text-foreground/80'
               )}
-            />
+            >
+              <Search className="h-4 w-4" />
+            </button>
             <input
               type="text"
-              disabled
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
               placeholder="Search"
               className={cn(
-                'h-9 w-48 rounded-full pl-9 pr-3 text-sm disabled:cursor-not-allowed',
+                'h-9 w-48 rounded-full pr-3 pl-9 text-sm',
                 isOverlay
                   ? 'bg-white/10 text-white placeholder:text-white/50'
                   : 'bg-foreground/10 text-foreground placeholder:text-foreground/50'
               )}
             />
-          </div>
+          </form>
 
           {username ? (
             <Link
