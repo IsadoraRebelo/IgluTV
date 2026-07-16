@@ -1,17 +1,17 @@
+import { BookmarkIcon, ClockIcon, FilmIcon } from '@heroicons/react/24/solid';
 import { redirect } from 'next/navigation';
 
-import { BookmarkIcon, ClockIcon, FilmIcon } from '@heroicons/react/24/solid';
 
+import type { RecentWatchEntry } from '@/components';
 import {
   AccordionSection,
   RecentlyWatchedAccordion,
   WatchListRow,
 } from '@/components';
-import type { RecentWatchEntry } from '@/components';
-
 import {
   buildWatchedDatesMap,
   getEpisodeSectionState,
+  getFirstEpisode,
   getPriorUnwatchedAiredEpisodes,
   hasEpisodeAired,
   isOlderThanDays,
@@ -85,11 +85,11 @@ async function buildWatchListEntry(
   const backlogRefs =
     section.kind === 'next'
       ? getPriorUnwatchedAiredEpisodes(
-        meta.seasons,
-        watchedDates,
-        episode.seasonNumber,
-        episode.episodeNumber
-      )
+          meta.seasons,
+          watchedDates,
+          episode.seasonNumber,
+          episode.episodeNumber
+        )
       : [];
   const backlogCount = backlogRefs.length;
   const unwatchedRuntimeMinutes =
@@ -185,31 +185,6 @@ function findEpisode(
   };
 }
 
-function getFirstEpisode(seasons: Season[]): LatestEpisode | null {
-  const regularSeasons = [...seasons]
-    .filter((season) => season.seasonNumber > 0)
-    .sort((a, b) => a.seasonNumber - b.seasonNumber);
-
-  for (const season of regularSeasons) {
-    const episode = [...season.episodes].sort(
-      (a, b) => a.episodeNumber - b.episodeNumber
-    )[0];
-    if (!episode) continue;
-
-    return {
-      name: episode.name,
-      overview: episode.overview,
-      seasonNumber: season.seasonNumber,
-      episodeNumber: episode.episodeNumber,
-      airDate: episode.airDate,
-      runtime: episode.runtime,
-      imageUrl: episode.imageUrl,
-    };
-  }
-
-  return null;
-}
-
 function formatRuntime(minutes: number): string {
   if (minutes <= 0) return '0m';
   const hours = Math.floor(minutes / 60);
@@ -258,7 +233,12 @@ async function buildWishlistEntry(
 }
 
 async function buildRecentWatchEntries(
-  rows: { tmdbShowId: number; seasonNumber: number; episodeNumber: number; watchedOn: string }[]
+  rows: {
+    tmdbShowId: number;
+    seasonNumber: number;
+    episodeNumber: number;
+    watchedOn: string;
+  }[]
 ): Promise<RecentWatchEntry[]> {
   const showIds = Array.from(new Set(rows.map((row) => row.tmdbShowId)));
   const bundles = await Promise.all(
@@ -338,12 +318,9 @@ export default async function TrackingPage() {
       return b.sortKey.localeCompare(a.sortKey);
     });
 
-  const recentWatchedRows = await getRecentWatchedEpisodes(
-    RECENT_WATCHED_LIMIT
-  );
-  const recentWatchedEntries = await buildRecentWatchEntries(
-    recentWatchedRows
-  );
+  const recentWatchedRows =
+    await getRecentWatchedEpisodes(RECENT_WATCHED_LIMIT);
+  const recentWatchedEntries = await buildRecentWatchEntries(recentWatchedRows);
 
   const staleShowIds = new Set(
     entries
@@ -388,17 +365,18 @@ export default async function TrackingPage() {
 
   return (
     <div className="flex flex-1 flex-col bg-[#14181c] font-sans antialiased">
-
       <main className="mx-auto w-full max-w-[950px] flex-1 px-3 pb-20 md:px-0">
-        <div className="grid grid-cols-1 gap-10 mt-5 lg:grid-cols-[1fr_260px]">
-
+        <div className="mt-5 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_260px]">
           <div>
             <RecentlyWatchedAccordion entries={recentWatchedEntries} />
             <AccordionSection title="Watch Next" defaultExpanded>
               {activeEntries.map(renderWatchListEntry)}
             </AccordionSection>
             {staleEntries.length > 0 ? (
-              <AccordionSection title="Haven't Watched For A While" defaultExpanded>
+              <AccordionSection
+                title="Haven't Watched For A While"
+                defaultExpanded
+              >
                 {staleEntries.map(renderWatchListEntry)}
               </AccordionSection>
             ) : wishlistEntries.length > 0 ? (
@@ -409,21 +387,22 @@ export default async function TrackingPage() {
           </div>
 
           <aside className="hidden h-fit flex-col gap-1 rounded-lg bg-white/[0.03] p-2 lg:flex">
-            <div className="flex items-center gap-2 rounded-md px-3 py-2.5 text-sm text-foreground">
+            <div className="text-foreground flex items-center gap-2 rounded-md px-3 py-2.5 text-sm">
               <FilmIcon className="h-4 w-4 shrink-0" />
               <span>
-                {totalEpisodesLeft} episode{totalEpisodesLeft === 1 ? '' : 's'} to
-                watch
+                {totalEpisodesLeft} episode{totalEpisodesLeft === 1 ? '' : 's'}{' '}
+                to watch
               </span>
             </div>
-            <div className="flex items-center gap-2 rounded-md px-3 py-2.5 text-sm text-foreground">
+            <div className="text-foreground flex items-center gap-2 rounded-md px-3 py-2.5 text-sm">
               <ClockIcon className="h-4 w-4 shrink-0" />
               <span>{formatRuntime(totalRuntimeMinutes)} to catch up</span>
             </div>
-            <div className="flex items-center gap-2 rounded-md px-3 py-2.5 text-sm text-foreground">
+            <div className="text-foreground flex items-center gap-2 rounded-md px-3 py-2.5 text-sm">
               <BookmarkIcon className="h-4 w-4 shrink-0" />
               <span>
-                {watchlistCount} show{watchlistCount === 1 ? '' : 's'} on watchlist
+                {watchlistCount} show{watchlistCount === 1 ? '' : 's'} on
+                watchlist
               </span>
             </div>
           </aside>

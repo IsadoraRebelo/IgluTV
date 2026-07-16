@@ -103,9 +103,7 @@ export function isOlderThanDays(dateStr: string, days: number): boolean {
   if (Number.isNaN(date.getTime())) return false;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const diffDays = Math.floor(
-    (today.getTime() - date.getTime()) / 86_400_000
-  );
+  const diffDays = Math.floor((today.getTime() - date.getTime()) / 86_400_000);
   return diffDays > days;
 }
 
@@ -194,6 +192,31 @@ export function getWatchNextEpisode(
         imageUrl: episode.imageUrl,
       };
     }
+  }
+
+  return null;
+}
+
+export function getFirstEpisode(seasons: Season[]): LatestEpisode | null {
+  const regularSeasons = [...seasons]
+    .filter((season) => season.seasonNumber > 0)
+    .sort((a, b) => a.seasonNumber - b.seasonNumber);
+
+  for (const season of regularSeasons) {
+    const episode = [...season.episodes].sort(
+      (a, b) => a.episodeNumber - b.episodeNumber
+    )[0];
+    if (!episode) continue;
+
+    return {
+      name: episode.name,
+      overview: episode.overview,
+      seasonNumber: season.seasonNumber,
+      episodeNumber: episode.episodeNumber,
+      airDate: episode.airDate,
+      runtime: episode.runtime,
+      imageUrl: episode.imageUrl,
+    };
   }
 
   return null;

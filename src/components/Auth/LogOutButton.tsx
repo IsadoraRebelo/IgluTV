@@ -1,12 +1,15 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useTransition } from 'react';
+import { forwardRef, useTransition } from 'react';
 import { toast } from 'sonner';
 
-import { signOut } from '@/utils';
+import { cn, signOut } from '@/utils';
 
-export const LogOutButton = () => {
+export const LogOutButton = forwardRef<
+  HTMLButtonElement,
+  { className?: string }
+>(({ className }, ref) => {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -27,12 +30,17 @@ export const LogOutButton = () => {
 
   return (
     <button
+      ref={ref}
       type="button"
       onClick={onClick}
       disabled={isPending}
-      className="text-destructive text-sm underline disabled:opacity-50"
+      className={cn(
+        'text-destructive text-sm underline disabled:opacity-50',
+        className
+      )}
     >
       {isPending ? '...' : 'Log out'}
     </button>
   );
-};
+});
+LogOutButton.displayName = 'LogOutButton';

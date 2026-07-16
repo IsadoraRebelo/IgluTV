@@ -25,19 +25,18 @@ import type {
   TMDBSeasonDetailRaw,
   TMDBSeriesDetailsRaw,
   TMDBShowImagesRaw,
-  TMDBTvShowRaw,
   TMDBWatchProvidersRaw,
-  TvShow,
   WatchProvider,
 } from '@/types';
 
 import {
+  ANIME_GENRE_ID,
   getCountryDisplayName,
   getLanguageDisplayName,
   isAnime,
 } from '@/utils';
 
-async function fetchPopularTvShows(): Promise<TvShow[]> {
+async function fetchTrendingTvShowIds(): Promise<number[]> {
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) {
     console.warn('[tv-shows] TMDB_API_KEY not set');
@@ -46,38 +45,63 @@ async function fetchPopularTvShows(): Promise<TvShow[]> {
 
   try {
     const res = await fetch(
-      `${TMDB_API_BASE_URL}/tv/popular?api_key=${apiKey}&language=en-US&page=1`,
+      `${TMDB_API_BASE_URL}/trending/tv/week?api_key=${apiKey}&language=en-US`,
       { cache: 'no-store' }
     );
 
     if (!res.ok) {
-      console.warn(`[tv-shows] TMDB ${res.status}: ${res.statusText}`);
+      console.warn(`[tv-shows] TMDB trending ${res.status}: ${res.statusText}`);
       return [];
     }
 
-    const json: { results?: TMDBTvShowRaw[] } = await res.json();
-    const results = Array.isArray(json.results) ? json.results : [];
-
-    return results.slice(0, 10).map((show) => ({
-      id: show.id,
-      name: show.name,
-      overview: show.overview,
-      posterUrl: show.poster_path
-        ? `${TMDB_IMAGE_BASE_URL}${show.poster_path}`
-        : null,
-      firstAirDate: show.first_air_date,
-      voteAverage: show.vote_average,
-    }));
+    const json: { results?: { id: number }[] } = await res.json();
+    return (json.results ?? []).map((show) => show.id);
   } catch (err) {
-    console.warn('[tv-shows] fetch failed', err);
+    console.warn('[tv-shows] trending fetch failed', err);
     return [];
   }
 }
 
-export const getPopularTvShows = unstable_cache(
-  fetchPopularTvShows,
-  ['popular-tv-shows'],
-  { revalidate: 3600, tags: ['popular-tv-shows'] }
+export const getTrendingTvShowIds = unstable_cache(
+  fetchTrendingTvShowIds,
+  ['trending-tv-show-ids'],
+  { revalidate: 3600, tags: ['trending-tv-show-ids'] }
+);
+
+// Discover-by-popularity rather than filtering /trending/tv into anime: the
+// trending feed alone is often too sparse in anime to fill a carousel row.
+async function fetchTrendingAnimeShowIds(): Promise<number[]> {
+  const apiKey = process.env.TMDB_API_KEY;
+  if (!apiKey) {
+    console.warn('[tv-shows] TMDB_API_KEY not set');
+    return [];
+  }
+
+  try {
+    const res = await fetch(
+      `${TMDB_API_BASE_URL}/discover/tv?api_key=${apiKey}&language=en-US&with_genres=${ANIME_GENRE_ID}&with_origin_country=JP&sort_by=popularity.desc&page=1`,
+      { cache: 'no-store' }
+    );
+
+    if (!res.ok) {
+      console.warn(
+        `[tv-shows] TMDB anime discover ${res.status}: ${res.statusText}`
+      );
+      return [];
+    }
+
+    const json: { results?: { id: number }[] } = await res.json();
+    return (json.results ?? []).map((show) => show.id);
+  } catch (err) {
+    console.warn('[tv-shows] anime discover fetch failed', err);
+    return [];
+  }
+}
+
+export const getTrendingAnimeShowIds = unstable_cache(
+  fetchTrendingAnimeShowIds,
+  ['trending-anime-show-ids'],
+  { revalidate: 3600, tags: ['trending-anime-show-ids'] }
 );
 
 async function fetchTmdbSeasonEpisodes(

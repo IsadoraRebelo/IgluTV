@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { AuthDialog } from '@/components';
+import { AuthDialog, LogOutButton } from '@/components';
 
 import { cn } from '@/utils';
 
@@ -19,7 +19,9 @@ export function NavBarClient({ username }: NavBarClientProps) {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const isOverlay =
-    pathname.startsWith('/show/') || /^\/profile\/[^/]+$/.test(pathname);
+    pathname === '/' ||
+    pathname.startsWith('/show/') ||
+    /^\/profile\/[^/]+$/.test(pathname);
 
   function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -107,12 +109,15 @@ export function NavBarClient({ username }: NavBarClientProps) {
                 <DropdownMenu.Content
                   align="end"
                   sideOffset={8}
-                  className="data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out z-50 w-40 rounded-lg bg-muted p-2 shadow-2xl ring-1 ring-white/10"
+                  className="data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out bg-muted z-50 w-40 rounded-lg p-2 shadow-2xl ring-1 ring-white/10"
                 >
                   {[
                     { href: `/profile/${username}`, label: 'Profile' },
                     { href: `/profile/${username}/shows`, label: 'Shows' },
-                    { href: `/profile/${username}/watchlist`, label: 'Watchlist' },
+                    {
+                      href: `/profile/${username}/watchlist`,
+                      label: 'Watchlist',
+                    },
                   ].map((item) => (
                     <DropdownMenu.Item key={item.href} asChild>
                       <Link
@@ -128,6 +133,10 @@ export function NavBarClient({ username }: NavBarClientProps) {
                       </Link>
                     </DropdownMenu.Item>
                   ))}
+                  <div className="my-1 border-t border-white/10" />
+                  <DropdownMenu.Item asChild>
+                    <LogOutButton className="block w-full rounded-md px-3 py-2 text-left text-sm text-[#c2d0dd] no-underline outline-none data-[highlighted]:bg-white/5" />
+                  </DropdownMenu.Item>
                 </DropdownMenu.Content>
               </DropdownMenu.Portal>
             </DropdownMenu.Root>
