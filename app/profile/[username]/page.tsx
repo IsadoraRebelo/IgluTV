@@ -2,6 +2,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 import { PosterCard, ProfileSettingsButton } from '@/components';
+
+import { getProfileByUsername } from '@/services/profile';
 import {
   getFavouriteShowsForUser,
   getFinishedSeasonsForUser,
@@ -11,61 +13,29 @@ import {
   getWatchedEpisodeCountsForUser,
   getWatchStatsForUser,
 } from '@/services/tracking';
-import { getProfileByUsername } from '@/services/profile';
 import { resolveShowSummaries } from '@/services/tv-shows';
 
 import { createClient } from '@/supabase/server';
 
 import type { ShowSummary } from '@/types';
-import { formatWatchDuration } from '@/utils';
+
+import {
+  buildDiaryEntries,
+  diaryEntryKey,
+  diaryEntryLabel,
+  formatDiaryDate,
+  formatWatchDuration,
+  groupDiaryEntriesByMonth,
+} from '@/utils';
 
 const RECENT_ACTIVITY_LIMIT = 15;
 const WATCHLIST_PREVIEW_LIMIT = 5;
 
-function formatDiaryDate(dateStr: string): { month: string; day: string } {
-  const date = new Date(`${dateStr}T00:00:00`);
-  return {
-    month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
-    day: String(date.getDate()),
-  };
-}
-
-type DiaryEntry =
-  | { kind: 'show'; show: ShowSummary; watchedOn: string }
-  | { kind: 'season'; show: ShowSummary; seasonNumber: number; watchedOn: string };
-type DiaryDayGroup = { day: string; entries: DiaryEntry[] };
-type DiaryMonthGroup = { key: string; month: string; days: DiaryDayGroup[] };
-
-function groupDiaryEntriesByMonth(entries: DiaryEntry[]): DiaryMonthGroup[] {
-  const groups: DiaryMonthGroup[] = [];
-
-  for (const entry of entries) {
-    const { month, day } = formatDiaryDate(entry.watchedOn);
-    const date = new Date(`${entry.watchedOn}T00:00:00`);
-    const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
-
-    let monthGroup = groups[groups.length - 1];
-    if (!monthGroup || monthGroup.key !== monthKey) {
-      monthGroup = { key: monthKey, month, days: [] };
-      groups.push(monthGroup);
-    }
-
-    let dayGroup = monthGroup.days[monthGroup.days.length - 1];
-    if (!dayGroup || dayGroup.day !== day) {
-      dayGroup = { day, entries: [] };
-      monthGroup.days.push(dayGroup);
-    }
-    dayGroup.entries.push(entry);
-  }
-
-  return groups;
-}
-
 function StatTile({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="flex flex-col items-center rounded-md bg-white/[0.03] py-3 text-center">
-      <span className="text-2xl font-semibold text-accent">{value}</span>
-      <span className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+      <span className="text-accent text-2xl font-semibold">{value}</span>
+      <span className="text-muted-foreground text-[10px] font-semibold tracking-wide uppercase">
         {label}
       </span>
     </div>
@@ -147,12 +117,8 @@ export default async function ProfilePage({
     .map((s) => summaries.get(s.tmdbShowId))
     .filter((s): s is ShowSummary => s !== undefined);
 
-  const favouriteShowSummaries = favouriteSummaries.filter(
-    (s) => !s.isAnime
-  );
-  const favouriteAnimeSummaries = favouriteSummaries.filter(
-    (s) => s.isAnime
-  );
+  const favouriteShowSummaries = favouriteSummaries.filter((s) => !s.isAnime);
+  const favouriteAnimeSummaries = favouriteSummaries.filter((s) => s.isAnime);
 
   const watchlistSummaries = watchlistShows
     .map((s) => summaries.get(s.tmdbShowId))
@@ -181,34 +147,13 @@ export default async function ProfilePage({
       } => entry !== null
     );
 
-  const bannerUrl = profile.bannerUrl ?? recentActivity[0]?.show.bannerUrl ?? null;
+  const bannerUrl =
+    profile.bannerUrl ?? recentActivity[0]?.show.bannerUrl ?? null;
 
-  const finishedShowEntries = finishedRows
-    .map((row): DiaryEntry | null => {
-      const show = summaries.get(row.tmdbShowId);
-      if (!show) return null;
-      return { kind: 'show', show, watchedOn: row.watchedOn };
-    })
-    .filter((entry): entry is DiaryEntry => entry !== null);
-
-  const finishedSeasonEntries = finishedSeasonRows
-    .map((row): DiaryEntry | null => {
-      const show = summaries.get(row.tmdbShowId);
-      if (!show) return null;
-      return {
-        kind: 'season',
-        show,
-        seasonNumber: row.seasonNumber,
-        watchedOn: row.watchedOn,
-      };
-    })
-    .filter((entry): entry is DiaryEntry => entry !== null);
-
-  const finishedEntries = [
-    ...finishedShowEntries,
-    ...finishedSeasonEntries,
-  ].sort((a, b) =>
-    a.watchedOn < b.watchedOn ? 1 : a.watchedOn > b.watchedOn ? -1 : 0
+  const finishedEntries = buildDiaryEntries(
+    finishedRows,
+    finishedSeasonRows,
+    summaries
   );
 
   const diaryGroups = groupDiaryEntriesByMonth(finishedEntries);
@@ -238,8 +183,8 @@ export default async function ProfilePage({
           ) : null}
         </div>
 
-        <div className="ml-2 md:ml-24 mt-[-50px] flex items-end">
-          <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-1 border-accent-foreground bg-[#2c3440] md:h-20 md:w-20">
+        <div className="mt-[-50px] ml-2 flex items-end md:ml-24">
+          <div className="border-accent-foreground relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-1 bg-[#2c3440] md:h-20 md:w-20">
             {profile.avatarUrl ? (
               <Image
                 src={profile.avatarUrl}
@@ -252,10 +197,9 @@ export default async function ProfilePage({
               <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-white">
                 {profile.username.slice(0, 1).toUpperCase()}
               </div>
-
             )}
           </div>
-          <div className="z-50 ml-3 mb-2">
+          <div className="z-50 mb-2 ml-3">
             <h1 className="text-lg font-bold text-white md:text-xl">
               {profile.username}
             </h1>
@@ -278,10 +222,7 @@ export default async function ProfilePage({
             value={formatWatchDuration(stats.totalWatchMinutes)}
           />
           <StatTile label="Episodes" value={stats.totalEpisodes} />
-          <StatTile
-            label="Episodes this year"
-            value={stats.episodesThisYear}
-          />
+          <StatTile label="Episodes this year" value={stats.episodesThisYear} />
           <StatTile label="Finished Shows" value={stats.finishedShowsCount} />
         </div>
 
@@ -289,7 +230,7 @@ export default async function ProfilePage({
           <div className="flex min-w-0 flex-col gap-10">
             {favouriteShowSummaries.length > 0 ? (
               <section>
-                <h2 className="mb-4 text-sm border-b border-muted-foreground pb-2 font-semibold text-muted-foreground">
+                <h2 className="border-muted-foreground text-muted-foreground mb-4 border-b pb-2 text-sm font-semibold">
                   FAVOURITE SHOWS
                 </h2>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -311,7 +252,7 @@ export default async function ProfilePage({
 
             {favouriteAnimeSummaries.length > 0 ? (
               <section>
-                <h2 className="mb-4 text-sm border-b border-muted-foreground pb-2 font-semibold text-muted-foreground">
+                <h2 className="border-muted-foreground text-muted-foreground mb-4 border-b pb-2 text-sm font-semibold">
                   FAVOURITE ANIME
                 </h2>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -333,7 +274,7 @@ export default async function ProfilePage({
 
             {recentActivity.length > 0 ? (
               <section className="min-w-0">
-                <h2 className="mb-4 text-sm border-b border-muted-foreground pb-2 font-semibold text-muted-foreground">
+                <h2 className="border-muted-foreground text-muted-foreground mb-4 border-b pb-2 text-sm font-semibold">
                   RECENT ACTIVITY
                 </h2>
                 <div className="flex gap-2 overflow-x-auto pb-2">
@@ -363,15 +304,15 @@ export default async function ProfilePage({
                 <div className="flex items-center justify-between">
                   <Link
                     href={`/profile/${profile.username}/watchlist`}
-                    className="text-sm font-semibold tracking-wide text-muted-foreground uppercase hover:text-white"
+                    className="text-muted-foreground text-sm font-semibold tracking-wide uppercase hover:text-white"
                   >
                     Watchlist
                   </Link>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground text-xs">
                     {watchlistShows.length}
                   </span>
                 </div>
-                <div className="flex gap-2 overflow-x-auto mt-1 border-t border-muted-foreground pt-3">
+                <div className="border-muted-foreground mt-1 flex gap-2 overflow-x-auto border-t pt-3">
                   {watchlistSummaries.map((show) => (
                     <Link
                       key={show.id}
@@ -396,14 +337,17 @@ export default async function ProfilePage({
             {finishedEntries.length > 0 ? (
               <div>
                 <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+                  <Link
+                    href={`/profile/${profile.username}/diary`}
+                    className="text-muted-foreground text-sm font-semibold tracking-wide uppercase hover:text-white"
+                  >
                     Diary
-                  </h2>
-                  <span className="text-xs text-muted-foreground">
+                  </Link>
+                  <span className="text-muted-foreground text-xs">
                     {finishedEntries.length}
                   </span>
                 </div>
-                <div className="mt-1 border-t border-muted-foreground" />
+                <div className="border-muted-foreground mt-1 border-t" />
                 <div className="flex flex-col">
                   {diaryGroups.map((group, i) => (
                     <div key={group.key}>
@@ -416,29 +360,19 @@ export default async function ProfilePage({
                         <div className="flex flex-1 flex-col gap-2">
                           {group.days.map((dayGroup) => (
                             <div key={dayGroup.day} className="flex gap-2">
-                              <span className="shrink-0 text-sm text-accent-foreground">
+                              <span className="text-accent-foreground shrink-0 text-sm">
                                 {dayGroup.day}
                               </span>
                               <div className="flex min-w-0 flex-col gap-1">
-                                {dayGroup.entries.map((entry) => {
-                                  const key =
-                                    entry.kind === 'season'
-                                      ? `${entry.show.id}-s${entry.seasonNumber}`
-                                      : `${entry.show.id}-show`;
-                                  const label =
-                                    entry.kind === 'season'
-                                      ? `S${entry.seasonNumber} · ${entry.show.name}`
-                                      : entry.show.name;
-                                  return (
-                                    <Link
-                                      key={key}
-                                      href={`/show/${entry.show.id}`}
-                                      className="truncate text-sm font-semibold text-muted-foreground"
-                                    >
-                                      {label}
-                                    </Link>
-                                  );
-                                })}
+                                {dayGroup.entries.map((entry) => (
+                                  <Link
+                                    key={diaryEntryKey(entry)}
+                                    href={`/show/${entry.show.id}`}
+                                    className="text-muted-foreground truncate text-sm font-semibold"
+                                  >
+                                    {diaryEntryLabel(entry)}
+                                  </Link>
+                                ))}
                               </div>
                             </div>
                           ))}

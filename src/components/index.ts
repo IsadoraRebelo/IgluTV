@@ -7,6 +7,8 @@ export * from './CastPage/CastCreditCard';
 export * from './CastPage/CastPageFilterBar';
 export * from './CastPage/CastPageView';
 export * from './CastPage/CastWatchProgress';
+export * from './DiaryPage/DiaryFilterBar';
+export * from './DiaryPage/DiaryPageView';
 export * from './EpisodeModal/EpisodeModal';
 export * from './Form/Form';
 export * from './Home/HomeHero';
