@@ -147,6 +147,13 @@ export default async function ProfilePage({
     .map((s) => summaries.get(s.tmdbShowId))
     .filter((s): s is ShowSummary => s !== undefined);
 
+  const favouriteShowSummaries = favouriteSummaries.filter(
+    (s) => !s.isAnime
+  );
+  const favouriteAnimeSummaries = favouriteSummaries.filter(
+    (s) => s.isAnime
+  );
+
   const watchlistSummaries = watchlistShows
     .map((s) => summaries.get(s.tmdbShowId))
     .filter((s): s is ShowSummary => s !== undefined)
@@ -280,13 +287,35 @@ export default async function ProfilePage({
 
         <div className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_260px]">
           <div className="flex min-w-0 flex-col gap-10">
-            {favouriteSummaries.length > 0 ? (
+            {favouriteShowSummaries.length > 0 ? (
               <section>
                 <h2 className="mb-4 text-sm border-b border-muted-foreground pb-2 font-semibold text-muted-foreground">
                   FAVOURITE SHOWS
                 </h2>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                  {favouriteSummaries.map((show) => (
+                  {favouriteShowSummaries.map((show) => (
+                    <PosterCard
+                      key={show.id}
+                      show={show}
+                      className="w-full"
+                      sizes="(max-width: 640px) 30vw, (max-width: 1024px) 22vw, 155px"
+                      progress={{
+                        watchedCount: watchedCounts.get(show.id) ?? 0,
+                        showStatus: statusByShowId.get(show.id) ?? null,
+                      }}
+                    />
+                  ))}
+                </div>
+              </section>
+            ) : null}
+
+            {favouriteAnimeSummaries.length > 0 ? (
+              <section>
+                <h2 className="mb-4 text-sm border-b border-muted-foreground pb-2 font-semibold text-muted-foreground">
+                  FAVOURITE ANIME
+                </h2>
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {favouriteAnimeSummaries.map((show) => (
                     <PosterCard
                       key={show.id}
                       show={show}

@@ -31,6 +31,7 @@ export type ShowDetails = {
   posterUrl: string | null;
   genres: string[];
   network: string | null;
+  isAnime: boolean;
   cast: CastMember[];
   status: string | null;
   averageRuntime: number | null;
@@ -127,6 +128,7 @@ export type ShowSummary = {
   year: string | null;
   genres: string[];
   network: string | null;
+  isAnime: boolean;
 };
 
 export type ShowBackdropImage = {

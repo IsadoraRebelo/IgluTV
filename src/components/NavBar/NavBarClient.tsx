@@ -1,6 +1,7 @@
 'use client';
 
-import { Search } from 'lucide-react';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { ChevronDown, Search } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -87,17 +88,49 @@ export function NavBarClient({ username }: NavBarClientProps) {
           </form>
 
           {username ? (
-            <Link
-              href={`/profile/${username}`}
-              className={cn(
-                'text-sm font-semibold transition-colors',
-                isOverlay
-                  ? 'text-white/80 hover:text-white'
-                  : 'text-foreground/80 hover:text-foreground'
-              )}
-            >
-              {username}
-            </Link>
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    'flex items-center gap-1 text-sm font-semibold transition-colors',
+                    isOverlay
+                      ? 'text-white/80 hover:text-white'
+                      : 'text-foreground/80 hover:text-foreground'
+                  )}
+                >
+                  {username}
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Portal>
+                <DropdownMenu.Content
+                  align="end"
+                  sideOffset={8}
+                  className="data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out z-50 w-40 rounded-lg bg-muted p-2 shadow-2xl ring-1 ring-white/10"
+                >
+                  {[
+                    { href: `/profile/${username}`, label: 'Profile' },
+                    { href: `/profile/${username}/shows`, label: 'Shows' },
+                    { href: `/profile/${username}/watchlist`, label: 'Watchlist' },
+                  ].map((item) => (
+                    <DropdownMenu.Item key={item.href} asChild>
+                      <Link
+                        href={item.href}
+                        className={cn(
+                          'block rounded-md px-3 py-2 text-sm outline-none data-[highlighted]:bg-white/5',
+                          pathname === item.href
+                            ? 'text-white'
+                            : 'text-[#c2d0dd]'
+                        )}
+                      >
+                        {item.label}
+                      </Link>
+                    </DropdownMenu.Item>
+                  ))}
+                </DropdownMenu.Content>
+              </DropdownMenu.Portal>
+            </DropdownMenu.Root>
           ) : (
             <AuthDialog />
           )}

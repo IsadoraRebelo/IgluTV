@@ -231,6 +231,11 @@ async function fetchTmdbShowFullDetails(
 
     const json: TMDBSeriesDetailsRaw = await res.json();
 
+    const showIsAnime = isAnime(
+      (json.genres ?? []).map((genre) => genre.id),
+      json.origin_country ?? []
+    );
+
     const details: ShowDetails = {
       name: json.name,
       overview: json.overview,
@@ -243,6 +248,7 @@ async function fetchTmdbShowFullDetails(
         : null,
       genres: (json.genres ?? []).map((genre) => genre.name),
       network: json.networks?.[0]?.name ?? null,
+      isAnime: showIsAnime,
       cast: (json.credits?.cast ?? []).map((member) => ({
         actorName: member.name,
         character: member.character,
@@ -266,10 +272,6 @@ async function fetchTmdbShowFullDetails(
     // for anime, and only actually used if TMDB has a community-maintained
     // "aired order" episode group for it (getTmdbAnimeArcNames returns null
     // otherwise, e.g. for Breaking Bad, which has no such group at all).
-    const showIsAnime = isAnime(
-      (json.genres ?? []).map((genre) => genre.id),
-      json.origin_country ?? []
-    );
     const arcNames = showIsAnime ? await getTmdbAnimeArcNames(id) : null;
 
     const lastEpisode = json.last_episode_to_air;
@@ -398,6 +400,7 @@ export async function resolveShowSummaries(
       year: full.details.year,
       genres: full.details.genres,
       network: full.details.network,
+      isAnime: full.details.isAnime,
     });
   });
   return map;
