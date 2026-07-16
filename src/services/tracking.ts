@@ -39,7 +39,9 @@ export async function getShowTrackingForUser(
 
   const { data, error } = await supabase
     .from('show_tracking')
-    .select('tmdb_show_id, status, is_favourite, skip_catch_up_prompt')
+    .select(
+      'tmdb_show_id, status, is_favourite, skip_catch_up_prompt, created_at'
+    )
     .eq('user_id', userId)
     .eq('tmdb_show_id', showId)
     .maybeSingle();
@@ -52,6 +54,7 @@ export async function getShowTrackingForUser(
     status: codeToStatus(data.status),
     isFavourite: data.is_favourite,
     skipCatchUpPrompt: data.skip_catch_up_prompt,
+    createdAt: data.created_at,
   };
 }
 
@@ -366,7 +369,9 @@ export async function getShowsForUser(
 
   let query = supabase
     .from('show_tracking')
-    .select('tmdb_show_id, status, is_favourite, skip_catch_up_prompt')
+    .select(
+      'tmdb_show_id, status, is_favourite, skip_catch_up_prompt, created_at'
+    )
     .eq('user_id', userId);
 
   if (status) query = query.eq('status', statusToCode(status));
@@ -379,6 +384,7 @@ export async function getShowsForUser(
     status: codeToStatus(row.status),
     isFavourite: row.is_favourite,
     skipCatchUpPrompt: row.skip_catch_up_prompt,
+    createdAt: row.created_at,
   }));
 }
 
@@ -397,7 +403,9 @@ export async function getFavouriteShowsForUser(
 
   const { data, error } = await supabase
     .from('show_tracking')
-    .select('tmdb_show_id, status, is_favourite, skip_catch_up_prompt')
+    .select(
+      'tmdb_show_id, status, is_favourite, skip_catch_up_prompt, created_at'
+    )
     .eq('user_id', userId)
     .eq('is_favourite', true);
 
@@ -408,6 +416,7 @@ export async function getFavouriteShowsForUser(
     status: codeToStatus(row.status),
     isFavourite: row.is_favourite,
     skipCatchUpPrompt: row.skip_catch_up_prompt,
+    createdAt: row.created_at,
   }));
 }
 

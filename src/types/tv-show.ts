@@ -124,6 +124,9 @@ export type ShowSummary = {
   posterUrl: string | null;
   bannerUrl: string | null;
   markableEpisodeCount: number;
+  year: string | null;
+  genres: string[];
+  network: string | null;
 };
 
 export type ShowBackdropImage = {

@@ -1,4 +1,5 @@
 import type {
+  DisplayStatus,
   EpisodeWatch,
   LatestEpisode,
   Season,
@@ -63,6 +64,19 @@ export function getWatchStatusBackground(
 
   const percent = (watchedCount / markableCount) * 100;
   return `linear-gradient(to right, ${fillColor} ${percent}%, var(--color-muted) ${percent}%)`;
+}
+
+export function getDisplayStatus(
+  status: ShowStatus,
+  watchedCount: number,
+  markableCount: number
+): DisplayStatus {
+  if (status === 'paused') return 'paused';
+  if (status === 'dropped') return 'dropped';
+  if (status === 'completed') return 'finished';
+  return markableCount > 0 && watchedCount >= markableCount
+    ? 'caught-up'
+    : 'ongoing';
 }
 
 export function getDaysUntilAir(dateStr: string | null): number | null {

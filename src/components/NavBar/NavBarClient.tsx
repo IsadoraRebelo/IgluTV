@@ -18,8 +18,7 @@ export function NavBarClient({ username }: NavBarClientProps) {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const isOverlay =
-    pathname.startsWith('/show/') ||
-    (pathname.startsWith('/profile/') && pathname !== '/profile');
+    pathname.startsWith('/show/') || /^\/profile\/[^/]+$/.test(pathname);
 
   function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

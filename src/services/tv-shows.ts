@@ -395,6 +395,9 @@ export async function resolveShowSummaries(
         ) ?? null,
       bannerUrl: full.details.bannerUrl,
       markableEpisodeCount,
+      year: full.details.year,
+      genres: full.details.genres,
+      network: full.details.network,
     });
   });
   return map;

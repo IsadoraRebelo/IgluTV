@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { ProfileSettingsButton, WatchProgressBar } from '@/components';
+import { PosterCard, ProfileSettingsButton } from '@/components';
 import {
   getFavouriteShowsForUser,
   getFinishedSeasonsForUser,
@@ -16,8 +16,8 @@ import { resolveShowSummaries } from '@/services/tv-shows';
 
 import { createClient } from '@/supabase/server';
 
-import type { ShowStatus, ShowSummary } from '@/types';
-import { cn, formatWatchDuration } from '@/utils';
+import type { ShowSummary } from '@/types';
+import { formatWatchDuration } from '@/utils';
 
 const RECENT_ACTIVITY_LIMIT = 15;
 const WATCHLIST_PREVIEW_LIMIT = 5;
@@ -59,48 +59,6 @@ function groupDiaryEntriesByMonth(entries: DiaryEntry[]): DiaryMonthGroup[] {
   }
 
   return groups;
-}
-
-function PosterCard({
-  show,
-  caption,
-  className,
-  sizes = '128px',
-  progress,
-}: {
-  show: ShowSummary;
-  caption?: string;
-  className?: string;
-  sizes?: string;
-  progress?: { watchedCount: number; showStatus: ShowStatus | null };
-}) {
-  return (
-    <Link href={`/show/${show.id}`} className={cn('flex flex-col gap-1', className)}>
-      <div className="relative aspect-[2/3] w-full overflow-hidden rounded-sm bg-[#2c3440]">
-        {show.posterUrl ? (
-          <Image
-            src={show.posterUrl}
-            alt={show.name}
-            fill
-            sizes={sizes}
-            className="object-cover"
-          />
-        ) : null}
-      </div>
-      {progress ? (
-        <WatchProgressBar
-          watchedCount={progress.watchedCount}
-          markableCount={show.markableEpisodeCount}
-          showStatus={progress.showStatus}
-          showCount={false}
-          className="h-1.5 rounded-sm"
-        />
-      ) : null}
-      {caption ? (
-        <p className="truncate text-xs text-[#8a9bab]">{caption}</p>
-      ) : null}
-    </Link>
-  );
 }
 
 function StatTile({ label, value }: { label: string; value: number | string }) {
@@ -299,7 +257,15 @@ export default async function ProfilePage({
       </div>
 
       <main className="mx-auto w-full max-w-[950px] flex-1 px-3 pb-20 md:px-0">
-        <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="mt-6 flex justify-end">
+          <Link
+            href={`/profile/${profile.username}/shows`}
+            className="text-sm text-[#9ab0bf] underline hover:text-white"
+          >
+            View all shows
+          </Link>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
           <StatTile
             label="Time Watching"
             value={formatWatchDuration(stats.totalWatchMinutes)}
@@ -366,9 +332,12 @@ export default async function ProfilePage({
             {watchlistSummaries.length > 0 ? (
               <div>
                 <div className="flex items-center justify-between">
-                  <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+                  <Link
+                    href={`/profile/${profile.username}/watchlist`}
+                    className="text-sm font-semibold tracking-wide text-muted-foreground uppercase hover:text-white"
+                  >
                     Watchlist
-                  </h2>
+                  </Link>
                   <span className="text-xs text-muted-foreground">
                     {watchlistShows.length}
                   </span>
