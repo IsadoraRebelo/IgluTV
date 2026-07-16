@@ -10,8 +10,8 @@ import {
 import { Image as ImageIcon, ImagePlus } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-
 import type { ReactNode } from 'react';
+
 import {
   ShowActionsMenu,
   ShowActionsSidebar,
@@ -25,7 +25,10 @@ import {
 
 import { getUserCountry } from '@/services/profile';
 import { getShowTracking, getWatchedEpisodes } from '@/services/tracking';
-import { getTmdbShowFullDetails, getTmdbWatchProviders } from '@/services/tv-shows';
+import {
+  getTmdbShowFullDetails,
+  getTmdbWatchProviders,
+} from '@/services/tv-shows';
 
 import { createClient } from '@/supabase/server';
 
@@ -40,52 +43,52 @@ const SHOW_ACTIONS: {
   label: string;
   activeColor?: string;
 }[] = [
-    {
-      id: 'mark-watched',
-      icon: <EyeIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-      reviveIcon: <PlayIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-      finishedIcon: (
-        <RocketLaunchIcon className="h-4 w-4 text-yellow-500 md:h-5 md:w-5" />
-      ),
-      label: 'Watched',
-      activeColor: '[&_svg]:!text-accent',
-    },
-    {
-      id: 'favourite',
-      icon: <HeartIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-      label: 'Favourite',
-      activeColor: '[&_svg]:!text-red-500',
-    },
-    {
-      id: '1',
-      status: 'watch_later',
-      icon: <ClockIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-      label: 'Add to watchlist',
-      activeColor: '[&_svg]:!text-accent-foreground',
-    },
-    {
-      id: '2',
-      status: 'paused',
-      icon: <PauseIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-      label: 'Pause',
-      activeColor: '[&_svg]:!text-paused',
-    },
-    {
-      id: '3',
-      status: 'dropped',
-      icon: <TrashIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-      label: 'Drop',
-      activeColor: '[&_svg]:!text-dropped',
-    },
-    {
-      icon: <ImageIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-      label: 'Change poster',
-    },
-    {
-      icon: <ImagePlus className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-      label: 'Change banner',
-    },
-  ];
+  {
+    id: 'mark-watched',
+    icon: <EyeIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    reviveIcon: <PlayIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    finishedIcon: (
+      <RocketLaunchIcon className="h-4 w-4 text-yellow-500 md:h-5 md:w-5" />
+    ),
+    label: 'Watched',
+    activeColor: '[&_svg]:!text-accent',
+  },
+  {
+    id: 'favourite',
+    icon: <HeartIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    label: 'Favourite',
+    activeColor: '[&_svg]:!text-red-500',
+  },
+  {
+    id: '1',
+    status: 'watch_later',
+    icon: <ClockIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    label: 'Add to watchlist',
+    activeColor: '[&_svg]:!text-accent-foreground',
+  },
+  {
+    id: '2',
+    status: 'paused',
+    icon: <PauseIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    label: 'Pause',
+    activeColor: '[&_svg]:!text-paused',
+  },
+  {
+    id: '3',
+    status: 'dropped',
+    icon: <TrashIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    label: 'Drop',
+    activeColor: '[&_svg]:!text-dropped',
+  },
+  {
+    icon: <ImageIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    label: 'Change poster',
+  },
+  {
+    icon: <ImagePlus className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    label: 'Change banner',
+  },
+];
 
 function formatDate(dateStr: string | null | undefined): string | null {
   if (!dateStr) return null;
@@ -111,15 +114,21 @@ export default async function ShowPage({
   }
 
   const supabase = await createClient();
-  const [tmdbFull, watchedEpisodes, tracking, userResult, watchProviders, userCountry] =
-    await Promise.all([
-      getTmdbShowFullDetails(numericId),
-      getWatchedEpisodes(numericId),
-      getShowTracking(numericId),
-      supabase.auth.getUser(),
-      getTmdbWatchProviders(numericId),
-      getUserCountry(),
-    ]);
+  const [
+    tmdbFull,
+    watchedEpisodes,
+    tracking,
+    userResult,
+    watchProviders,
+    userCountry,
+  ] = await Promise.all([
+    getTmdbShowFullDetails(numericId),
+    getWatchedEpisodes(numericId),
+    getShowTracking(numericId),
+    supabase.auth.getUser(),
+    getTmdbWatchProviders(numericId),
+    getUserCountry(),
+  ]);
   const isLoggedIn = userResult.data.user !== null;
 
   if (!tmdbFull) {
@@ -267,7 +276,7 @@ function HomeTab({
 
       <section>
         <h2 className="mb-3 px-1 text-lg font-semibold text-white">Details</h2>
-        <div className="px-1 flex flex-col divide-y divide-white/10 text-sm">
+        <div className="flex flex-col divide-y divide-white/10 px-1 text-sm">
           <DetailRow label="Seasons" value={meta?.numberOfSeasons} />
           <DetailRow label="Episodes" value={meta?.numberOfEpisodes} />
           <DetailRow
@@ -333,8 +342,9 @@ function CastTab({ cast }: { cast: ShowDetails['cast'] }) {
   return (
     <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
       {cast.map((member) => (
-        <div
-          key={`${member.actorName}-${member.character}`}
+        <Link
+          key={member.actorId}
+          href={`/cast/${member.actorId}`}
           className="relative aspect-[2/3] w-full overflow-hidden rounded-sm bg-[#2c3440]"
         >
           {member.imageUrl ? (
@@ -355,7 +365,7 @@ function CastTab({ cast }: { cast: ShowDetails['cast'] }) {
               {member.character}
             </div>
           </div>
-        </div>
+        </Link>
       ))}
     </div>
   );

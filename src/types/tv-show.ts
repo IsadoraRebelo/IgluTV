@@ -17,6 +17,7 @@ export type TMDBTvShowRaw = {
 };
 
 export type CastMember = {
+  actorId: number;
   actorName: string;
   character: string;
   imageUrl: string | null;
@@ -182,7 +183,12 @@ export type TMDBSeriesDetailsRaw = {
   next_episode_to_air?: TMDBEpisodeRaw | null;
   last_episode_to_air?: TMDBEpisodeRaw | null;
   credits?: {
-    cast?: { name: string; character: string; profile_path: string | null }[];
+    cast?: {
+      id: number;
+      name: string;
+      character: string;
+      profile_path: string | null;
+    }[];
   };
   content_ratings?: {
     results?: { iso_3166_1: string; rating: string }[];

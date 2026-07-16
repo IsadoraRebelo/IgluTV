@@ -250,6 +250,7 @@ async function fetchTmdbShowFullDetails(
       network: json.networks?.[0]?.name ?? null,
       isAnime: showIsAnime,
       cast: (json.credits?.cast ?? []).map((member) => ({
+        actorId: member.id,
         actorName: member.name,
         character: member.character,
         imageUrl: member.profile_path

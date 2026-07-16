@@ -46,7 +46,10 @@ export function ShowResultRow({ show }: { show: TvShowSearchResult }) {
 
 export function PersonResultRow({ person }: { person: PersonSearchResult }) {
   return (
-    <div className="flex gap-4 p-2">
+    <Link
+      href={`/cast/${person.id}`}
+      className="flex gap-4 rounded-md p-2 hover:bg-white/5"
+    >
       <div className="relative h-[70px] w-[70px] shrink-0 overflow-hidden rounded-full bg-[#2c3440]">
         {person.profileUrl ? (
           <Image
@@ -66,6 +69,6 @@ export function PersonResultRow({ person }: { person: PersonSearchResult }) {
           </p>
         ) : null}
       </div>
-    </div>
+    </Link>
   );
 }

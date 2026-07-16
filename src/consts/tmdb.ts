@@ -11,3 +11,24 @@ export const TMDB_BACKDROP_BASE_URL = 'https://image.tmdb.org/t/p/w780';
 export const TMDB_BACKDROP_LARGE_BASE_URL = 'https://image.tmdb.org/t/p/w1280';
 // Provider logos (Netflix, Disney+, etc.) — small icons, w92 is plenty.
 export const TMDB_PROVIDER_LOGO_BASE_URL = 'https://image.tmdb.org/t/p/w92';
+// TMDB's TV genre list is fixed/stable — hardcoded here (same rationale as
+// ANIME_GENRE_ID in src/utils/is-anime.ts) so genre filtering doesn't need
+// an extra request per page.
+export const TMDB_TV_GENRES: Record<number, string> = {
+  10759: 'Action & Adventure',
+  16: 'Animation',
+  35: 'Comedy',
+  80: 'Crime',
+  99: 'Documentary',
+  18: 'Drama',
+  10751: 'Family',
+  10762: 'Kids',
+  9648: 'Mystery',
+  10763: 'News',
+  10764: 'Reality',
+  10765: 'Sci-Fi & Fantasy',
+  10766: 'Soap',
+  10767: 'Talk',
+  10768: 'War & Politics',
+  37: 'Western',
+};
