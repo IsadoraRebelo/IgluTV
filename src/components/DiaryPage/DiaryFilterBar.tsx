@@ -66,13 +66,13 @@ function MobileFiltersSheet({
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out fixed inset-0 z-50 bg-black/70" />
         <DialogPrimitive.Content className="data-[state=open]:animate-slide-up data-[state=closed]:animate-slide-down fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] w-full flex-col rounded-t-lg bg-[#14181c] shadow-2xl">
-          <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3">
-            <DialogPrimitive.Title className="text-sm font-semibold text-white">
+          <div className="relative flex shrink-0 items-center justify-center px-4 py-3 pt-5">
+            <DialogPrimitive.Title className="text-center text-xs font-semibold uppercase  text-muted-foreground">
               Filters
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
               aria-label="Close"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-white"
+              className="absolute right-2 top-1 flex h-8 w-8 items-center justify-center text-white"
             >
               <X className="h-4 w-4" />
             </DialogPrimitive.Close>
@@ -90,7 +90,7 @@ function MobileFiltersSheet({
                     type="button"
                     onClick={() => onSortChange(key)}
                     className={cn(
-                      'flex items-center justify-between rounded-md px-1 py-2.5 text-left text-sm',
+                      'flex items-center justify-between rounded-md px-1 py-1 text-left text-sm',
                       key === sortKey ? 'text-white' : 'text-[#c2d0dd]'
                     )}
                   >
@@ -125,6 +125,7 @@ function MobileFiltersSheet({
               optionLabel={(genre) => genre}
               selected={selectedGenres}
               onToggle={onToggleGenre}
+              showBorder={false}
             />
           </div>
         </DialogPrimitive.Content>

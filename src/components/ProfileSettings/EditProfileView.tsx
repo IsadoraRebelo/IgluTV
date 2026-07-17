@@ -20,12 +20,14 @@ export function EditProfileView({
   bannerUrl,
   onClose,
   onChangeBanner,
+  onChangePicture,
 }: {
   username: string;
   avatarUrl: string | null;
   bannerUrl: string | null;
   onClose: () => void;
   onChangeBanner: () => void;
+  onChangePicture: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -63,7 +65,7 @@ export function EditProfileView({
         </button>
       </div>
 
-      <div className="flex items-center gap-4 opacity-50">
+      <div className="flex items-center gap-4">
         <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-[#2c3440]">
           {avatarUrl ? (
             <Image
@@ -81,7 +83,13 @@ export function EditProfileView({
         </div>
         <div>
           <p className="text-sm font-medium text-white">Profile picture</p>
-          <p className="text-xs text-[#8a9bab]">Coming soon</p>
+          <button
+            type="button"
+            onClick={onChangePicture}
+            className="text-xs text-[#8a9bab] underline hover:text-white"
+          >
+            Change picture
+          </button>
         </div>
       </div>
 

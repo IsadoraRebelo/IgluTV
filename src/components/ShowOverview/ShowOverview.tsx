@@ -2,7 +2,17 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-export function ShowOverview({ text }: { text: string }) {
+type ShowOverviewProps = {
+  text: string;
+  marginTopClassName?: string;
+  textSizeClassName?: string;
+};
+
+export function ShowOverview({
+  text,
+  marginTopClassName = 'mt-2',
+  textSizeClassName = 'text-[15px]',
+}: ShowOverviewProps) {
   const [expanded, setExpanded] = useState(false);
   const [isTruncated, setIsTruncated] = useState(false);
   const paragraphRef = useRef<HTMLParagraphElement>(null);
@@ -17,9 +27,8 @@ export function ShowOverview({ text }: { text: string }) {
     <div>
       <p
         ref={paragraphRef}
-        className={`mt-2 max-w-[65ch] text-[15px] leading-relaxed text-[#c2d0dd] ${
-          expanded ? '' : 'line-clamp-2 md:line-clamp-5'
-        }`}
+        className={`${marginTopClassName} max-w-[65ch] ${textSizeClassName} leading-relaxed text-[#c2d0dd] ${expanded ? '' : 'line-clamp-2 md:line-clamp-5'
+          }`}
       >
         {text}
       </p>

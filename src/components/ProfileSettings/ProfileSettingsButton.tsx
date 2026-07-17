@@ -6,11 +6,12 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { type BannerShowOption } from './actions';
+import { AvatarUploadView } from './AvatarUploadView';
 import { BannerImagesView } from './BannerImagesView';
 import { BannerShowsView } from './BannerShowsView';
 import { EditProfileView } from './EditProfileView';
 
-type View = 'edit' | 'shows' | 'images';
+type View = 'edit' | 'shows' | 'images' | 'picture';
 
 export function ProfileSettingsButton({
   username,
@@ -36,7 +37,7 @@ export function ProfileSettingsButton({
     }
   }
 
-  function handleBannerApplied() {
+  function handleApplied() {
     handleOpenChange(false);
     router.refresh();
   }
@@ -69,6 +70,7 @@ export function ProfileSettingsButton({
               bannerUrl={bannerUrl}
               onClose={() => handleOpenChange(false)}
               onChangeBanner={() => setView('shows')}
+              onChangePicture={() => setView('picture')}
             />
           ) : null}
 
@@ -87,7 +89,15 @@ export function ProfileSettingsButton({
               key={selectedShow.id}
               show={selectedShow}
               onBack={() => setView('shows')}
-              onApplied={handleBannerApplied}
+              onApplied={handleApplied}
+            />
+          ) : null}
+
+          {view === 'picture' ? (
+            <AvatarUploadView
+              currentAvatarUrl={avatarUrl}
+              onCancel={() => setView('edit')}
+              onApplied={handleApplied}
             />
           ) : null}
         </DialogPrimitive.Content>

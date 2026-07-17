@@ -10,9 +10,9 @@ export function CastWatchProgress({
   const percentage = Math.round((watchedCount / totalCount) * 100);
 
   return (
-    <div className="rounded-lg bg-white/[0.03] p-4 ring-1 ring-white/10">
-      <div className="flex items-baseline justify-between">
-        <p className="text-sm text-[#c2d0dd]">
+    <div className="rounded-sm bg-white/[0.03] ring-1 ring-white/10">
+      <div className="flex items-baseline justify-between px-3 pt-2">
+        <p className="text-xs text-[#c2d0dd]">
           You&apos;ve watched {watchedCount} of {totalCount}
         </p>
         <span className="text-lg font-semibold text-white">{percentage}%</span>

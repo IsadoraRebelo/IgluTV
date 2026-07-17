@@ -180,7 +180,7 @@ export default async function ShowPage({
           </div>
 
           <div className="relative z-10 mx-auto -mt-24 w-full max-w-[950px] px-3 sm:-mt-32 md:px-0">
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-8">
               <div className="relative hidden h-[345px] w-[230px] shrink-0 overflow-hidden rounded-md shadow-2xl ring-1 ring-white/10 md:block">
                 {details.posterUrl ? (
                   <Image
@@ -382,7 +382,7 @@ function SimilarTab({ shows }: { shows: ShowMeta['similar'] }) {
         <Link
           key={similarShow.id}
           href={`/show/${similarShow.id}`}
-          className="flex flex-col gap-2"
+          className="flex flex-col gap-3"
         >
           <div className="relative aspect-[2/3] w-full overflow-hidden rounded-md bg-[#2c3440]">
             {similarShow.posterUrl ? (

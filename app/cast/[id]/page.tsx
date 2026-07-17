@@ -62,7 +62,7 @@ export default async function CastPage({
       <main className="mx-auto w-full max-w-[950px] flex-1 px-3 pt-10 pb-20 md:px-0">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_260px]">
           <aside className="order-1 flex flex-col gap-4 lg:order-2">
-            <div className="relative aspect-[3/4] w-full max-w-[230px] overflow-hidden rounded-md bg-[#2c3440]">
+            <div className="relative aspect-[3/4] w-full max-w-[230px] overflow-hidden rounded-sm bg-[#2c3440]">
               {person.profileUrl ? (
                 <Image
                   src={person.profileUrl}
@@ -73,7 +73,13 @@ export default async function CastPage({
                 />
               ) : null}
             </div>
-            {person.biography ? <ShowOverview text={person.biography} /> : null}
+            {person.biography ? (
+              <ShowOverview
+                text={person.biography}
+                marginTopClassName="mt-0"
+                textSizeClassName="text-sm"
+              />
+            ) : null}
             <a
               href={`https://www.themoviedb.org/person/${numericId}`}
               target="_blank"
@@ -90,12 +96,12 @@ export default async function CastPage({
             ) : null}
           </aside>
 
-          <div className="order-2 flex flex-col gap-6 lg:order-1">
+          <div className="order-2 flex flex-col gap-5 lg:order-1">
             <div>
               <p className="text-xs font-semibold tracking-wide text-[#8a9bab] uppercase">
                 TV Shows Starring
               </p>
-              <h1 className="text-2xl font-semibold text-white sm:text-3xl">
+              <h1 className="text-xl font-semibold text-white sm:text-3xl">
                 {person.name}
               </h1>
             </div>

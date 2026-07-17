@@ -1,7 +1,7 @@
 'use server';
 
 import { ServiceError } from '@/services/errors';
-import { updateBannerUrl, updateUsername } from '@/services/profile';
+import { updateBannerUrl, updateUsername, uploadAvatar } from '@/services/profile';
 import { getShowsForUser } from '@/services/tracking';
 import { getTmdbShowImages, resolveShowSummaries } from '@/services/tv-shows';
 
@@ -37,6 +37,12 @@ export async function updateBannerAction(
   bannerUrl: string
 ): Promise<ProfileSettingsActionResult> {
   return toResult(updateBannerUrl(bannerUrl));
+}
+
+export async function uploadAvatarAction(
+  formData: FormData
+): Promise<ProfileSettingsActionResult> {
+  return toResult(uploadAvatar(formData).then(() => undefined));
 }
 
 export type BannerShowOption = {

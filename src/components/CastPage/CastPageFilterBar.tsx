@@ -35,8 +35,8 @@ export function CastPageFilterBar({
   onSortChange: (key: CastSortKey) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
-      <div className="flex flex-wrap items-center gap-5">
+    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-2">
+      <div className="flex flex-wrap items-center gap-3">
         <FilterDropdown
           label="Decade"
           options={decadeOptions}
