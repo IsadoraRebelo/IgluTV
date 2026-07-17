@@ -7,7 +7,10 @@ import {
   getTmdbPersonDetails,
   getTmdbPersonTvCredits,
 } from '@/services/person';
-import { getWatchedEpisodeCountsForUser } from '@/services/tracking';
+import {
+  getShowsForUser,
+  getWatchedEpisodeCountsForUser,
+} from '@/services/tracking';
 
 import { createClient } from '@/supabase/server';
 
@@ -37,16 +40,21 @@ export default async function CastPage({
   const userId = userResult.data.user?.id ?? null;
 
   let watchedCounts: Map<number, number> | null = null;
+  let completedShowIds: Set<number> | null = null;
   if (userId) {
-    watchedCounts = await getWatchedEpisodeCountsForUser(
-      userId,
-      credits.map((credit) => credit.showId)
-    );
+    [watchedCounts, completedShowIds] = await Promise.all([
+      getWatchedEpisodeCountsForUser(
+        userId,
+        credits.map((credit) => credit.showId)
+      ),
+      getShowsForUser(userId, 'completed').then(
+        (shows) => new Set(shows.map((show) => show.tmdbShowId))
+      ),
+    ]);
   }
 
-  const watchedShowCount = watchedCounts
-    ? credits.filter((credit) => (watchedCounts.get(credit.showId) ?? 0) > 0)
-        .length
+  const watchedShowCount = completedShowIds
+    ? credits.filter((credit) => completedShowIds.has(credit.showId)).length
     : 0;
 
   return (

@@ -24,16 +24,16 @@ export function CastCreditCard({
             className="object-cover"
           />
         ) : null}
+        {watchedCount !== null ? (
+          <WatchProgressBar
+            watchedCount={watchedCount}
+            markableCount={credit.episodeCount}
+            showStatus={null}
+            showCount={false}
+            className="absolute inset-x-0 bottom-0 h-1"
+          />
+        ) : null}
       </div>
-      {watchedCount !== null ? (
-        <WatchProgressBar
-          watchedCount={watchedCount}
-          markableCount={credit.episodeCount}
-          showStatus={null}
-          showCount={false}
-          className="h-1.5 rounded-sm"
-        />
-      ) : null}
       <p className="truncate text-xs text-[#8a9bab]">
         {credit.episodeCount} episode{credit.episodeCount === 1 ? '' : 's'}
       </p>

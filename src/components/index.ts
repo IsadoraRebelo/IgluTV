@@ -18,6 +18,7 @@ export * from './LatestEpisodeCard/LatestEpisodeCard';
 export * from './NavBar/NavBar';
 export * from './PosterCard/PosterCard';
 export * from './ProfileSettings/ProfileSettingsButton';
+export * from './ProfileSubNav/ProfileSubNav';
 export * from './RecentlyWatchedAccordion/RecentlyWatchedAccordion';
 export * from './SearchResults/SearchFilters';
 export * from './SearchResults/SearchResultRow';

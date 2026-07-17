@@ -31,16 +31,16 @@ export function PosterCard({
             className="object-cover"
           />
         ) : null}
+        {progress ? (
+          <WatchProgressBar
+            watchedCount={progress.watchedCount}
+            markableCount={show.markableEpisodeCount}
+            showStatus={progress.showStatus}
+            showCount={false}
+            className="absolute inset-x-0 bottom-0 h-1"
+          />
+        ) : null}
       </div>
-      {progress ? (
-        <WatchProgressBar
-          watchedCount={progress.watchedCount}
-          markableCount={show.markableEpisodeCount}
-          showStatus={progress.showStatus}
-          showCount={false}
-          className="h-1.5 rounded-sm"
-        />
-      ) : null}
       {caption ? (
         <p className="truncate text-xs text-[#8a9bab]">{caption}</p>
       ) : null}

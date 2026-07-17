@@ -271,8 +271,8 @@ export default async function ProfilePage({
                     RECENT ACTIVITY
                   </h2>
                   <Link
-                    href={`/profile/${profile.username}/watchlist`}
-                    className="text-xs font-semibold tracking-wide uppercase"
+                    href={`/profile/${profile.username}/shows`}
+                    className="text-xs font-semibold tracking-wide uppercase hover:text-accent"
                   >
                     All
                   </Link>
@@ -302,14 +302,15 @@ export default async function ProfilePage({
             {watchlistSummaries.length > 0 ? (
               <div>
                 <div className="flex items-center px-1 justify-between">
-                  <h2
-                    className="text-muted-foreground text-sm font-semibold tracking-wide uppercase"
-                  >
-                    Watchlist
-                  </h2>
                   <Link
                     href={`/profile/${profile.username}/watchlist`}
-                    className="text-muted-foreground text-xs font-semibold tracking-wide uppercase"
+                    className="text-muted-foreground text-sm font-semibold tracking-wide uppercase hover:text-accent"
+                  >
+                    Watchlist
+                  </Link>
+                  <Link
+                    href={`/profile/${profile.username}/watchlist`}
+                    className="text-muted-foreground text-xs font-semibold tracking-wide uppercase hover:text-accent"
                   >
                     {watchlistShows.length}
                   </Link>
@@ -339,14 +340,15 @@ export default async function ProfilePage({
             {finishedEntries.length > 0 ? (
               <div>
                 <div className="flex items-center justify-between py-1">
-                  <h2
-                    className="text-muted-foreground text-sm font-semibold tracking-wide uppercase"
-                  >
-                    Diary
-                  </h2>
                   <Link
                     href={`/profile/${profile.username}/diary`}
-                    className="text-muted-foreground text-xs font-semibold tracking-wide uppercase"
+                    className="text-muted-foreground text-sm font-semibold tracking-wide uppercase hover:text-accent"
+                  >
+                    Diary
+                  </Link>
+                  <Link
+                    href={`/profile/${profile.username}/diary`}
+                    className="text-muted-foreground text-xs font-semibold tracking-wide uppercase hover:text-accent"
                   >
                     {finishedEntries.length}
                   </Link>
@@ -372,7 +374,7 @@ export default async function ProfilePage({
                                   <Link
                                     key={diaryEntryKey(entry)}
                                     href={`/show/${entry.show.id}`}
-                                    className="text-muted-foreground truncate text-sm font-semibold"
+                                    className="text-muted-foreground truncate text-sm font-semibold hover:text-accent"
                                   >
                                     {diaryEntryLabel(entry)}
                                   </Link>

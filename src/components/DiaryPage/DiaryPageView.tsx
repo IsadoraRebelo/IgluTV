@@ -155,11 +155,8 @@ export function DiaryPageView({ entries }: { entries: DiaryEntry[] }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
-        Diary
-      </h1>
-
       <DiaryFilterBar
+        title="Diary"
         yearOptions={yearOptions}
         decadeOptions={decadeOptions}
         genreOptions={genreOptions}

@@ -1,12 +1,12 @@
 'use client';
 
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { ChevronDown, SlidersHorizontal, X } from 'lucide-react';
+import { SlidersHorizontal, X } from 'lucide-react';
 
 import {
   FilterDropdown,
   MobileFilterSection,
+  SortDropdown,
 } from '@/components/FilterDropdown/FilterDropdown';
 
 import { cn } from '@/utils';
@@ -134,6 +134,7 @@ function MobileFiltersSheet({
 }
 
 export function DiaryFilterBar({
+  title,
   yearOptions,
   decadeOptions,
   genreOptions,
@@ -147,6 +148,7 @@ export function DiaryFilterBar({
   sortDirection,
   onSortChange,
 }: {
+  title: string;
   yearOptions: number[];
   decadeOptions: number[];
   genreOptions: string[];
@@ -161,81 +163,61 @@ export function DiaryFilterBar({
   onSortChange: (key: DiarySortKey) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
-      <div className="hidden flex-wrap items-center gap-5 sm:flex">
-        <FilterDropdown
-          label="Diary Year"
-          options={yearOptions}
-          optionLabel={(year) => String(year)}
-          selected={selectedYears}
-          onToggle={onToggleYear}
-        />
-        <FilterDropdown
-          label="Decade"
-          options={decadeOptions}
-          optionLabel={(decade) => `${decade}s`}
-          selected={selectedDecades}
-          onToggle={onToggleDecade}
-        />
-        <FilterDropdown
-          label="Genre"
-          options={genreOptions}
-          optionLabel={(genre) => genre}
-          selected={selectedGenres}
-          onToggle={onToggleGenre}
-        />
-      </div>
+    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-1 mt-5">
+      <h2 className="text-muted-foreground text-sm font-semibold tracking-widest uppercase">
+        {title}
+      </h2>
 
-      <div className="sm:hidden">
-        <MobileFiltersSheet
-          yearOptions={yearOptions}
-          decadeOptions={decadeOptions}
-          genreOptions={genreOptions}
-          selectedYears={selectedYears}
-          selectedDecades={selectedDecades}
-          selectedGenres={selectedGenres}
-          onToggleYear={onToggleYear}
-          onToggleDecade={onToggleDecade}
-          onToggleGenre={onToggleGenre}
-          sortKey={sortKey}
-          sortDirection={sortDirection}
-          onSortChange={onSortChange}
-        />
-      </div>
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="hidden flex-wrap items-center gap-5 sm:flex">
+          <FilterDropdown
+            label="Diary Year"
+            options={yearOptions}
+            optionLabel={(year) => String(year)}
+            selected={selectedYears}
+            onToggle={onToggleYear}
+          />
+          <FilterDropdown
+            label="Decade"
+            options={decadeOptions}
+            optionLabel={(decade) => `${decade}s`}
+            selected={selectedDecades}
+            onToggle={onToggleDecade}
+          />
+          <FilterDropdown
+            label="Genre"
+            options={genreOptions}
+            optionLabel={(genre) => genre}
+            selected={selectedGenres}
+            onToggle={onToggleGenre}
+          />
+        </div>
 
-      <div className="hidden sm:block">
-        <DropdownMenu.Root>
-          <DropdownMenu.Trigger asChild>
-            <button
-              type="button"
-              className="flex items-center gap-1 text-xs font-semibold tracking-wide text-[#9ab0bf] uppercase"
-            >
-              Sort by {SORT_LABELS[sortKey]}
-              {sortDirection === 'asc' ? '↑' : '↓'}
-              <ChevronDown className="h-3 w-3" />
-            </button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content
-              align="end"
-              sideOffset={8}
-              className="data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out bg-muted z-50 w-48 rounded-lg p-2 shadow-2xl ring-1 ring-white/10"
-            >
-              {(Object.keys(SORT_LABELS) as DiarySortKey[]).map((key) => (
-                <DropdownMenu.Item
-                  key={key}
-                  onSelect={() => onSortChange(key)}
-                  className={cn(
-                    'rounded-md px-3 py-2 text-sm outline-none data-[highlighted]:bg-white/5',
-                    key === sortKey ? 'text-white' : 'text-[#c2d0dd]'
-                  )}
-                >
-                  {SORT_LABELS[key]}
-                </DropdownMenu.Item>
-              ))}
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
+        <div className="sm:hidden">
+          <MobileFiltersSheet
+            yearOptions={yearOptions}
+            decadeOptions={decadeOptions}
+            genreOptions={genreOptions}
+            selectedYears={selectedYears}
+            selectedDecades={selectedDecades}
+            selectedGenres={selectedGenres}
+            onToggleYear={onToggleYear}
+            onToggleDecade={onToggleDecade}
+            onToggleGenre={onToggleGenre}
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            onSortChange={onSortChange}
+          />
+        </div>
+
+        <div className="hidden sm:block">
+          <SortDropdown
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            labels={SORT_LABELS}
+            onSortChange={onSortChange}
+          />
+        </div>
       </div>
     </div>
   );

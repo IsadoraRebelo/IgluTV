@@ -154,11 +154,8 @@ export function WatchlistView({ entries }: { entries: WatchlistEntry[] }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-        Watchlist
-      </h1>
-
       <WatchlistFilterBar
+        title="Watchlist"
         decadeOptions={decadeOptions}
         genreOptions={genreOptions}
         serviceOptions={serviceOptions}

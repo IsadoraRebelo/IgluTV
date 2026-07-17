@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { DiaryPageView } from '@/components';
+import { DiaryPageView, ProfileSubNav } from '@/components';
 
 import { getProfileByUsername } from '@/services/profile';
 import {
@@ -56,7 +56,12 @@ export default async function DiaryPage({
 
   return (
     <div className="flex flex-1 flex-col bg-[#14181c] font-sans antialiased">
-      <main className="mx-auto w-full max-w-6xl flex-1 px-3 pt-10 pb-20 md:px-0">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-3 pt-5 pb-20 md:px-0">
+        <ProfileSubNav
+          username={profile.username}
+          avatarUrl={profile.avatarUrl}
+          active="diary"
+        />
         <DiaryPageView entries={entries} />
       </main>
     </div>

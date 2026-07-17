@@ -124,4 +124,12 @@ h6 {
 
 button {
   cursor: pointer;
+
+  &:hover {
+    color: var(--accent-color);
+  }
+}
+
+a:hover {
+  color: var(--accent-color);
 }

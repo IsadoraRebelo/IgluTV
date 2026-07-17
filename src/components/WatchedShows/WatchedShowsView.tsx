@@ -205,11 +205,8 @@ export function WatchedShowsView({ entries }: { entries: WatchedShowEntry[] }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
-        Shows
-      </h1>
-
       <WatchedShowsFilterBar
+        title="Shows"
         statusOptions={STATUS_OPTIONS}
         decadeOptions={decadeOptions}
         genreOptions={genreOptions}

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { WatchedShowsView } from '@/components';
+import { ProfileSubNav, WatchedShowsView } from '@/components';
 import { getDisplayStatus } from '@/components/ShowTracker/utils';
 import type { WatchedShowEntry } from '@/components/WatchedShows/types';
 import { getProfileByUsername } from '@/services/profile';
@@ -80,7 +80,12 @@ export default async function WatchedShowsPage({
 
   return (
     <div className="flex flex-1 flex-col bg-[#14181c] font-sans antialiased">
-      <main className="mx-auto w-full max-w-6xl flex-1 px-3 pt-10 pb-20 md:px-0">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-3 pt-5 pb-20 md:px-0">
+        <ProfileSubNav
+          username={profile.username}
+          avatarUrl={profile.avatarUrl}
+          active="shows"
+        />
         <WatchedShowsView entries={entries} />
       </main>
     </div>
