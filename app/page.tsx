@@ -11,7 +11,7 @@ import {
 import {
   getMyShows,
   getWatchedEpisodeCountsForUser,
-  getWatchedEpisodes,
+  getWatchedEpisodesForShows,
 } from '@/services/tracking';
 import {
   getTmdbShowFullDetails,
@@ -22,26 +22,25 @@ import {
 
 import { createClient } from '@/supabase/server';
 
-import type { ShowSummary, ShowTracking } from '@/types';
+import type { EpisodeWatch, ShowSummary, ShowTracking } from '@/types';
 
 async function getWatchNextShowIds(
-  watchingShows: ShowTracking[]
+  watchingShows: ShowTracking[],
+  watchedEpisodesByShow: Map<number, EpisodeWatch[]>
 ): Promise<number[]> {
   const results = await Promise.all(
     watchingShows.map(async (tracked) => {
       let tmdbFull: Awaited<ReturnType<typeof getTmdbShowFullDetails>>;
-      let watchedEpisodes: Awaited<ReturnType<typeof getWatchedEpisodes>>;
       try {
-        [tmdbFull, watchedEpisodes] = await Promise.all([
-          getTmdbShowFullDetails(tracked.tmdbShowId),
-          getWatchedEpisodes(tracked.tmdbShowId),
-        ]);
+        tmdbFull = await getTmdbShowFullDetails(tracked.tmdbShowId);
       } catch (err) {
         console.warn('[home] watch-next entry fetch failed', err);
         return null;
       }
       if (!tmdbFull) return null;
 
+      const watchedEpisodes =
+        watchedEpisodesByShow.get(tracked.tmdbShowId) ?? [];
       const watchedDates = buildWatchedDatesMap(watchedEpisodes);
       const section = getEpisodeSectionState(
         tmdbFull.meta,
@@ -109,8 +108,15 @@ export default async function Home() {
       ? await Promise.all([getMyShows('watching'), getMyShows('watch_later')])
       : [[], []];
 
+  const watchedEpisodesByShow = userId
+    ? await getWatchedEpisodesForShows(
+        userId,
+        watchingShows.map((tracked) => tracked.tmdbShowId)
+      )
+    : new Map<number, EpisodeWatch[]>();
+
   const [watchNextIds, startNextIds] = await Promise.all([
-    getWatchNextShowIds(watchingShows),
+    getWatchNextShowIds(watchingShows, watchedEpisodesByShow),
     getStartNextShowIds(wishlistShows),
   ]);
 

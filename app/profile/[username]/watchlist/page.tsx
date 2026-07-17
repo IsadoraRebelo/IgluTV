@@ -1,24 +1,11 @@
-import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
 import { ProfileSubNav, WatchlistView } from '@/components';
 import type { WatchlistEntry } from '@/components/WatchlistGrid/types';
+
 import { getProfileByUsername } from '@/services/profile';
 import { getShowsForUser } from '@/services/tracking';
 import { resolveShowSummaries } from '@/services/tv-shows';
-
-function ProfileNotFound() {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-[#14181c] px-6 py-24 text-center">
-      <p className="text-[#9ab0bf]">Profile not found.</p>
-      <Link
-        href="/"
-        className="mt-4 text-sm text-[#678] underline hover:text-[#9ab0bf]"
-      >
-        Back to home
-      </Link>
-    </div>
-  );
-}
 
 export default async function WatchlistPage({
   params,
@@ -28,7 +15,7 @@ export default async function WatchlistPage({
   const { username } = await params;
 
   const profile = await getProfileByUsername(username);
-  if (!profile) return <ProfileNotFound />;
+  if (!profile) notFound();
 
   const watchlistTracking = await getShowsForUser(profile.id, 'watch_later');
   const summaries = await resolveShowSummaries(
@@ -40,9 +27,7 @@ export default async function WatchlistPage({
       const show = summaries.get(tracking.tmdbShowId);
       if (!show) return null;
 
-      const decade = show.year
-        ? Math.floor(Number(show.year) / 10) * 10
-        : null;
+      const decade = show.year ? Math.floor(Number(show.year) / 10) * 10 : null;
 
       return {
         show,

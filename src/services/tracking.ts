@@ -7,7 +7,7 @@ import { createClient } from '@/supabase/server';
 import type { EpisodeWatch, ShowStatus, ShowTracking } from '@/types';
 
 import { ServiceError } from './errors';
-import { getTmdbShowFullDetails } from './tv-shows';
+import { getTmdbShowFullDetails, resolveShowSummaries } from './tv-shows';
 
 const STATUS_CODES: Record<ShowStatus, number> = {
   watching: 1,
@@ -68,21 +68,18 @@ export async function getShowTracking(
   return getShowTrackingForUser(userId, showId);
 }
 
-export async function getWatchedEpisodesForUser(
-  userId: string,
-  showId: number
-): Promise<EpisodeWatch[]> {
-  const supabase = await createClient();
+type WatchedEpisodeRow = {
+  id: number;
+  season_number: number;
+  episode_number: number;
+  watched_on: string | null;
+  created_at: string;
+};
 
-  const { data, error } = await supabase
-    .from('episode_watches')
-    .select('id, season_number, episode_number, watched_on, created_at')
-    .eq('user_id', userId)
-    .eq('tmdb_show_id', showId);
-
-  if (error) throw new ServiceError(error.message, error.code);
-
-  const watched = (data ?? []).map((row) => ({
+function mapAndSortWatchedEpisodeRows(
+  rows: WatchedEpisodeRow[]
+): EpisodeWatch[] {
+  const watched = rows.map((row) => ({
     id: row.id,
     seasonNumber: row.season_number,
     episodeNumber: row.episode_number,
@@ -104,6 +101,23 @@ export async function getWatchedEpisodesForUser(
   }));
 }
 
+export async function getWatchedEpisodesForUser(
+  userId: string,
+  showId: number
+): Promise<EpisodeWatch[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('episode_watches')
+    .select('id, season_number, episode_number, watched_on, created_at')
+    .eq('user_id', userId)
+    .eq('tmdb_show_id', showId);
+
+  if (error) throw new ServiceError(error.message, error.code);
+
+  return mapAndSortWatchedEpisodeRows(data ?? []);
+}
+
 export async function getWatchedEpisodes(
   showId: number
 ): Promise<EpisodeWatch[]> {
@@ -112,6 +126,41 @@ export async function getWatchedEpisodes(
   if (!userId) return [];
 
   return getWatchedEpisodesForUser(userId, showId);
+}
+
+// Batched version of getWatchedEpisodesForUser for N shows in one query —
+// use this instead of calling getWatchedEpisodesForUser in a loop.
+export async function getWatchedEpisodesForShows(
+  userId: string,
+  showIds: number[]
+): Promise<Map<number, EpisodeWatch[]>> {
+  const map = new Map<number, EpisodeWatch[]>();
+  if (showIds.length === 0) return map;
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('episode_watches')
+    .select(
+      'id, tmdb_show_id, season_number, episode_number, watched_on, created_at'
+    )
+    .eq('user_id', userId)
+    .in('tmdb_show_id', showIds);
+
+  if (error) throw new ServiceError(error.message, error.code);
+
+  const rowsByShow = new Map<number, WatchedEpisodeRow[]>();
+  for (const row of data ?? []) {
+    const rows = rowsByShow.get(row.tmdb_show_id) ?? [];
+    rows.push(row);
+    rowsByShow.set(row.tmdb_show_id, rows);
+  }
+
+  for (const [showId, rows] of rowsByShow) {
+    map.set(showId, mapAndSortWatchedEpisodeRows(rows));
+  }
+
+  return map;
 }
 
 type RecentWatchedEpisodeRow = {
@@ -298,9 +347,7 @@ export async function getFinishedSeasonsForUser(
   );
   if (showIds.length === 0) return [];
 
-  const fullDetailsList = await Promise.all(
-    showIds.map((id) => getTmdbShowFullDetails(id))
-  );
+  const summaries = await resolveShowSummaries(showIds);
 
   const seasonKey = (showId: number, seasonNumber: number) =>
     `${showId}-${seasonNumber}`;
@@ -310,11 +357,11 @@ export async function getFinishedSeasonsForUser(
     { tmdbShowId: number; seasonNumber: number; lastEpisodeNumber: number }
   >();
 
-  showIds.forEach((showId, i) => {
-    const full = fullDetailsList[i];
-    if (!full) return;
-    for (const season of full.meta.seasons) {
-      if (season.seasonNumber <= 0 || !season.episodeCount) continue;
+  showIds.forEach((showId) => {
+    const summary = summaries.get(showId);
+    if (!summary) return;
+    for (const season of summary.seasons) {
+      if (!season.episodeCount) continue;
       seasons.set(seasonKey(showId, season.seasonNumber), {
         tmdbShowId: showId,
         seasonNumber: season.seasonNumber,
@@ -465,10 +512,7 @@ export async function getWatchStatsForUser(userId: string): Promise<{
     .select('id', { count: 'exact', head: true })
     .eq('user_id', userId);
   if (totalEpisodesError) {
-    throw new ServiceError(
-      totalEpisodesError.message,
-      totalEpisodesError.code
-    );
+    throw new ServiceError(totalEpisodesError.message, totalEpisodesError.code);
   }
 
   const currentYear = new Date().getFullYear();
@@ -482,11 +526,12 @@ export async function getWatchStatsForUser(userId: string): Promise<{
     throw new ServiceError(thisYearError.message, thisYearError.code);
   }
 
-  const { count: finishedShowsCount, error: finishedShowsError } = await supabase
-    .from('show_tracking')
-    .select('tmdb_show_id', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .eq('status', statusToCode('completed'));
+  const { count: finishedShowsCount, error: finishedShowsError } =
+    await supabase
+      .from('show_tracking')
+      .select('tmdb_show_id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('status', statusToCode('completed'));
   if (finishedShowsError) {
     throw new ServiceError(finishedShowsError.message, finishedShowsError.code);
   }
@@ -502,28 +547,12 @@ export async function getWatchStatsForUser(userId: string): Promise<{
   const distinctShowIds = Array.from(
     new Set((watchRows ?? []).map((row) => row.tmdb_show_id))
   );
-  const fullDetailsList = await Promise.all(
-    distinctShowIds.map((id) => getTmdbShowFullDetails(id))
-  );
-
-  const runtimeByShow = new Map<number, Map<string, number>>();
-  distinctShowIds.forEach((showId, i) => {
-    const full = fullDetailsList[i];
-    if (!full) return;
-
-    const lookup = new Map<string, number>();
-    for (const season of full.meta.seasons) {
-      for (const episode of season.episodes) {
-        if (episode.runtime == null) continue;
-        lookup.set(`${season.seasonNumber}-${episode.episodeNumber}`, episode.runtime);
-      }
-    }
-    runtimeByShow.set(showId, lookup);
-  });
+  // Approximation: per-show average runtime × watched-episode count, instead
+  // of fetching every episode's exact runtime via the full-details fan-out.
+  const summaries = await resolveShowSummaries(distinctShowIds);
 
   const totalWatchMinutes = (watchRows ?? []).reduce((sum, row) => {
-    const lookup = runtimeByShow.get(row.tmdb_show_id);
-    const runtime = lookup?.get(`${row.season_number}-${row.episode_number}`);
+    const runtime = summaries.get(row.tmdb_show_id)?.averageRuntime;
     return sum + (runtime ?? 0);
   }, 0);
 

@@ -1,28 +1,15 @@
-import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
 import { ProfileSubNav, WatchedShowsView } from '@/components';
 import { getDisplayStatus } from '@/components/ShowTracker/utils';
 import type { WatchedShowEntry } from '@/components/WatchedShows/types';
+
 import { getProfileByUsername } from '@/services/profile';
 import {
   getShowsForUser,
   getWatchedEpisodeCountsForUser,
 } from '@/services/tracking';
 import { resolveShowSummaries } from '@/services/tv-shows';
-
-function ProfileNotFound() {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-[#14181c] px-6 py-24 text-center">
-      <p className="text-[#9ab0bf]">Profile not found.</p>
-      <Link
-        href="/"
-        className="mt-4 text-sm text-[#678] underline hover:text-[#9ab0bf]"
-      >
-        Back to home
-      </Link>
-    </div>
-  );
-}
 
 export default async function WatchedShowsPage({
   params,
@@ -32,7 +19,7 @@ export default async function WatchedShowsPage({
   const { username } = await params;
 
   const profile = await getProfileByUsername(username);
-  if (!profile) return <ProfileNotFound />;
+  if (!profile) notFound();
 
   const trackedShows = await getShowsForUser(profile.id);
   const trackedNotWatchlist = trackedShows.filter(
@@ -63,9 +50,7 @@ export default async function WatchedShowsPage({
         watchedCount,
         show.markableEpisodeCount
       );
-      const decade = show.year
-        ? Math.floor(Number(show.year) / 10) * 10
-        : null;
+      const decade = show.year ? Math.floor(Number(show.year) / 10) * 10 : null;
 
       return {
         show,

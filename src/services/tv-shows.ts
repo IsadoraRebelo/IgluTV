@@ -2,8 +2,6 @@
 
 import { unstable_cache } from 'next/cache';
 
-import { getDaysUntilAir } from '@/components/ShowTracker/utils';
-
 import {
   TMDB_API_BASE_URL,
   TMDB_BACKDROP_BASE_URL,
@@ -20,6 +18,7 @@ import type {
   ShowDetails,
   ShowMeta,
   ShowSummary,
+  ShowSummarySeason,
   TMDBEpisodeGroupDetail,
   TMDBEpisodeGroupListEntry,
   TMDBSeasonDetailRaw,
@@ -228,6 +227,99 @@ export const getTmdbAnimeArcNames = unstable_cache(
   { revalidate: 3600, tags: ['tmdb-anime-arc-names'] }
 );
 
+// One TMDB request per show: everything PosterCard/carousels need to render
+// a poster tile, without the season/episode-group fan-out that
+// fetchTmdbShowFullDetails does. Full details remain a separate, heavier
+// tier for the show page and tracking views that need per-episode data.
+async function fetchTmdbShowSummary(id: number): Promise<ShowSummary | null> {
+  const apiKey = process.env.TMDB_API_KEY;
+  if (!apiKey) {
+    console.warn('[tv-shows] TMDB_API_KEY not set');
+    return null;
+  }
+
+  try {
+    const res = await fetch(
+      `${TMDB_API_BASE_URL}/tv/${id}?api_key=${apiKey}&language=en-US`,
+      { cache: 'no-store' }
+    );
+
+    if (!res.ok) {
+      console.warn(`[tv-shows] TMDB summary ${res.status}: ${res.statusText}`);
+      return null;
+    }
+
+    const json: TMDBSeriesDetailsRaw = await res.json();
+
+    const showIsAnime = isAnime(
+      (json.genres ?? []).map((genre) => genre.id),
+      json.origin_country ?? []
+    );
+
+    const seasons: ShowSummarySeason[] = (json.seasons ?? [])
+      .filter((season) => season.season_number > 0)
+      .map((season) => ({
+        seasonNumber: season.season_number,
+        episodeCount: season.episode_count,
+      }));
+
+    // Approximate "episodes aired so far" from the show's own
+    // last-aired-episode pointer instead of fetching every season's episode
+    // list: every regular season before it counts in full, and the
+    // last-aired season counts up to (and including) its own episode
+    // number. Slightly less precise than the full tier's per-episode
+    // air-date check, but avoids the season fan-out entirely.
+    const lastAired = json.last_episode_to_air;
+    let markableEpisodeCount = 0;
+    if (lastAired) {
+      if (lastAired.season_number > 0) {
+        for (const season of seasons) {
+          if (season.seasonNumber < lastAired.season_number) {
+            markableEpisodeCount += season.episodeCount ?? 0;
+          } else if (season.seasonNumber === lastAired.season_number) {
+            markableEpisodeCount += lastAired.episode_number;
+          }
+        }
+      } else {
+        // last_episode_to_air is a season-0 special — specials release
+        // between/after completed regular seasons, so treat every known
+        // regular season's full episode count as already aired.
+        markableEpisodeCount = seasons.reduce(
+          (sum, season) => sum + (season.episodeCount ?? 0),
+          0
+        );
+      }
+    }
+
+    return {
+      id,
+      name: json.name,
+      posterUrl: json.poster_path
+        ? `${TMDB_POSTER_LARGE_BASE_URL}${json.poster_path}`
+        : null,
+      bannerUrl: json.backdrop_path
+        ? `${TMDB_BACKDROP_LARGE_BASE_URL}${json.backdrop_path}`
+        : null,
+      markableEpisodeCount,
+      year: json.first_air_date ? json.first_air_date.slice(0, 4) : null,
+      genres: (json.genres ?? []).map((genre) => genre.name),
+      network: json.networks?.[0]?.name ?? null,
+      isAnime: showIsAnime,
+      averageRuntime: json.episode_run_time?.[0] ?? null,
+      seasons,
+    };
+  } catch (err) {
+    console.warn('[tv-shows] summary fetch failed', err);
+    return null;
+  }
+}
+
+export const getShowSummary = unstable_cache(
+  fetchTmdbShowSummary,
+  ['tmdb-show-summary'],
+  { revalidate: 3600, tags: ['tmdb-show-summary'] }
+);
+
 // Fetched unconditionally for every show detail page: `details` covers
 // name/overview/images/genres/cast/network/status/etc, while `meta`
 // (season summaries with their episodes, latest episode, recommendations)
@@ -283,7 +375,8 @@ async function fetchTmdbShowFullDetails(
       })),
       // TMDB's "Returning Series" reads as jargon in the UI — display it as
       // "Ongoing" instead.
-      status: json.status === 'Returning Series' ? 'Ongoing' : (json.status ?? null),
+      status:
+        json.status === 'Returning Series' ? 'Ongoing' : (json.status ?? null),
       averageRuntime: json.episode_run_time?.[0] ?? null,
       originalLanguage: getLanguageDisplayName(json.original_language),
       originalCountry: getCountryDisplayName(json.origin_country?.[0]),
@@ -395,36 +488,12 @@ export async function resolveShowSummaries(
   showIds: number[]
 ): Promise<Map<number, ShowSummary>> {
   const uniqueIds = Array.from(new Set(showIds));
-  const results = await Promise.all(
-    uniqueIds.map((id) => getTmdbShowFullDetails(id))
-  );
+  const results = await Promise.all(uniqueIds.map((id) => getShowSummary(id)));
 
   const map = new Map<number, ShowSummary>();
   uniqueIds.forEach((id, i) => {
-    const full = results[i];
-    if (!full) return;
-
-    const markableEpisodeCount = full.meta.seasons
-      .filter((season) => season.seasonNumber > 0)
-      .reduce(
-        (sum, season) =>
-          sum +
-          season.episodes.filter((ep) => getDaysUntilAir(ep.airDate) === null)
-            .length,
-        0
-      );
-
-    map.set(id, {
-      id,
-      name: full.details.name,
-      posterUrl: full.details.posterUrl,
-      bannerUrl: full.details.bannerUrl,
-      markableEpisodeCount,
-      year: full.details.year,
-      genres: full.details.genres,
-      network: full.details.network,
-      isAnime: full.details.isAnime,
-    });
+    const summary = results[i];
+    if (summary) map.set(id, summary);
   });
   return map;
 }

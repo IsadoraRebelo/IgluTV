@@ -1,7 +1,6 @@
 import { BookmarkIcon, ClockIcon, FilmIcon } from '@heroicons/react/24/solid';
 import { redirect } from 'next/navigation';
 
-
 import type { RecentWatchEntry } from '@/components';
 import {
   AccordionSection,
@@ -21,7 +20,7 @@ import {
   getMyShows,
   getRecentWatchedEpisodes,
   getShowTracking,
-  getWatchedEpisodes,
+  getWatchedEpisodesForShows,
 } from '@/services/tracking';
 import { getTmdbShowFullDetails } from '@/services/tv-shows';
 
@@ -57,15 +56,12 @@ type WatchListEntry = {
 };
 
 async function buildWatchListEntry(
-  tracked: ShowTracking
+  tracked: ShowTracking,
+  watchedEpisodes: EpisodeWatch[]
 ): Promise<WatchListEntry | null> {
   let tmdbFull: Awaited<ReturnType<typeof getTmdbShowFullDetails>>;
-  let watchedEpisodes: Awaited<ReturnType<typeof getWatchedEpisodes>>;
   try {
-    [tmdbFull, watchedEpisodes] = await Promise.all([
-      getTmdbShowFullDetails(tracked.tmdbShowId),
-      getWatchedEpisodes(tracked.tmdbShowId),
-    ]);
+    tmdbFull = await getTmdbShowFullDetails(tracked.tmdbShowId);
   } catch (err) {
     console.warn('[tracking] entry fetch failed', err);
     return null;
@@ -138,11 +134,13 @@ type ShowBundle = {
   cast: CastMember[];
 };
 
-async function buildShowBundle(showId: number): Promise<ShowBundle | null> {
+async function buildShowBundle(
+  showId: number,
+  watchedEpisodes: EpisodeWatch[]
+): Promise<ShowBundle | null> {
   try {
-    const [tmdbFull, watchedEpisodes, tracking] = await Promise.all([
+    const [tmdbFull, tracking] = await Promise.all([
       getTmdbShowFullDetails(showId),
-      getWatchedEpisodes(showId),
       getShowTracking(showId),
     ]);
     if (!tmdbFull) return null;
@@ -195,15 +193,12 @@ function formatRuntime(minutes: number): string {
 }
 
 async function buildWishlistEntry(
-  tracked: ShowTracking
+  tracked: ShowTracking,
+  watchedEpisodes: EpisodeWatch[]
 ): Promise<WatchListEntry | null> {
   let tmdbFull: Awaited<ReturnType<typeof getTmdbShowFullDetails>>;
-  let watchedEpisodes: Awaited<ReturnType<typeof getWatchedEpisodes>>;
   try {
-    [tmdbFull, watchedEpisodes] = await Promise.all([
-      getTmdbShowFullDetails(tracked.tmdbShowId),
-      getWatchedEpisodes(tracked.tmdbShowId),
-    ]);
+    tmdbFull = await getTmdbShowFullDetails(tracked.tmdbShowId);
   } catch (err) {
     console.warn('[tracking] wishlist entry fetch failed', err);
     return null;
@@ -238,11 +233,14 @@ async function buildRecentWatchEntries(
     seasonNumber: number;
     episodeNumber: number;
     watchedOn: string;
-  }[]
+  }[],
+  watchedEpisodesByShow: Map<number, EpisodeWatch[]>
 ): Promise<RecentWatchEntry[]> {
   const showIds = Array.from(new Set(rows.map((row) => row.tmdbShowId)));
   const bundles = await Promise.all(
-    showIds.map((showId) => buildShowBundle(showId))
+    showIds.map((showId) =>
+      buildShowBundle(showId, watchedEpisodesByShow.get(showId) ?? [])
+    )
   );
   const bundleByShowId = new Map(
     showIds.map((showId, i) => [showId, bundles[i]])
@@ -305,8 +303,29 @@ export default async function TrackingPage() {
   if (!user) redirect('/');
 
   const trackedShows = await getMyShows('watching');
+  const wishlistShows = await getMyShows('watch_later');
+  const recentWatchedRows =
+    await getRecentWatchedEpisodes(RECENT_WATCHED_LIMIT);
+
+  const allShowIds = Array.from(
+    new Set([
+      ...trackedShows.map((tracked) => tracked.tmdbShowId),
+      ...wishlistShows.map((tracked) => tracked.tmdbShowId),
+      ...recentWatchedRows.map((row) => row.tmdbShowId),
+    ])
+  );
+  const watchedEpisodesByShow = await getWatchedEpisodesForShows(
+    user.id,
+    allShowIds
+  );
+
   const results = await Promise.all(
-    trackedShows.map((tracked) => buildWatchListEntry(tracked))
+    trackedShows.map((tracked) =>
+      buildWatchListEntry(
+        tracked,
+        watchedEpisodesByShow.get(tracked.tmdbShowId) ?? []
+      )
+    )
   );
 
   const entries = results
@@ -318,9 +337,10 @@ export default async function TrackingPage() {
       return b.sortKey.localeCompare(a.sortKey);
     });
 
-  const recentWatchedRows =
-    await getRecentWatchedEpisodes(RECENT_WATCHED_LIMIT);
-  const recentWatchedEntries = await buildRecentWatchEntries(recentWatchedRows);
+  const recentWatchedEntries = await buildRecentWatchEntries(
+    recentWatchedRows,
+    watchedEpisodesByShow
+  );
 
   const staleShowIds = new Set(
     entries
@@ -340,12 +360,15 @@ export default async function TrackingPage() {
     staleShowIds.has(entry.showId)
   );
 
-  const wishlistShows = await getMyShows('watch_later');
-
   let wishlistEntries: WatchListEntry[] = [];
   if (staleEntries.length === 0) {
     const wishlistResults = await Promise.all(
-      wishlistShows.map((tracked) => buildWishlistEntry(tracked))
+      wishlistShows.map((tracked) =>
+        buildWishlistEntry(
+          tracked,
+          watchedEpisodesByShow.get(tracked.tmdbShowId) ?? []
+        )
+      )
     );
     wishlistEntries = wishlistResults
       .filter((entry): entry is WatchListEntry => entry !== null)

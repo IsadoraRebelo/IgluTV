@@ -10,6 +10,7 @@ import {
 import { Image as ImageIcon, ImagePlus } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import type { ReactNode } from 'react';
 
 import {
@@ -43,52 +44,52 @@ const SHOW_ACTIONS: {
   label: string;
   activeColor?: string;
 }[] = [
-    {
-      id: 'mark-watched',
-      icon: <EyeIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-      reviveIcon: <PlayIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-      finishedIcon: (
-        <RocketLaunchIcon className="h-4 w-4 text-yellow-500 md:h-5 md:w-5" />
-      ),
-      label: 'Watched',
-      activeColor: '[&_svg]:!text-accent',
-    },
-    {
-      id: 'favourite',
-      icon: <HeartIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-      label: 'Favourite',
-      activeColor: '[&_svg]:!text-red-500',
-    },
-    {
-      id: '1',
-      status: 'watch_later',
-      icon: <ClockIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-      label: 'Add to watchlist',
-      activeColor: '[&_svg]:!text-accent-foreground',
-    },
-    {
-      id: '2',
-      status: 'paused',
-      icon: <PauseIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-      label: 'Pause',
-      activeColor: '[&_svg]:!text-paused',
-    },
-    {
-      id: '3',
-      status: 'dropped',
-      icon: <TrashIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-      label: 'Drop',
-      activeColor: '[&_svg]:!text-dropped',
-    },
-    {
-      icon: <ImageIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-      label: 'Change poster',
-    },
-    {
-      icon: <ImagePlus className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-      label: 'Change banner',
-    },
-  ];
+  {
+    id: 'mark-watched',
+    icon: <EyeIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    reviveIcon: <PlayIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    finishedIcon: (
+      <RocketLaunchIcon className="h-4 w-4 text-yellow-500 md:h-5 md:w-5" />
+    ),
+    label: 'Watched',
+    activeColor: '[&_svg]:!text-accent',
+  },
+  {
+    id: 'favourite',
+    icon: <HeartIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    label: 'Favourite',
+    activeColor: '[&_svg]:!text-red-500',
+  },
+  {
+    id: '1',
+    status: 'watch_later',
+    icon: <ClockIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    label: 'Add to watchlist',
+    activeColor: '[&_svg]:!text-accent-foreground',
+  },
+  {
+    id: '2',
+    status: 'paused',
+    icon: <PauseIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    label: 'Pause',
+    activeColor: '[&_svg]:!text-paused',
+  },
+  {
+    id: '3',
+    status: 'dropped',
+    icon: <TrashIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    label: 'Drop',
+    activeColor: '[&_svg]:!text-dropped',
+  },
+  {
+    icon: <ImageIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    label: 'Change poster',
+  },
+  {
+    icon: <ImagePlus className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    label: 'Change banner',
+  },
+];
 
 function formatDate(dateStr: string | null | undefined): string | null {
   if (!dateStr) return null;
@@ -110,7 +111,7 @@ export default async function ShowPage({
   const numericId = Number(id);
 
   if (Number.isNaN(numericId)) {
-    return <ShowNotFound />;
+    notFound();
   }
 
   const supabase = await createClient();
@@ -132,7 +133,7 @@ export default async function ShowPage({
   const isLoggedIn = userResult.data.user !== null;
 
   if (!tmdbFull) {
-    return <ShowNotFound />;
+    notFound();
   }
 
   const details: ShowDetails = tmdbFull.details;
@@ -241,20 +242,6 @@ export default async function ShowPage({
         </main>
       </div>
     </ShowTrackingProvider>
-  );
-}
-
-function ShowNotFound() {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-[#14181c] px-6 py-24 text-center">
-      <p className="text-[#9ab0bf]">Show not found.</p>
-      <Link
-        href="/"
-        className="mt-4 text-sm text-[#678] underline hover:text-[#9ab0bf]"
-      >
-        Back to home
-      </Link>
-    </div>
   );
 }
 

@@ -102,6 +102,11 @@ export type TMDBSeasonDetailRaw = {
   episodes?: TMDBSeasonEpisodeRaw[];
 };
 
+export type ShowSummarySeason = {
+  seasonNumber: number;
+  episodeCount: number | null;
+};
+
 export type ShowSummary = {
   id: number;
   name: string;
@@ -112,6 +117,8 @@ export type ShowSummary = {
   genres: string[];
   network: string | null;
   isAnime: boolean;
+  averageRuntime: number | null;
+  seasons: ShowSummarySeason[];
 };
 
 export type ShowBackdropImage = {

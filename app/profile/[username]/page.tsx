@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
 import { PosterCard, ProfileSettingsButton } from '@/components';
 
@@ -42,20 +43,6 @@ function StatTile({ label, value }: { label: string; value: number | string }) {
   );
 }
 
-function ProfileNotFound() {
-  return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-[#14181c] px-6 py-24 text-center">
-      <p className="text-[#9ab0bf]">Profile not found.</p>
-      <Link
-        href="/"
-        className="mt-4 text-sm text-[#678] underline hover:text-[#9ab0bf]"
-      >
-        Back to home
-      </Link>
-    </div>
-  );
-}
-
 export default async function ProfilePage({
   params,
 }: {
@@ -64,7 +51,7 @@ export default async function ProfilePage({
   const { username } = await params;
 
   const profile = await getProfileByUsername(username);
-  if (!profile) return <ProfileNotFound />;
+  if (!profile) notFound();
 
   const supabase = await createClient();
   const {
@@ -222,7 +209,7 @@ export default async function ProfilePage({
           <div className="flex min-w-0 flex-col gap-10">
             {favouriteShowSummaries.length > 0 ? (
               <section>
-                <h2 className="border-muted-foreground px-1 text-muted-foreground mb-4 border-b pb-2 text-sm font-semibold">
+                <h2 className="border-muted-foreground text-muted-foreground mb-4 border-b px-1 pb-2 text-sm font-semibold">
                   FAVOURITE SHOWS
                 </h2>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -244,7 +231,7 @@ export default async function ProfilePage({
 
             {favouriteAnimeSummaries.length > 0 ? (
               <section>
-                <h2 className="border-muted-foreground px-1 text-muted-foreground mb-4 border-b pb-2 text-sm font-semibold">
+                <h2 className="border-muted-foreground text-muted-foreground mb-4 border-b px-1 pb-2 text-sm font-semibold">
                   FAVOURITE ANIME
                 </h2>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -266,13 +253,11 @@ export default async function ProfilePage({
 
             {recentActivity.length > 0 ? (
               <section className="min-w-0">
-                <div className="flex items-center px-1 justify-between mb-4 border-b pb-2 text-muted-foreground border-muted-foreground">
-                  <h2 className="text-sm font-semibold">
-                    RECENT ACTIVITY
-                  </h2>
+                <div className="text-muted-foreground border-muted-foreground mb-4 flex items-center justify-between border-b px-1 pb-2">
+                  <h2 className="text-sm font-semibold">RECENT ACTIVITY</h2>
                   <Link
                     href={`/profile/${profile.username}/shows`}
-                    className="text-xs font-semibold tracking-wide uppercase hover:text-accent"
+                    className="hover:text-accent text-xs font-semibold tracking-wide uppercase"
                   >
                     All
                   </Link>
@@ -301,16 +286,16 @@ export default async function ProfilePage({
           <aside className="flex flex-col gap-8">
             {watchlistSummaries.length > 0 ? (
               <div>
-                <div className="flex items-center px-1 justify-between">
+                <div className="flex items-center justify-between px-1">
                   <Link
                     href={`/profile/${profile.username}/watchlist`}
-                    className="text-muted-foreground text-sm font-semibold tracking-wide uppercase hover:text-accent"
+                    className="text-muted-foreground hover:text-accent text-sm font-semibold tracking-wide uppercase"
                   >
                     Watchlist
                   </Link>
                   <Link
                     href={`/profile/${profile.username}/watchlist`}
-                    className="text-muted-foreground text-xs font-semibold tracking-wide uppercase hover:text-accent"
+                    className="text-muted-foreground hover:text-accent text-xs font-semibold tracking-wide uppercase"
                   >
                     {watchlistShows.length}
                   </Link>
@@ -342,13 +327,13 @@ export default async function ProfilePage({
                 <div className="flex items-center justify-between py-1">
                   <Link
                     href={`/profile/${profile.username}/diary`}
-                    className="text-muted-foreground text-sm font-semibold tracking-wide uppercase hover:text-accent"
+                    className="text-muted-foreground hover:text-accent text-sm font-semibold tracking-wide uppercase"
                   >
                     Diary
                   </Link>
                   <Link
                     href={`/profile/${profile.username}/diary`}
-                    className="text-muted-foreground text-xs font-semibold tracking-wide uppercase hover:text-accent"
+                    className="text-muted-foreground hover:text-accent text-xs font-semibold tracking-wide uppercase"
                   >
                     {finishedEntries.length}
                   </Link>
@@ -374,7 +359,7 @@ export default async function ProfilePage({
                                   <Link
                                     key={diaryEntryKey(entry)}
                                     href={`/show/${entry.show.id}`}
-                                    className="text-muted-foreground truncate text-sm font-semibold hover:text-accent"
+                                    className="text-muted-foreground hover:text-accent truncate text-sm font-semibold"
                                   >
                                     {diaryEntryLabel(entry)}
                                   </Link>
