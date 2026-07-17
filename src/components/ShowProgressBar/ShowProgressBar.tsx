@@ -15,6 +15,8 @@ export function ShowProgressBar({
 }) {
   const { watchedDates, showStatus } = useShowTrackingContext();
 
+  if (showStatus === null) return null;
+
   const markableEpisodes = seasons
     .filter((season) => season.seasonNumber > 0)
     .flatMap((season) =>

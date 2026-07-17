@@ -221,7 +221,12 @@ export function SeasonAccordion({
                                     src={episode.imageUrl}
                                     alt={episode.name}
                                     fill
-                                    sizes="96px"
+                                    // Stills are 16:9 but this box is cropped to a
+                                    // square via object-cover, so the *height* is
+                                    // the limiting dimension — request enough width
+                                    // (96 * 16/9) to cover a 96px-tall square without
+                                    // upscaling.
+                                    sizes="170px"
                                     className="object-cover"
                                   />
                                 ) : null}

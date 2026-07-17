@@ -1,7 +1,7 @@
 import { Inter, Bricolage_Grotesque } from 'next/font/google';
 
 import type { Metadata } from 'next';
-import { NavBar, Toaster } from '@/components';
+import { Footer, NavBar, Toaster } from '@/components';
 
 import './globals.css';
 
@@ -34,6 +34,7 @@ export default function RootLayout({
         <Toaster />
         <NavBar />
         {children}
+        <Footer />
       </body>
     </html>
   );

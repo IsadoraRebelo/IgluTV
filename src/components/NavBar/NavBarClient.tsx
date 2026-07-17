@@ -118,6 +118,7 @@ export function NavBarClient({ username }: NavBarClientProps) {
                       href: `/profile/${username}/watchlist`,
                       label: 'Watchlist',
                     },
+                    { href: '/account', label: 'Account' },
                   ].map((item) => (
                     <DropdownMenu.Item key={item.href} asChild>
                       <Link

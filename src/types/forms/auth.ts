@@ -46,3 +46,28 @@ export const profileSettingsFormSchema = z.object({
   username: usernameSchema,
 });
 export type ProfileSettingsInput = z.TypeOf<typeof profileSettingsFormSchema>;
+
+const currentPasswordSchema = z
+  .string()
+  .min(1, { message: 'Enter your current password' });
+
+export const changeEmailFormSchema = z.object({
+  newEmail: z.email(),
+  currentPassword: currentPasswordSchema,
+});
+export type ChangeEmailUserInput = z.TypeOf<typeof changeEmailFormSchema>;
+
+export const changeAccountPasswordFormSchema = z.object({
+  currentPassword: currentPasswordSchema,
+  newPassword: z
+    .string()
+    .min(6, { message: 'Password must be at least 6 characters' }),
+});
+export type ChangeAccountPasswordUserInput = z.TypeOf<
+  typeof changeAccountPasswordFormSchema
+>;
+
+export const deleteAccountFormSchema = z.object({
+  currentPassword: currentPasswordSchema,
+});
+export type DeleteAccountUserInput = z.TypeOf<typeof deleteAccountFormSchema>;

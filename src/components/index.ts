@@ -10,6 +10,7 @@ export * from './CastPage/CastWatchProgress';
 export * from './DiaryPage/DiaryFilterBar';
 export * from './DiaryPage/DiaryPageView';
 export * from './EpisodeModal/EpisodeModal';
+export * from './Footer/Footer';
 export * from './Form/Form';
 export * from './Home/HomeHero';
 export * from './Home/ShowCarouselRow';

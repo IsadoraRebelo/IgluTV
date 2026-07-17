@@ -156,7 +156,7 @@ export default async function ProfilePage({
     summaries
   );
 
-  const diaryGroups = groupDiaryEntriesByMonth(finishedEntries);
+  const diaryGroups = groupDiaryEntriesByMonth(finishedEntries.slice(0, 10));
 
   return (
     <div className="flex flex-1 flex-col bg-[#14181c] font-sans antialiased">
@@ -208,14 +208,6 @@ export default async function ProfilePage({
       </div>
 
       <main className="mx-auto w-full max-w-[950px] flex-1 px-3 pb-20 md:px-0">
-        <div className="mt-6 flex justify-end">
-          <Link
-            href={`/profile/${profile.username}/shows`}
-            className="text-sm text-[#9ab0bf] underline hover:text-white"
-          >
-            View all shows
-          </Link>
-        </div>
         <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
           <StatTile
             label="Time Watching"
@@ -230,7 +222,7 @@ export default async function ProfilePage({
           <div className="flex min-w-0 flex-col gap-10">
             {favouriteShowSummaries.length > 0 ? (
               <section>
-                <h2 className="border-muted-foreground text-muted-foreground mb-4 border-b pb-2 text-sm font-semibold">
+                <h2 className="border-muted-foreground px-1 text-muted-foreground mb-4 border-b pb-2 text-sm font-semibold">
                   FAVOURITE SHOWS
                 </h2>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -252,7 +244,7 @@ export default async function ProfilePage({
 
             {favouriteAnimeSummaries.length > 0 ? (
               <section>
-                <h2 className="border-muted-foreground text-muted-foreground mb-4 border-b pb-2 text-sm font-semibold">
+                <h2 className="border-muted-foreground px-1 text-muted-foreground mb-4 border-b pb-2 text-sm font-semibold">
                   FAVOURITE ANIME
                 </h2>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -274,9 +266,17 @@ export default async function ProfilePage({
 
             {recentActivity.length > 0 ? (
               <section className="min-w-0">
-                <h2 className="border-muted-foreground text-muted-foreground mb-4 border-b pb-2 text-sm font-semibold">
-                  RECENT ACTIVITY
-                </h2>
+                <div className="flex items-center px-1 justify-between mb-4 border-b pb-2 text-muted-foreground border-muted-foreground">
+                  <h2 className="text-sm font-semibold">
+                    RECENT ACTIVITY
+                  </h2>
+                  <Link
+                    href={`/profile/${profile.username}/watchlist`}
+                    className="text-xs font-semibold tracking-wide uppercase"
+                  >
+                    All
+                  </Link>
+                </div>
                 <div className="flex gap-2 overflow-x-auto pb-2">
                   {recentActivity.map((entry) => {
                     const { month, day } = formatDiaryDate(entry.watchedOn);
@@ -301,16 +301,18 @@ export default async function ProfilePage({
           <aside className="flex flex-col gap-8">
             {watchlistSummaries.length > 0 ? (
               <div>
-                <div className="flex items-center justify-between">
-                  <Link
-                    href={`/profile/${profile.username}/watchlist`}
-                    className="text-muted-foreground text-sm font-semibold tracking-wide uppercase hover:text-white"
+                <div className="flex items-center px-1 justify-between">
+                  <h2
+                    className="text-muted-foreground text-sm font-semibold tracking-wide uppercase"
                   >
                     Watchlist
-                  </Link>
-                  <span className="text-muted-foreground text-xs">
+                  </h2>
+                  <Link
+                    href={`/profile/${profile.username}/watchlist`}
+                    className="text-muted-foreground text-xs font-semibold tracking-wide uppercase"
+                  >
                     {watchlistShows.length}
-                  </span>
+                  </Link>
                 </div>
                 <div className="border-muted-foreground mt-1 flex gap-2 overflow-x-auto border-t pt-3">
                   {watchlistSummaries.map((show) => (
@@ -336,16 +338,18 @@ export default async function ProfilePage({
 
             {finishedEntries.length > 0 ? (
               <div>
-                <div className="flex items-center justify-between">
-                  <Link
-                    href={`/profile/${profile.username}/diary`}
-                    className="text-muted-foreground text-sm font-semibold tracking-wide uppercase hover:text-white"
+                <div className="flex items-center justify-between py-1">
+                  <h2
+                    className="text-muted-foreground text-sm font-semibold tracking-wide uppercase"
                   >
                     Diary
-                  </Link>
-                  <span className="text-muted-foreground text-xs">
+                  </h2>
+                  <Link
+                    href={`/profile/${profile.username}/diary`}
+                    className="text-muted-foreground text-xs font-semibold tracking-wide uppercase"
+                  >
                     {finishedEntries.length}
-                  </span>
+                  </Link>
                 </div>
                 <div className="border-muted-foreground mt-1 border-t" />
                 <div className="flex flex-col">

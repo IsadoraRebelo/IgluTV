@@ -151,7 +151,7 @@ export function CastPageView({
           No TV shows match these filters.
         </p>
       ) : (
-        <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-5">
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
           {sortedCredits.map((credit) => (
             <CastCreditCard
               key={credit.showId}

@@ -29,5 +29,9 @@ export async function GET(request: NextRequest) {
     redirect('/reset-password');
   }
 
+  if (type === 'email_change') {
+    redirect('/account?emailChanged=1');
+  }
+
   redirect('/');
 }

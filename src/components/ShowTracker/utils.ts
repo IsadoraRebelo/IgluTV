@@ -223,7 +223,7 @@ export function getFirstEpisode(seasons: Season[]): LatestEpisode | null {
 }
 
 // TMDB's own vocabulary for "this show will never air again" — anything
-// else (Returning Series, In Production, Planned, Pilot) can still air more.
+// else (Ongoing, In Production, Planned, Pilot) can still air more.
 const FINISHED_SHOW_STATUSES = new Set(['Ended', 'Canceled']);
 
 export function isShowFinished(status: string | null): boolean {

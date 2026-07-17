@@ -268,7 +268,7 @@ async function fetchTmdbShowFullDetails(
         ? `${TMDB_BACKDROP_LARGE_BASE_URL}${json.backdrop_path}`
         : null,
       posterUrl: json.poster_path
-        ? `${TMDB_IMAGE_BASE_URL}${json.poster_path}`
+        ? `${TMDB_POSTER_LARGE_BASE_URL}${json.poster_path}`
         : null,
       genres: (json.genres ?? []).map((genre) => genre.name),
       network: json.networks?.[0]?.name ?? null,
@@ -278,10 +278,12 @@ async function fetchTmdbShowFullDetails(
         actorName: member.name,
         character: member.character,
         imageUrl: member.profile_path
-          ? `${TMDB_IMAGE_BASE_URL}${member.profile_path}`
+          ? `${TMDB_POSTER_LARGE_BASE_URL}${member.profile_path}`
           : null,
       })),
-      status: json.status ?? null,
+      // TMDB's "Returning Series" reads as jargon in the UI — display it as
+      // "Ongoing" instead.
+      status: json.status === 'Returning Series' ? 'Ongoing' : (json.status ?? null),
       averageRuntime: json.episode_run_time?.[0] ?? null,
       originalLanguage: getLanguageDisplayName(json.original_language),
       originalCountry: getCountryDisplayName(json.origin_country?.[0]),
@@ -367,7 +369,7 @@ async function fetchTmdbShowFullDetails(
         id: s.id,
         name: s.name,
         posterUrl: s.poster_path
-          ? `${TMDB_IMAGE_BASE_URL}${s.poster_path}`
+          ? `${TMDB_POSTER_LARGE_BASE_URL}${s.poster_path}`
           : null,
         matchPercentage:
           typeof s.vote_average === 'number'
@@ -415,11 +417,7 @@ export async function resolveShowSummaries(
     map.set(id, {
       id,
       name: full.details.name,
-      posterUrl:
-        full.details.posterUrl?.replace(
-          TMDB_IMAGE_BASE_URL,
-          TMDB_POSTER_LARGE_BASE_URL
-        ) ?? null,
+      posterUrl: full.details.posterUrl,
       bannerUrl: full.details.bannerUrl,
       markableEpisodeCount,
       year: full.details.year,

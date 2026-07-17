@@ -43,52 +43,52 @@ const SHOW_ACTIONS: {
   label: string;
   activeColor?: string;
 }[] = [
-  {
-    id: 'mark-watched',
-    icon: <EyeIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-    reviveIcon: <PlayIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-    finishedIcon: (
-      <RocketLaunchIcon className="h-4 w-4 text-yellow-500 md:h-5 md:w-5" />
-    ),
-    label: 'Watched',
-    activeColor: '[&_svg]:!text-accent',
-  },
-  {
-    id: 'favourite',
-    icon: <HeartIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-    label: 'Favourite',
-    activeColor: '[&_svg]:!text-red-500',
-  },
-  {
-    id: '1',
-    status: 'watch_later',
-    icon: <ClockIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-    label: 'Add to watchlist',
-    activeColor: '[&_svg]:!text-accent-foreground',
-  },
-  {
-    id: '2',
-    status: 'paused',
-    icon: <PauseIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-    label: 'Pause',
-    activeColor: '[&_svg]:!text-paused',
-  },
-  {
-    id: '3',
-    status: 'dropped',
-    icon: <TrashIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-    label: 'Drop',
-    activeColor: '[&_svg]:!text-dropped',
-  },
-  {
-    icon: <ImageIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-    label: 'Change poster',
-  },
-  {
-    icon: <ImagePlus className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-    label: 'Change banner',
-  },
-];
+    {
+      id: 'mark-watched',
+      icon: <EyeIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+      reviveIcon: <PlayIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+      finishedIcon: (
+        <RocketLaunchIcon className="h-4 w-4 text-yellow-500 md:h-5 md:w-5" />
+      ),
+      label: 'Watched',
+      activeColor: '[&_svg]:!text-accent',
+    },
+    {
+      id: 'favourite',
+      icon: <HeartIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+      label: 'Favourite',
+      activeColor: '[&_svg]:!text-red-500',
+    },
+    {
+      id: '1',
+      status: 'watch_later',
+      icon: <ClockIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+      label: 'Add to watchlist',
+      activeColor: '[&_svg]:!text-accent-foreground',
+    },
+    {
+      id: '2',
+      status: 'paused',
+      icon: <PauseIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+      label: 'Pause',
+      activeColor: '[&_svg]:!text-paused',
+    },
+    {
+      id: '3',
+      status: 'dropped',
+      icon: <TrashIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+      label: 'Drop',
+      activeColor: '[&_svg]:!text-dropped',
+    },
+    {
+      icon: <ImageIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+      label: 'Change poster',
+    },
+    {
+      icon: <ImagePlus className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+      label: 'Change banner',
+    },
+  ];
 
 function formatDate(dateStr: string | null | undefined): string | null {
   if (!dateStr) return null;
@@ -377,7 +377,7 @@ function SimilarTab({ shows }: { shows: ShowMeta['similar'] }) {
   }
 
   return (
-    <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 md:grid-cols-5">
+    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
       {shows.map((similarShow) => (
         <Link
           key={similarShow.id}

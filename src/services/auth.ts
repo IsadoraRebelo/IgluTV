@@ -53,3 +53,27 @@ export async function updatePassword(password: string) {
 
   return data;
 }
+
+export async function verifyPassword(password: string): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.email) throw new ServiceError('Not authenticated', 'not_authenticated');
+
+  const { error } = await supabase.auth.signInWithPassword({
+    email: user.email,
+    password,
+  });
+
+  if (error) throw new ServiceError('Incorrect password', 'invalid_credentials');
+}
+
+export async function updateEmail(newEmail: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.updateUser({ email: newEmail });
+
+  if (error) throw new ServiceError(error.message, error.code);
+
+  return data;
+}
