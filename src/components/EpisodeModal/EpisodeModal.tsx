@@ -1,11 +1,11 @@
 'use client';
 
+import { CalendarDaysIcon } from '@heroicons/react/24/solid';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { ChevronDown, X } from 'lucide-react';
-import { CalendarDaysIcon } from '@heroicons/react/24/solid';
 import Image from 'next/image';
-
 import { useState } from 'react';
+
 import { WatchedToggleButton } from '@/components';
 import { useShowTrackingContext } from '@/components/ShowTracker/ShowTrackingContext';
 import {
@@ -13,7 +13,6 @@ import {
   getDaysUntilAir,
   getWatchedDates,
 } from '@/components/ShowTracker/utils';
-
 
 import type { CastMember, SeasonEpisode } from '@/types';
 
@@ -105,10 +104,10 @@ export function EpisodeModal({
     >
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="max-sm:data-[state=open]:animate-fade-in max-sm:data-[state=closed]:animate-fade-out fixed inset-0 z-50 bg-black/70" />
-        <DialogPrimitive.Content className="max-sm:data-[state=open]:animate-slide-up max-sm:data-[state=closed]:animate-slide-down fixed inset-x-0 bottom-0 z-50 max-h-[85vh] w-full overflow-y-auto rounded-t-lg bg-[#14181c] shadow-2xl sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-[90vw] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg">
+        <DialogPrimitive.Content className="max-sm:data-[state=open]:animate-slide-up max-sm:data-[state=closed]:animate-slide-down bg-background fixed inset-x-0 bottom-0 z-50 max-h-[85vh] w-full overflow-y-auto rounded-t-lg shadow-2xl sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-[90vw] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg">
           {episode ? (
             <>
-              <div className="relative h-[160px] w-full overflow-hidden rounded-t-lg bg-[#2c3440] sm:h-[220px]">
+              <div className="bg-surface relative h-[160px] w-full overflow-hidden rounded-t-lg sm:h-[220px]">
                 {episode.imageUrl ? (
                   <Image
                     src={episode.imageUrl}
@@ -118,7 +117,7 @@ export function EpisodeModal({
                     className="object-cover"
                   />
                 ) : null}
-                <div className="absolute inset-0 bg-gradient-to-t from-[#14181c] via-[#14181c]/30 to-transparent" />
+                <div className="from-background via-background/30 absolute inset-0 bg-gradient-to-t to-transparent" />
                 <DialogPrimitive.Close
                   aria-label="Close"
                   className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white transition-colors hover:bg-black/70"
@@ -130,14 +129,14 @@ export function EpisodeModal({
               <div className="flex flex-col gap-3 p-5 pt-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <DialogPrimitive.Title className="text-sm font-semibold text-accent-foreground">
+                    <DialogPrimitive.Title className="text-accent-foreground text-sm font-semibold">
                       S{String(seasonNumber).padStart(2, '0')} | E
                       {String(episode.episodeNumber).padStart(2, '0')}
                     </DialogPrimitive.Title>
                     <p className="text-lg font-semibold text-white">
                       {episode.name}
                     </p>
-                    <p className="mt-1 text-xs text-[#8a9bab]">
+                    <p className="text-text-secondary mt-1 text-xs">
                       {[
                         formatDate(episode.airDate),
                         episode.runtime ? `${episode.runtime}m` : null,
@@ -151,15 +150,17 @@ export function EpisodeModal({
                           <button
                             type="button"
                             onClick={() => setHistoryOpen((prev) => !prev)}
-                            className="mt-4 flex items-center gap-1 text-sm text-[#8a9bab]"
+                            className="text-text-secondary mt-4 flex items-center gap-1 text-sm"
                           >
                             <div className="flex items-center gap-1">
-                              <CalendarDaysIcon className="h-5 w-5" /> {episodeWatchDates.length}× first{' '}
+                              <CalendarDaysIcon className="h-5 w-5" />{' '}
+                              {episodeWatchDates.length}× first{' '}
                               {formatDateOrUnknown(episodeWatchDates[0])}
                             </div>
                             <ChevronDown
-                              className={`h-3 w-3 transition-transform ${historyOpen ? 'rotate-180' : ''
-                                }`}
+                              className={`h-3 w-3 transition-transform ${
+                                historyOpen ? 'rotate-180' : ''
+                              }`}
                             />
                           </button>
                         ) : editingIndex === 0 ? (
@@ -173,15 +174,16 @@ export function EpisodeModal({
                                 handleDateInputCommit(0, event.target.value)
                               }
                               onKeyDown={(event) => {
-                                if (event.key === 'Escape') setEditingIndex(null);
+                                if (event.key === 'Escape')
+                                  setEditingIndex(null);
                               }}
-                              className="rounded border border-white/10 bg-white/5 px-1 py-0.5 text-xs text-[#c2d0dd]"
+                              className="text-text-primary rounded border border-white/10 bg-white/5 px-1 py-0.5 text-xs"
                             />
                             <button
                               type="button"
                               onMouseDown={(event) => event.preventDefault()}
                               onClick={() => handleClearDate(0)}
-                              className="text-[10px] text-[#678] underline decoration-dotted underline-offset-2 hover:text-white"
+                              className="text-text-faint text-[10px] underline decoration-dotted underline-offset-2 hover:text-white"
                             >
                               I don&apos;t remember the date
                             </button>
@@ -191,17 +193,20 @@ export function EpisodeModal({
                             type="button"
                             disabled={isPending}
                             onClick={() => setEditingIndex(0)}
-                            className="mt-4 text-sm text-[#8a9bab] underline decoration-dotted underline-offset-2 hover:text-white disabled:pointer-events-none disabled:opacity-50"
+                            className="text-text-secondary mt-4 text-sm underline decoration-dotted underline-offset-2 hover:text-white disabled:pointer-events-none disabled:opacity-50"
                           >
                             <div className="flex items-center gap-1">
-                              <CalendarDaysIcon className="h-5 w-5" /> {formatDateOrUnknown(episodeWatchDates[0])}
+                              <CalendarDaysIcon className="h-5 w-5" />{' '}
+                              {formatDateOrUnknown(episodeWatchDates[0])}
                             </div>
                           </button>
                         )}
                         {episodeWatchDates.length > 1 ? (
                           <div
                             className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-                              historyOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                              historyOpen
+                                ? 'grid-rows-[1fr]'
+                                : 'grid-rows-[0fr]'
                             }`}
                           >
                             <ul className="mt-1 flex flex-col gap-0.5 overflow-hidden pl-1">
@@ -227,7 +232,7 @@ export function EpisodeModal({
                                           setEditingIndex(null);
                                         }
                                       }}
-                                      className="rounded border border-white/10 bg-white/5 px-1 py-0.5 text-xs text-[#c2d0dd]"
+                                      className="text-text-primary rounded border border-white/10 bg-white/5 px-1 py-0.5 text-xs"
                                     />
                                     <button
                                       type="button"
@@ -235,7 +240,7 @@ export function EpisodeModal({
                                         event.preventDefault()
                                       }
                                       onClick={() => handleClearDate(index)}
-                                      className="text-[10px] text-[#678] underline decoration-dotted underline-offset-2 hover:text-white"
+                                      className="text-text-faint text-[10px] underline decoration-dotted underline-offset-2 hover:text-white"
                                     >
                                       I don&apos;t remember the date
                                     </button>
@@ -246,7 +251,7 @@ export function EpisodeModal({
                                       type="button"
                                       disabled={isPending}
                                       onClick={() => setEditingIndex(index)}
-                                      className="text-xs text-[#678] underline decoration-dotted underline-offset-2 hover:text-white disabled:pointer-events-none disabled:opacity-50"
+                                      className="text-text-faint text-xs underline decoration-dotted underline-offset-2 hover:text-white disabled:pointer-events-none disabled:opacity-50"
                                     >
                                       {formatDateOrUnknown(date)}
                                     </button>
@@ -260,7 +265,7 @@ export function EpisodeModal({
                     ) : null}
                   </div>
                   {daysUntilAir !== null ? (
-                    <span className="shrink-0 text-xs text-[#8a9bab]">
+                    <span className="text-text-secondary shrink-0 text-xs">
                       In {daysUntilAir} day{daysUntilAir === 1 ? '' : 's'}
                     </span>
                   ) : !isLoggedIn ? null : (
@@ -293,20 +298,20 @@ export function EpisodeModal({
                   )}
                 </div>
 
-                <DialogPrimitive.Description className="text-sm leading-relaxed text-[#c2d0dd]">
+                <DialogPrimitive.Description className="text-text-primary text-sm leading-relaxed">
                   {episode.overview || 'No description available.'}
                 </DialogPrimitive.Description>
 
                 {cast.length > 0 ? (
                   <div className="mt-2">
-                    <h3 className="mb-2 text-xs font-semibold tracking-[0.15em] text-[#678] uppercase">
+                    <h3 className="text-text-faint mb-2 text-xs font-semibold tracking-[0.15em] uppercase">
                       Cast
                     </h3>
                     <div className="flex gap-3 overflow-x-auto pb-1">
                       {cast.map((member) => (
                         <div
                           key={`${member.actorName}-${member.character}`}
-                          className="relative aspect-[2/3] w-24 shrink-0 overflow-hidden rounded-md bg-[#2c3440]"
+                          className="bg-surface relative aspect-[2/3] w-24 shrink-0 overflow-hidden rounded-md"
                         >
                           {member.imageUrl ? (
                             <Image

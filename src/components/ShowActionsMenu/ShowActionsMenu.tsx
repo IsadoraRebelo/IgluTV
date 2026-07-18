@@ -2,8 +2,8 @@
 
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { MoreHorizontal } from 'lucide-react';
-
 import type { ReactNode } from 'react';
+
 import { useShowTrackingContext } from '@/components';
 import {
   getFavouritePresentation,
@@ -11,7 +11,9 @@ import {
   getStatusActionLabel,
   getVisibleActions,
 } from '@/components/ShowTracker/show-actions';
+
 import type { ShowStatus } from '@/types';
+
 import { cn } from '@/utils/cn';
 
 export function ShowActionsMenu({
@@ -58,7 +60,7 @@ export function ShowActionsMenu({
         <button
           type="button"
           aria-label="More options"
-          className="flex h-6 w-6 md:h-9 md:w-9 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60"
+          className="flex h-6 w-6 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 md:h-9 md:w-9"
         >
           <MoreHorizontal className="h-3 w-3 md:h-5 md:w-5" />
         </button>
@@ -67,12 +69,12 @@ export function ShowActionsMenu({
         <DropdownMenu.Content
           align="end"
           sideOffset={8}
-          className="data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out z-50 w-64 rounded-lg bg-muted p-2 shadow-2xl ring-1 ring-white/10"
+          className="data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out bg-muted z-50 w-64 rounded-lg p-2 shadow-2xl ring-1 ring-white/10"
         >
           {!isLoggedIn ? (
             <DropdownMenu.Item
               onSelect={openAuthDialog}
-              className="rounded-md bg-white/5 px-3 py-2.5 text-sm text-[#c2d0dd] outline-none data-[highlighted]:bg-white/10"
+              className="text-text-primary rounded-md bg-white/5 px-3 py-2.5 text-sm outline-none data-[highlighted]:bg-white/10"
             >
               Sign in to log, rate or review
             </DropdownMenu.Item>
@@ -95,9 +97,11 @@ export function ShowActionsMenu({
                       isSettingShowStatus || (isActiveStatus && !isWatchLater)
                     }
                     onSelect={() => onSetShowStatus(status)}
-                    className="flex items-center text-sm gap-3 rounded-md px-3 py-2.5 text-[#c2d0dd] outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-white/5"
+                    className="text-text-primary flex items-center gap-3 rounded-md px-3 py-2.5 text-sm outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-white/5"
                   >
-                    <span className={cn(isActiveStatus && activeColor)}>{icon}</span>
+                    <span className={cn(isActiveStatus && activeColor)}>
+                      {icon}
+                    </span>
                     {displayLabel}
                   </DropdownMenu.Item>
                 );
@@ -142,8 +146,9 @@ export function ShowActionsMenu({
                         ? onToggleFavourite
                         : undefined
                   }
-                  className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#c2d0dd] outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-white/5 ${isInteractive ? '' : 'cursor-default'
-                    }`}
+                  className={`text-text-primary flex items-center gap-3 rounded-md px-3 py-2.5 text-sm outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-white/5 ${
+                    isInteractive ? '' : 'cursor-default'
+                  }`}
                 >
                   <span className={cn(shouldUseActiveColor && activeColor)}>
                     {displayIcon}

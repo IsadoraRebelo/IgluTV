@@ -11,7 +11,7 @@ export function ShowResultRow({ show }: { show: TvShowSearchResult }) {
       href={`/show/${show.id}`}
       className="flex gap-4 rounded-md p-2 hover:bg-white/5"
     >
-      <div className="relative h-[105px] w-[70px] shrink-0 overflow-hidden rounded-sm bg-[#2c3440]">
+      <div className="bg-surface relative h-[105px] w-[70px] shrink-0 overflow-hidden rounded-sm">
         {show.posterUrl ? (
           <Image
             src={show.posterUrl}
@@ -26,18 +26,20 @@ export function ShowResultRow({ show }: { show: TvShowSearchResult }) {
         <h3 className="text-base font-semibold text-white">
           {show.name}
           {year ? (
-            <span className="ml-2 text-sm font-normal text-[#8a9bab]">
+            <span className="text-text-secondary ml-2 text-sm font-normal">
               {year}
             </span>
           ) : null}
         </h3>
         {show.originalName ? (
-          <p className="truncate text-sm text-[#8a9bab]">
+          <p className="text-text-secondary truncate text-sm">
             Original title: {show.originalName}
           </p>
         ) : null}
         {show.overview ? (
-          <p className="line-clamp-2 text-sm text-[#8a9bab]">{show.overview}</p>
+          <p className="text-text-secondary line-clamp-2 text-sm">
+            {show.overview}
+          </p>
         ) : null}
       </div>
     </Link>
@@ -50,7 +52,7 @@ export function PersonResultRow({ person }: { person: PersonSearchResult }) {
       href={`/cast/${person.id}`}
       className="flex gap-4 rounded-md p-2 hover:bg-white/5"
     >
-      <div className="relative h-[70px] w-[70px] shrink-0 overflow-hidden rounded-full bg-[#2c3440]">
+      <div className="bg-surface relative h-[70px] w-[70px] shrink-0 overflow-hidden rounded-full">
         {person.profileUrl ? (
           <Image
             src={person.profileUrl}
@@ -64,7 +66,7 @@ export function PersonResultRow({ person }: { person: PersonSearchResult }) {
       <div className="flex min-w-0 flex-col justify-center gap-1">
         <h3 className="text-base font-semibold text-white">{person.name}</h3>
         {person.knownForNames.length > 0 ? (
-          <p className="max-w-md truncate text-sm text-[#8a9bab]">
+          <p className="text-text-secondary max-w-md truncate text-sm">
             Known for: {person.knownForNames.join(', ')}
           </p>
         ) : null}

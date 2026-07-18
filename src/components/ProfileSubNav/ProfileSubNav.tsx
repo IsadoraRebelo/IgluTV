@@ -22,8 +22,11 @@ export function ProfileSubNav({
 }) {
   return (
     <div className="mb-6 flex items-center gap-6 rounded-sm bg-[#181f26] px-4 py-3">
-      <Link href={`/profile/${username}`} className="flex shrink-0 items-center gap-2">
-        <div className="relative h-6 w-6 shrink-0 overflow-hidden rounded-full bg-[#2c3440]">
+      <Link
+        href={`/profile/${username}`}
+        className="flex shrink-0 items-center gap-2"
+      >
+        <div className="bg-surface relative h-6 w-6 shrink-0 overflow-hidden rounded-full">
           {avatarUrl ? (
             <Image
               src={avatarUrl}
@@ -48,7 +51,7 @@ export function ProfileSubNav({
             href={`/profile/${username}/${tab.id}`}
             className={cn(
               'text-xs font-semibold tracking-wide uppercase',
-              tab.id === active ? 'text-accent' : 'text-[#9ab0bf]'
+              tab.id === active ? 'text-accent' : 'text-text-tertiary'
             )}
           >
             {tab.label}

@@ -55,7 +55,9 @@ export function SearchResults({
 
   if (shows.length === 0 && people.length === 0) {
     return (
-      <p className="text-sm text-[#678]">No results for &quot;{query}&quot;</p>
+      <p className="text-text-faint text-sm">
+        No results for &quot;{query}&quot;
+      </p>
     );
   }
 
@@ -88,7 +90,7 @@ export function SearchResults({
           {isPending ? 'Loading...' : 'Load more'}
         </button>
       ) : (
-        <p className="mt-6 self-center text-sm text-[#678]">
+        <p className="text-text-faint mt-6 self-center text-sm">
           That&apos;s all the results
         </p>
       )}

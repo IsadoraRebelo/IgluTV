@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { LatestEpisodeCard } from '@/components';
 import type { EpisodeSectionState } from '@/components/ShowTracker/utils';
 
-
 import type { CastMember } from '@/types';
 
 export function WatchNextCard({
@@ -82,7 +81,7 @@ export function WatchNextCard({
             isLoggedIn={isLoggedIn}
           />
         ) : (
-          <p className="text-sm text-[#8a9bab]">
+          <p className="text-text-secondary text-sm">
             You&apos;re all caught up — no new episodes yet.
           </p>
         )}

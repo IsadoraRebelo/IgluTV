@@ -1,16 +1,21 @@
 @import 'tailwindcss';
 
 :root {
-  --background: #ffffff;
-  --foreground: #08121a;
-  --primary-foreground: #f4f4f5;
-  --muted: #e4e4e7;
-  --muted-foreground: #71717a;
-  --destructive: #dc2626;
+  --background: #14181c;
+  --foreground: #ededed;
+  --primary-foreground: #18181b;
+  --muted: #27272a;
+  --muted-foreground: #a1a1aa;
+  --destructive: #ef4444;
   --accent-color: #3ec6e0;
   --accent-foreground: #5d848f;
   --dropped-color: #ef4444;
   --paused-color: #28414a;
+  --surface: #2c3440;
+  --text-primary: #c2d0dd;
+  --text-secondary: #8a9bab;
+  --text-tertiary: #9ab0bf;
+  --text-faint: #678;
 }
 
 @theme inline {
@@ -24,6 +29,11 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-dropped: var(--dropped-color);
   --color-paused: var(--paused-color);
+  --color-surface: var(--surface);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-faint: var(--text-faint);
   --font-sans: var(--font-inter-sans);
   --font-heading: var(--font-bricolage-grotesque-sans);
   --animate-slide-up: slide-up 300ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
@@ -92,21 +102,6 @@
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #08121a;
-    --foreground: #ededed;
-    --primary-foreground: #18181b;
-    --muted: #27272a;
-    --muted-foreground: #a1a1aa;
-    --destructive: #ef4444;
-    --accent-color: #3ec6e0;
-    --accent-foreground: #5d848f;
-    --dropped-color: #ef4444;
-    --paused-color: #28414a;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
@@ -124,12 +119,37 @@ h6 {
 
 button {
   cursor: pointer;
+}
 
-  &:hover {
-    color: var(--accent-color);
+@utility container-shell {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 72rem;
+  padding-inline: 1rem;
+
+  @media (width >= 48rem) {
+    padding-inline: 3.75rem;
   }
 }
 
-a:hover {
-  color: var(--accent-color);
+@utility container-wide {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 72rem;
+  padding-inline: 0.75rem;
+
+  @media (width >= 48rem) {
+    padding-inline: 0;
+  }
+}
+
+@utility container-narrow {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 950px;
+  padding-inline: 0.75rem;
+
+  @media (width >= 48rem) {
+    padding-inline: 0;
+  }
 }

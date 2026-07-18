@@ -14,11 +14,11 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-[#14181c] px-6 py-24 text-center">
-      <p className="text-[#9ab0bf]">Something went wrong.</p>
+    <div className="flex flex-1 flex-col items-center justify-center px-6 py-24 text-center">
+      <p className="text-text-tertiary">Something went wrong.</p>
       <button
         onClick={() => unstable_retry()}
-        className="mt-4 text-sm text-[#678] underline hover:text-[#9ab0bf]"
+        className="text-text-faint hover:text-text-tertiary mt-4 text-sm underline"
       >
         Try again
       </button>

@@ -1,7 +1,7 @@
 export function Footer() {
   return (
     <footer className="bg-background text-foreground mt-auto">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-center px-4 py-4 text-xs md:px-15">
+      <div className="container-shell flex items-center justify-center py-4 text-xs">
         <p className="text-foreground/60">
           Show data provided by{' '}
           <a

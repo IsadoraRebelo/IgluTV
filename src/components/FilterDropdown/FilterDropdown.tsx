@@ -44,8 +44,8 @@ export function FilterDropdown<T extends string | number>({
             type="button"
             className={cn(
               'absolute top-0 left-0 flex items-center gap-1 text-xs font-semibold tracking-wide uppercase',
-              'data-[state=open]:mt-[-7px] data-[state=open]:z-50 data-[state=open]:w-fit-content data-[state=open]:justify-start data-[state=open]:rounded-t-sm data-[state=open]:border data-[state=open]:border-b-0 data-[state=open]:border-white/10 data-[state=open]:bg-muted data-[state=open]:px-3 data-[state=open]:py-2 data-[state=open]:shadow-2xl',
-              selected.size > 0 ? 'text-white' : 'text-[#9ab0bf]'
+              'data-[state=open]:w-fit-content data-[state=open]:bg-muted data-[state=open]:z-50 data-[state=open]:mt-[-7px] data-[state=open]:justify-start data-[state=open]:rounded-t-sm data-[state=open]:border data-[state=open]:border-b-0 data-[state=open]:border-white/10 data-[state=open]:px-3 data-[state=open]:py-2 data-[state=open]:shadow-2xl',
+              selected.size > 0 ? 'text-white' : 'text-text-tertiary'
             )}
           >
             {labelContent}
@@ -56,7 +56,7 @@ export function FilterDropdown<T extends string | number>({
             side="bottom"
             align="start"
             sideOffset={0}
-            className="data-[state=open]:animate-fade-in px-3 data-[state=closed]:animate-fade-out z-50 max-h-80 w-fit-content overflow-y-auto rounded-b-sm border border-white/10 bg-muted p-2 shadow-2xl"
+            className="data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out w-fit-content bg-muted z-50 max-h-80 overflow-y-auto rounded-b-sm border border-white/10 p-2 px-3 shadow-2xl"
           >
             {options.map((option) => {
               const isSelected = selected.has(option);
@@ -69,11 +69,13 @@ export function FilterDropdown<T extends string | number>({
                   onClick={() => onToggle(option)}
                   className={cn(
                     'flex w-full items-center gap-2 rounded-md py-1 text-left text-sm outline-none',
-                    isSelected ? 'text-white' : 'text-[#c2d0dd]'
+                    isSelected ? 'text-white' : 'text-text-primary'
                   )}
                 >
                   <span className="flex h-4 w-4 items-center justify-center rounded-sm border border-white/20">
-                    {isSelected ? <Check className="h-3 w-3 text-accent" /> : null}
+                    {isSelected ? (
+                      <Check className="text-accent h-3 w-3" />
+                    ) : null}
                   </span>
                   {optionLabel(option)}
                 </button>
@@ -104,7 +106,7 @@ export function SortDropdown<K extends string>({
       <HoverCard.Trigger asChild>
         <button
           type="button"
-          className="flex items-center gap-1 text-xs font-semibold tracking-wide text-[#9ab0bf] uppercase"
+          className="text-text-tertiary flex items-center gap-1 text-xs font-semibold tracking-wide uppercase"
         >
           Sort by {labels[sortKey]}
           {sortDirection === 'asc' ? '↑' : '↓'}
@@ -116,7 +118,7 @@ export function SortDropdown<K extends string>({
           side="bottom"
           align="end"
           sideOffset={8}
-          className="data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out z-50 w-fit-content px-3 rounded-sm bg-muted p-2 shadow-2xl ring-1 ring-white/10"
+          className="data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out w-fit-content bg-muted z-50 rounded-sm p-2 px-3 shadow-2xl ring-1 ring-white/10"
         >
           {keys.map((key) => (
             <button
@@ -125,7 +127,7 @@ export function SortDropdown<K extends string>({
               onClick={() => onSortChange(key)}
               className={cn(
                 'block w-full rounded-md py-1 text-left text-sm outline-none',
-                key === sortKey ? 'text-white' : 'text-[#c2d0dd]'
+                key === sortKey ? 'text-white' : 'text-text-primary'
               )}
             >
               {labels[key]}
@@ -156,7 +158,7 @@ export function MobileFilterSection<T extends string | number>({
 
   return (
     <div className={cn('py-3', showBorder ? 'border-b border-white/10' : '')}>
-      <h3 className="px-1 pb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+      <h3 className="text-muted-foreground px-1 pb-2 text-xs font-semibold tracking-wide uppercase">
         {label}
       </h3>
       <div className="flex flex-col">
@@ -167,10 +169,10 @@ export function MobileFilterSection<T extends string | number>({
               key={option}
               type="button"
               onClick={() => onToggle(option)}
-              className="flex items-center gap-2 rounded-md px-1 py-1 text-left text-sm text-[#c2d0dd]"
+              className="text-text-primary flex items-center gap-2 rounded-md px-1 py-1 text-left text-sm"
             >
               <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-white/20">
-                {isSelected ? <Check className="h-3 w-3 text-accent" /> : null}
+                {isSelected ? <Check className="text-accent h-3 w-3" /> : null}
               </span>
               {optionLabel(option)}
             </button>

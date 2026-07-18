@@ -87,13 +87,13 @@ export function SeasonAccordion({
           markableEpisodes.length === 0
             ? 0
             : Math.min(
-              ...markableEpisodes.map((ep) =>
-                getRewatchCount(
-                  watchedDates,
-                  episodeKey(season.seasonNumber, ep.episodeNumber)
+                ...markableEpisodes.map((ep) =>
+                  getRewatchCount(
+                    watchedDates,
+                    episodeKey(season.seasonNumber, ep.episodeNumber)
+                  )
                 )
-              )
-            );
+              );
 
         const statusBackground = getWatchStatusBackground(
           showStatus,
@@ -119,20 +119,21 @@ export function SeasonAccordion({
                     {season.name}
                   </span>
                   {formatDate(season.airDate) ? (
-                    <span className="text-xs text-[#8a9bab]">
+                    <span className="text-text-secondary text-xs">
                       {formatDate(season.airDate)}
                     </span>
                   ) : null}
                 </div>
                 <ChevronDown
-                  className={`h-6 w-6 shrink-0 text-[#678] transition-transform duration-300 ease-in-out ${isExpanded ? 'rotate-180' : ''
-                    }`}
+                  className={`text-text-faint h-6 w-6 shrink-0 transition-transform duration-300 ease-in-out ${
+                    isExpanded ? 'rotate-180' : ''
+                  }`}
                 />
               </button>
 
               <div className="flex items-center gap-3">
                 {total ? (
-                  <span className="text-sm text-[#8a9bab]">
+                  <span className="text-text-secondary text-sm">
                     {seasonWatchedCount}/{total}
                   </span>
                 ) : null}
@@ -160,8 +161,9 @@ export function SeasonAccordion({
             />
 
             <div
-              className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-                }`}
+              className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+                isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+              }`}
             >
               <div className="overflow-hidden">
                 <div className="flex flex-col gap-2 p-2">
@@ -186,7 +188,7 @@ export function SeasonAccordion({
                         episode.arcName !== null &&
                         episode.arcName !== previousArcName &&
                         episode.arcName.toLowerCase() !==
-                        season.name.toLowerCase();
+                          season.name.toLowerCase();
                       if (episode.arcName !== null) {
                         previousArcName = episode.arcName;
                       }
@@ -194,7 +196,7 @@ export function SeasonAccordion({
                       return (
                         <div key={episode.episodeNumber} className="contents">
                           {showArcDivider ? (
-                            <div className="mt-2 px-1 py-2 text-sm font-semibold tracking-wide text-[#8a9bab] uppercase first:mt-0">
+                            <div className="text-text-secondary mt-2 px-1 py-2 text-sm font-semibold tracking-wide uppercase first:mt-0">
                               {episode.arcName}
                             </div>
                           ) : null}
@@ -215,7 +217,7 @@ export function SeasonAccordion({
                               }
                               className="flex min-w-0 flex-1 items-stretch gap-3 text-left"
                             >
-                              <div className="relative aspect-square shrink-0 overflow-hidden bg-[#2c3440]">
+                              <div className="bg-surface relative aspect-square shrink-0 overflow-hidden">
                                 {episode.imageUrl ? (
                                   <Image
                                     src={episode.imageUrl}
@@ -232,12 +234,12 @@ export function SeasonAccordion({
                                 ) : null}
                               </div>
                               <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 py-4">
-                                <p className="text-md truncate font-semibold text-[#c2d0dd]">
+                                <p className="text-md text-text-primary truncate font-semibold">
                                   {String(episode.episodeNumber)}.{' '}
                                   {episode.name}
                                 </p>
                                 {formatDate(episode.airDate) ? (
-                                  <p className="text-xs text-[#678]">
+                                  <p className="text-text-faint text-xs">
                                     {formatDate(episode.airDate)}
                                   </p>
                                 ) : null}
@@ -245,7 +247,7 @@ export function SeasonAccordion({
                             </button>
                             <div className="flex shrink-0 items-center pr-3 pl-2">
                               {daysUntilAir !== null ? (
-                                <span className="w-16 text-right text-xs text-[#8a9bab]">
+                                <span className="text-text-secondary w-16 text-right text-xs">
                                   In {daysUntilAir} day
                                   {daysUntilAir === 1 ? '' : 's'}
                                 </span>

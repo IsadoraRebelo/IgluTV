@@ -9,7 +9,7 @@ export function HomeHero({
   children: ReactNode;
 }) {
   return (
-    <div className="relative w-full overflow-hidden bg-[#14181c]">
+    <div className="bg-background relative w-full overflow-hidden">
       <div className="absolute inset-0">
         {bannerUrl ? (
           <Image
@@ -21,8 +21,8 @@ export function HomeHero({
             className="object-cover"
           />
         ) : null}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#14181c] via-[#14181c]/60 to-[#14181c]/20" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#14181c]/80 via-transparent to-[#14181c]/40" />
+        <div className="from-background via-background/60 to-background/20 absolute inset-0 bg-gradient-to-t" />
+        <div className="from-background/80 to-background/40 absolute inset-0 bg-gradient-to-r via-transparent" />
       </div>
       <div className="relative pt-24 pb-10 sm:pt-28">{children}</div>
     </div>

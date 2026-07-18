@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+
 import type { ShowStatus } from '@/types';
 
 import { cn } from '@/utils/cn';
@@ -56,7 +57,7 @@ export function ShowActionsSidebar({
       <button
         type="button"
         onClick={openAuthDialog}
-        className="text-md rounded-md bg-white/5 px-3 py-2.5 text-left text-[#c2d0dd] hover:bg-white/10"
+        className="text-md text-text-primary rounded-md bg-white/5 px-3 py-2.5 text-left hover:bg-white/10"
       >
         Sign in to log, rate or review
       </button>
@@ -81,13 +82,9 @@ export function ShowActionsSidebar({
               type="button"
               disabled={isMarkingShowWatched || isSettingShowStatus}
               onClick={onMarkShowWatched}
-              className="text-md flex items-center gap-3 rounded-md px-3 py-2.5 text-left text-[#c2d0dd] hover:bg-white/5 disabled:pointer-events-none disabled:opacity-50"
+              className="text-md text-text-primary flex items-center gap-3 rounded-md px-3 py-2.5 text-left hover:bg-white/5 disabled:pointer-events-none disabled:opacity-50"
             >
-              <span
-                className={cn(
-                  shouldUseActiveColor && action.activeColor
-                )}
-              >
+              <span className={cn(shouldUseActiveColor && action.activeColor)}>
                 {icon}
               </span>
               {label}
@@ -105,13 +102,9 @@ export function ShowActionsSidebar({
               type="button"
               disabled={isTogglingFavourite}
               onClick={onToggleFavourite}
-              className="text-md flex items-center gap-3 rounded-md px-3 py-2.5 text-left text-[#c2d0dd] hover:bg-white/5 disabled:pointer-events-none disabled:opacity-50"
+              className="text-md text-text-primary flex items-center gap-3 rounded-md px-3 py-2.5 text-left hover:bg-white/5 disabled:pointer-events-none disabled:opacity-50"
             >
-              <span
-                className={cn(
-                  shouldUseActiveColor && action.activeColor
-                )}
-              >
+              <span className={cn(shouldUseActiveColor && action.activeColor)}>
                 {icon}
               </span>
               {label}
@@ -130,7 +123,7 @@ export function ShowActionsSidebar({
               type="button"
               disabled={isSettingShowStatus || (isActive && !isWatchLater)}
               onClick={() => onSetShowStatus(action.status!)}
-              className="text-md flex items-center gap-3 rounded-md px-3 py-2.5 text-left text-[#c2d0dd] hover:bg-white/5 disabled:pointer-events-none"
+              className="text-md text-text-primary flex items-center gap-3 rounded-md px-3 py-2.5 text-left hover:bg-white/5 disabled:pointer-events-none"
             >
               <span className={cn(isActive && action.activeColor)}>
                 {action.icon}
@@ -143,7 +136,7 @@ export function ShowActionsSidebar({
         return (
           <div
             key={action.label}
-            className="text-md flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 text-[#c2d0dd] hover:bg-white/5"
+            className="text-md text-text-primary flex cursor-default items-center gap-3 rounded-md px-3 py-2.5 hover:bg-white/5"
           >
             {action.icon}
             {action.label}

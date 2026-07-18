@@ -48,14 +48,14 @@ export function ProfileSettingsButton({
         <button
           type="button"
           aria-label="Profile settings"
-          className="absolute bottom-0 right-2 md:right-25 z-10 flex h-5 w-5 md:h-9 md:w-9 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60"
+          className="absolute right-2 bottom-0 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 md:right-25 md:h-9 md:w-9"
         >
           <Settings className="h-5 w-5" />
         </button>
       </DialogPrimitive.Trigger>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="max-sm:data-[state=open]:animate-fade-in max-sm:data-[state=closed]:animate-fade-out fixed inset-0 z-50 bg-black/70" />
-        <DialogPrimitive.Content className="max-sm:data-[state=open]:animate-slide-up max-sm:data-[state=closed]:animate-slide-down fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] w-full flex-col overflow-hidden rounded-t-lg bg-[#14181c] shadow-2xl sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-[90vw] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg">
+        <DialogPrimitive.Content className="max-sm:data-[state=open]:animate-slide-up max-sm:data-[state=closed]:animate-slide-down bg-background fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] w-full flex-col overflow-hidden rounded-t-lg shadow-2xl sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-[90vw] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg">
           <DialogPrimitive.Title className="sr-only">
             Profile settings
           </DialogPrimitive.Title>

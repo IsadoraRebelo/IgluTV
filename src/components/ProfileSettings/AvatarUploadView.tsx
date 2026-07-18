@@ -19,9 +19,7 @@ export function AvatarUploadView({
   onApplied: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
-  const [previewUrl, setPreviewUrl] = useState<string | null>(
-    currentAvatarUrl
-  );
+  const [previewUrl, setPreviewUrl] = useState<string | null>(currentAvatarUrl);
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -62,18 +60,16 @@ export function AvatarUploadView({
         <button
           type="button"
           onClick={onCancel}
-          className="text-sm text-[#8a9bab] hover:text-white"
+          className="text-text-secondary text-sm hover:text-white"
         >
           Cancel
         </button>
-        <h2 className="text-base font-semibold text-white">
-          Profile picture
-        </h2>
+        <h2 className="text-base font-semibold text-white">Profile picture</h2>
         <span className="w-12" aria-hidden="true" />
       </div>
 
       <div className="flex flex-1 flex-col items-center gap-4 p-6">
-        <div className="relative h-32 w-32 shrink-0 overflow-hidden rounded-full bg-[#2c3440]">
+        <div className="bg-surface relative h-32 w-32 shrink-0 overflow-hidden rounded-full">
           {previewUrl ? (
             <Image
               src={previewUrl}
@@ -86,7 +82,7 @@ export function AvatarUploadView({
           ) : null}
         </div>
 
-        <label className="cursor-pointer text-sm text-[#8a9bab] hover:text-white">
+        <label className="text-text-secondary cursor-pointer text-sm hover:text-white">
           <span className="underline">
             {isPending ? 'Uploading…' : 'Choose an image'}
           </span>
@@ -99,7 +95,7 @@ export function AvatarUploadView({
           />
         </label>
 
-        <p className="text-center text-xs text-[#8a9bab]">
+        <p className="text-text-secondary text-center text-xs">
           Your picture should be a square image, at least 300 x 300px.
         </p>
       </div>

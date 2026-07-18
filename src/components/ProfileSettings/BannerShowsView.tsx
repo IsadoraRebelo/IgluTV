@@ -6,7 +6,10 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { Input } from '@/components';
 
-import { type BannerShowOption, getMyShowsForBannerPickerAction } from './actions';
+import {
+  type BannerShowOption,
+  getMyShowsForBannerPickerAction,
+} from './actions';
 
 export function BannerShowsView({
   onCancel,
@@ -37,7 +40,7 @@ export function BannerShowsView({
         <button
           type="button"
           onClick={onCancel}
-          className="text-sm text-[#8a9bab] hover:text-white"
+          className="text-text-secondary text-sm hover:text-white"
         >
           Cancel
         </button>
@@ -47,7 +50,7 @@ export function BannerShowsView({
 
       <div className="p-4">
         <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[#8a9bab]" />
+          <Search className="text-text-secondary pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
             variant="secondary"
             placeholder="Search for a show"
@@ -58,11 +61,11 @@ export function BannerShowsView({
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
         {shows === null ? (
-          <p className="text-sm text-[#8a9bab]">Loading your shows…</p>
+          <p className="text-text-secondary text-sm">Loading your shows…</p>
         ) : shows.length === 0 ? (
-          <p className="text-sm text-[#8a9bab]">
+          <p className="text-text-secondary text-sm">
             Track some shows to use their backdrops as your banner.
           </p>
         ) : (
@@ -74,7 +77,7 @@ export function BannerShowsView({
                 onClick={() => onSelectShow(show)}
                 className="flex flex-col gap-1 text-left"
               >
-                <div className="relative aspect-[2/3] w-full overflow-hidden rounded-sm bg-[#2c3440]">
+                <div className="bg-surface relative aspect-[2/3] w-full overflow-hidden rounded-sm">
                   {show.posterUrl ? (
                     <Image
                       src={show.posterUrl}
@@ -85,7 +88,9 @@ export function BannerShowsView({
                     />
                   ) : null}
                 </div>
-                <p className="truncate text-xs text-[#c2d0dd]">{show.name}</p>
+                <p className="text-text-primary truncate text-xs">
+                  {show.name}
+                </p>
               </button>
             ))}
           </div>

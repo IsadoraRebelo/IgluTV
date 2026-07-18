@@ -41,8 +41,8 @@ export default async function DiaryPage({
   );
 
   return (
-    <div className="flex flex-1 flex-col bg-[#14181c] font-sans antialiased">
-      <main className="mx-auto w-full max-w-6xl flex-1 px-3 pt-10 pb-20 md:px-0">
+    <div className="flex flex-1 flex-col">
+      <main className="container-wide flex-1 pt-10 pb-20">
         <ProfileSubNav
           username={profile.username}
           avatarUrl={profile.avatarUrl}

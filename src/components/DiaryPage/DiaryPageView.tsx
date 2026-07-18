@@ -182,10 +182,10 @@ export function DiaryPageView({ entries }: { entries: DiaryEntry[] }) {
                       <td className="py-3 pr-3 align-top">
                         {showMonthBadge ? (
                           <div className="flex w-14 flex-col items-center rounded-md bg-white/[0.06] py-1">
-                            <span className="text-[10px] font-bold tracking-wide text-[#8a9bab] uppercase">
+                            <span className="text-text-secondary text-[10px] font-bold tracking-wide uppercase">
                               {current.month}
                             </span>
-                            <span className="text-[10px] font-bold tracking-wide text-[#8a9bab] uppercase">
+                            <span className="text-text-secondary text-[10px] font-bold tracking-wide uppercase">
                               {current.year}
                             </span>
                           </div>
@@ -199,7 +199,7 @@ export function DiaryPageView({ entries }: { entries: DiaryEntry[] }) {
                           href={`/show/${entry.show.id}`}
                           className="flex min-w-0 items-center gap-3"
                         >
-                          <div className="relative aspect-[2/3] w-10 shrink-0 overflow-hidden rounded-md bg-[#2c3440]">
+                          <div className="bg-surface relative aspect-[2/3] w-10 shrink-0 overflow-hidden rounded-md">
                             {entry.show.posterUrl ? (
                               <Image
                                 src={entry.show.posterUrl}

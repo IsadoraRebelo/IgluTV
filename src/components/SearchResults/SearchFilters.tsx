@@ -35,7 +35,7 @@ export function SearchFilters({
               '-mb-px flex-1 border-b-2 px-1 py-3 text-center text-sm font-medium transition-colors',
               active === filter.id
                 ? 'border-accent text-white'
-                : 'border-transparent text-[#678] hover:text-[#9ab0bf]'
+                : 'text-text-faint hover:text-text-tertiary border-transparent'
             )}
           >
             {filter.label}
@@ -53,7 +53,7 @@ export function SearchFilters({
           href={filterHref(query, filter.id)}
           className={cn(
             'text-md rounded-md px-3 py-2.5 text-left hover:bg-white/5',
-            active === filter.id ? 'text-white' : 'text-[#c2d0dd]'
+            active === filter.id ? 'text-white' : 'text-text-primary'
           )}
         >
           {filter.label}

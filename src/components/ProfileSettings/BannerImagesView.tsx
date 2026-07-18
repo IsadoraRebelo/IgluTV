@@ -69,11 +69,11 @@ export function BannerImagesView({
         </h2>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto p-4">
+      <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {images === null ? (
-          <p className="text-sm text-[#8a9bab]">Loading images…</p>
+          <p className="text-text-secondary text-sm">Loading images…</p>
         ) : images.length === 0 ? (
-          <p className="text-sm text-[#8a9bab]">
+          <p className="text-text-secondary text-sm">
             No banner images available for this show.
           </p>
         ) : (
@@ -85,7 +85,7 @@ export function BannerImagesView({
                 disabled={savingPath !== null}
                 onClick={() => handleSelect(image)}
                 aria-label={`Use this ${show.name} image as your banner`}
-                className="relative aspect-video overflow-hidden rounded-md bg-[#2c3440] disabled:opacity-50"
+                className="bg-surface relative aspect-video overflow-hidden rounded-md disabled:opacity-50"
               >
                 <Image
                   src={image.thumbnailUrl}

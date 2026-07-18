@@ -131,8 +131,8 @@ export default async function ProfilePage({
   const diaryGroups = groupDiaryEntriesByMonth(finishedEntries.slice(0, 10));
 
   return (
-    <div className="flex flex-1 flex-col bg-[#14181c] font-sans antialiased">
-      <div className="relative mx-auto w-full max-w-6xl px-3 md:px-0">
+    <div className="flex flex-1 flex-col">
+      <div className="container-wide relative">
         <div className="relative h-[140px] w-full overflow-hidden sm:h-[350px]">
           {bannerUrl ? (
             <Image
@@ -144,8 +144,8 @@ export default async function ProfilePage({
               className="object-cover object-top"
             />
           ) : null}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#14181c] via-[#14181c]/40 to-[#14181c]/10" />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#14181c] via-transparent to-[#14181c]" />
+          <div className="from-background via-background/40 to-background/10 absolute inset-0 bg-gradient-to-t" />
+          <div className="from-background to-background absolute inset-0 bg-gradient-to-r via-transparent" />
           {isOwner ? (
             <ProfileSettingsButton
               username={profile.username}
@@ -156,7 +156,7 @@ export default async function ProfilePage({
         </div>
 
         <div className="mt-[-50px] ml-2 flex items-end md:ml-24">
-          <div className="border-accent-foreground relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-1 bg-[#2c3440] md:h-20 md:w-20">
+          <div className="border-accent-foreground bg-surface relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-1 md:h-20 md:w-20">
             {profile.avatarUrl ? (
               <Image
                 src={profile.avatarUrl}
@@ -179,7 +179,7 @@ export default async function ProfilePage({
         </div>
       </div>
 
-      <main className="mx-auto w-full max-w-[950px] flex-1 px-3 pb-20 md:px-0">
+      <main className="container-narrow flex-1 pb-20">
         <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
           <StatTile
             label="Time Watching"
@@ -290,7 +290,7 @@ export default async function ProfilePage({
                     <Link
                       key={show.id}
                       href={`/show/${show.id}`}
-                      className="relative aspect-[2/3] w-14 shrink-0 overflow-hidden rounded-md bg-[#2c3440]"
+                      className="bg-surface relative aspect-[2/3] w-14 shrink-0 overflow-hidden rounded-md"
                     >
                       {show.posterUrl ? (
                         <Image
@@ -329,7 +329,7 @@ export default async function ProfilePage({
                     <div key={group.key}>
                       <div className="flex items-start gap-3 py-3">
                         <div className="shrink-0 rounded-md bg-white/[0.06] px-3 pb-1">
-                          <span className="text-[10px] font-bold tracking-wide text-[#8a9bab] uppercase">
+                          <span className="text-text-secondary text-[10px] font-bold tracking-wide uppercase">
                             {group.month}
                           </span>
                         </div>

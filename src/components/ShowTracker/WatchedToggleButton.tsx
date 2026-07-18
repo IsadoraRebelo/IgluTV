@@ -29,10 +29,12 @@ export function WatchedToggleButton({
   onRemove: () => void;
   onRemoveRewatches: () => void;
 }) {
-  const buttonClassName = `flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#14181c] transition-colors disabled:opacity-50 ${isWatched ? 'bg-accent' : 'bg-muted-foreground'
-    }`;
+  const buttonClassName = `flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-background transition-colors disabled:opacity-50 ${
+    isWatched ? 'bg-accent' : 'bg-muted-foreground'
+  }`;
 
-  const buttonItemClassName = "flex cursor-default cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-sm text-[#c2d0dd] outline-none data-[highlighted]:bg-white/5"
+  const buttonItemClassName =
+    'flex cursor-default cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 text-sm text-text-primary outline-none data-[highlighted]:bg-white/5';
 
   if (!isWatched) {
     return (
@@ -93,10 +95,7 @@ export function WatchedToggleButton({
               {removeRewatchesLabel}
             </DropdownMenu.Item>
           ) : null}
-          <DropdownMenu.Item
-            onClick={onRemove}
-            className={buttonItemClassName}
-          >
+          <DropdownMenu.Item onClick={onRemove} className={buttonItemClassName}>
             <EyeSlashIcon className="h-4 w-4" />
             {removeLabel}
           </DropdownMenu.Item>

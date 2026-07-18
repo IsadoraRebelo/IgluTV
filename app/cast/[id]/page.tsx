@@ -54,11 +54,11 @@ export default async function CastPage({
     : 0;
 
   return (
-    <div className="flex flex-1 flex-col bg-[#14181c] font-sans antialiased">
-      <main className="mx-auto w-full max-w-[950px] flex-1 px-3 pt-10 pb-20 md:px-0">
+    <div className="flex flex-1 flex-col">
+      <main className="container-narrow flex-1 pt-10 pb-20">
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_260px]">
           <aside className="order-1 flex flex-col gap-4 lg:order-2">
-            <div className="relative aspect-[3/4] w-full max-w-[230px] overflow-hidden rounded-sm bg-[#2c3440]">
+            <div className="bg-surface relative aspect-[3/4] w-full max-w-[230px] overflow-hidden rounded-sm">
               {person.profileUrl ? (
                 <Image
                   src={person.profileUrl}
@@ -80,7 +80,7 @@ export default async function CastPage({
               href={`https://www.themoviedb.org/person/${numericId}`}
               target="_blank"
               rel="noreferrer"
-              className="w-fit rounded-md bg-white/5 px-3 py-1.5 text-xs font-semibold text-[#c2d0dd] hover:bg-white/10"
+              className="text-text-primary w-fit rounded-md bg-white/5 px-3 py-1.5 text-xs font-semibold hover:bg-white/10"
             >
               More details at TMDB
             </a>
@@ -94,7 +94,7 @@ export default async function CastPage({
 
           <div className="order-2 flex flex-col gap-5 lg:order-1">
             <div>
-              <p className="text-xs font-semibold tracking-wide text-[#8a9bab] uppercase">
+              <p className="text-text-secondary text-xs font-semibold tracking-wide uppercase">
                 TV Shows Starring
               </p>
               <h1 className="text-xl font-semibold text-white sm:text-3xl">

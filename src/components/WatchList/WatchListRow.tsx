@@ -169,7 +169,7 @@ function WatchListRowContent({
               : baseRowClassName
         }
       >
-        <div className="relative aspect-square w-25 shrink-0 overflow-hidden bg-[#2c3440] sm:w-30">
+        <div className="bg-surface relative aspect-square w-25 shrink-0 overflow-hidden sm:w-30">
           {episode.imageUrl ? (
             <Image
               src={episode.imageUrl}
@@ -183,8 +183,8 @@ function WatchListRowContent({
             <span
               className={
                 badge === 'premiere'
-                  ? 'absolute bottom-1 left-1 w-fit rounded-md bg-white px-2 py-0.5 text-xs font-semibold tracking-wide text-[#14181c] uppercase'
-                  : 'absolute bottom-1 left-1 w-fit rounded-md bg-yellow-400 px-2 py-0.5 text-xs font-semibold tracking-wide text-[#14181c] uppercase'
+                  ? 'text-background absolute bottom-1 left-1 w-fit rounded-md bg-white px-2 py-0.5 text-xs font-semibold tracking-wide uppercase'
+                  : 'text-background absolute bottom-1 left-1 w-fit rounded-md bg-yellow-400 px-2 py-0.5 text-xs font-semibold tracking-wide uppercase'
               }
             >
               {badge === 'premiere' ? 'Premiere' : 'New'}
@@ -207,12 +207,12 @@ function WatchListRowContent({
               S{String(episode.seasonNumber).padStart(2, '0')} | E
               {String(episode.episodeNumber).padStart(2, '0')}
               {backlogCount > 0 ? (
-                <span className="ml-1 text-xs font-normal text-[#8a9bab]">
+                <span className="text-text-secondary ml-1 text-xs font-normal">
                   +{backlogCount}
                 </span>
               ) : null}
             </p>
-            <p className="truncate text-sm text-[#c2d0dd]">{episode.name}</p>
+            <p className="text-text-primary truncate text-sm">{episode.name}</p>
           </div>
         </div>
 

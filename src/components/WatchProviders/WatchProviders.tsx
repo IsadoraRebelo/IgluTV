@@ -17,11 +17,15 @@ import type { WatchProvider } from '@/types';
 import { getCountryDisplayName } from '@/utils';
 
 import { updateUserCountryAction } from './actions';
-import { getProviderAvailability, sortProvidersByCountryPriority } from './utils';
+import {
+  getProviderAvailability,
+  sortProvidersByCountryPriority,
+} from './utils';
 
 // Preferred countries surface first in the picker, then everything else.
 const OTHER_COUNTRIES = WATCH_PROVIDER_COUNTRIES.filter(
-  (code) => !(WATCH_PROVIDER_PRIORITY_COUNTRIES as readonly string[]).includes(code)
+  (code) =>
+    !(WATCH_PROVIDER_PRIORITY_COUNTRIES as readonly string[]).includes(code)
 );
 
 export function WatchProviders({
@@ -77,14 +81,16 @@ export function WatchProviders({
       >
         <h2 className="text-sm font-semibold text-white">Where to watch</h2>
         <ChevronDown
-          className={`h-4 w-4 shrink-0 text-[#678] transition-transform duration-300 ease-in-out ${isExpanded ? 'rotate-180' : ''
-            }`}
+          className={`text-text-faint h-4 w-4 shrink-0 transition-transform duration-300 ease-in-out ${
+            isExpanded ? 'rotate-180' : ''
+          }`}
         />
       </button>
 
       <div
-        className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-          }`}
+        className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
+          isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+        }`}
       >
         <div className="overflow-hidden">
           <ul className="grid grid-cols-2 gap-2">
@@ -111,13 +117,13 @@ export function WatchProviders({
                       className="rounded-md"
                     />
                   ) : (
-                    <div className="h-8 w-8 shrink-0 rounded-md bg-[#2c3440]" />
+                    <div className="bg-surface h-8 w-8 shrink-0 rounded-md" />
                   )}
                   <div className="flex flex-col">
-                    <span className="text-sm text-[#c2d0dd]">
+                    <span className="text-text-primary text-sm">
                       {provider.providerName}
                     </span>
-                    <span className="text-xs text-[#8a9bab]">
+                    <span className="text-text-secondary text-xs">
                       {countryLabel}
                     </span>
                   </div>
@@ -127,13 +133,13 @@ export function WatchProviders({
           </ul>
 
           <div className="mt-2 flex items-center justify-between gap-3">
-            <p className="text-xs text-[#678]">
+            <p className="text-text-faint text-xs">
               Streaming data provided by{' '}
               <a
                 href="https://www.justwatch.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="underline hover:text-[#9ab0bf]"
+                className="hover:text-text-tertiary underline"
               >
                 JustWatch
               </a>
@@ -142,18 +148,18 @@ export function WatchProviders({
               value={country}
               disabled={isSaving}
               onChange={(e) => handleCountryChange(e.target.value)}
-              className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs text-[#c2d0dd] disabled:opacity-50"
+              className="text-text-primary rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs disabled:opacity-50"
             >
-              <optgroup label="Preferred" className="bg-[#14181c]">
+              <optgroup label="Preferred" className="bg-background">
                 {WATCH_PROVIDER_PRIORITY_COUNTRIES.map((code) => (
-                  <option key={code} value={code} className="bg-[#14181c]">
+                  <option key={code} value={code} className="bg-background">
                     {getCountryDisplayName(code)}
                   </option>
                 ))}
               </optgroup>
-              <optgroup label="All countries" className="bg-[#14181c]">
+              <optgroup label="All countries" className="bg-background">
                 {OTHER_COUNTRIES.map((code) => (
-                  <option key={code} value={code} className="bg-[#14181c]">
+                  <option key={code} value={code} className="bg-background">
                     {getCountryDisplayName(code)}
                   </option>
                 ))}

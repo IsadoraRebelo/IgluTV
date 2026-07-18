@@ -66,7 +66,7 @@ export function EditProfileView({
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-[#2c3440]">
+        <div className="bg-surface relative h-16 w-16 shrink-0 overflow-hidden rounded-full">
           {avatarUrl ? (
             <Image
               src={avatarUrl}
@@ -86,7 +86,7 @@ export function EditProfileView({
           <button
             type="button"
             onClick={onChangePicture}
-            className="text-xs text-[#8a9bab] underline hover:text-white"
+            className="text-text-secondary text-xs underline hover:text-white"
           >
             Change picture
           </button>

@@ -38,7 +38,7 @@ function MobileFiltersSheet<TSortKey extends string>({
         <button
           type="button"
           aria-label="Filters"
-          className="relative flex h-8 w-8 items-center justify-center rounded-md text-[#9ab0bf]"
+          className="text-text-tertiary relative flex h-8 w-8 items-center justify-center rounded-md"
         >
           <SlidersHorizontal className="h-4 w-4" />
           {activeFilterCount > 0 ? (
@@ -48,7 +48,7 @@ function MobileFiltersSheet<TSortKey extends string>({
       </DialogPrimitive.Trigger>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out fixed inset-0 z-50 bg-black/70" />
-        <DialogPrimitive.Content className="data-[state=open]:animate-slide-up data-[state=closed]:animate-slide-down fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] w-full flex-col rounded-t-lg bg-[#14181c] shadow-2xl">
+        <DialogPrimitive.Content className="data-[state=open]:animate-slide-up data-[state=closed]:animate-slide-down bg-background fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] w-full flex-col rounded-t-lg shadow-2xl">
           <div className="relative flex shrink-0 items-center justify-center px-4 py-3 pt-5">
             <DialogPrimitive.Title className="text-muted-foreground text-center text-xs font-semibold uppercase">
               Filters
@@ -74,7 +74,7 @@ function MobileFiltersSheet<TSortKey extends string>({
                     onClick={() => onSortChange(key)}
                     className={cn(
                       'flex items-center justify-between rounded-md px-1 py-1 text-left text-sm',
-                      key === sortKey ? 'text-white' : 'text-[#c2d0dd]'
+                      key === sortKey ? 'text-white' : 'text-text-primary'
                     )}
                   >
                     {sortLabels[key]}
@@ -224,7 +224,7 @@ export function ListFilterBar<TSortKey extends string>(
                 'flex h-7 w-7 items-center justify-center rounded-md',
                 density === 'dense'
                   ? 'bg-white/10 text-white'
-                  : 'text-[#678] hover:text-[#9ab0bf]'
+                  : 'text-text-faint hover:text-text-tertiary'
               )}
             >
               <Grid3x3 className="h-4 w-4" />
@@ -237,7 +237,7 @@ export function ListFilterBar<TSortKey extends string>(
                 'flex h-7 w-7 items-center justify-center rounded-md',
                 density === 'large'
                   ? 'bg-white/10 text-white'
-                  : 'text-[#678] hover:text-[#9ab0bf]'
+                  : 'text-text-faint hover:text-text-tertiary'
               )}
             >
               <LayoutGrid className="h-4 w-4" />

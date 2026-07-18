@@ -68,14 +68,14 @@ export function NavBarUserMenu({ isOverlay }: { isOverlay: boolean }) {
                 href={item.href}
                 className={cn(
                   'block rounded-md py-1 text-sm outline-none',
-                  pathname === item.href ? 'text-white' : 'text-[#c2d0dd]'
+                  pathname === item.href ? 'text-white' : 'text-text-primary'
                 )}
               >
                 {item.label}
               </Link>
             ))}
             <div className="my-1 border-t border-white/10" />
-            <LogOutButton className="block w-full rounded-md py-1 text-left text-sm text-[#c2d0dd] no-underline outline-none" />
+            <LogOutButton className="text-text-primary block w-full rounded-md py-1 text-left text-sm no-underline outline-none" />
           </HoverCard.Content>
         </HoverCard.Portal>
       </div>

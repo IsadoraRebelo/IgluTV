@@ -34,7 +34,7 @@ export function NavBarClient() {
           : 'bg-background text-foreground'
       )}
     >
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-6 px-4 md:px-15">
+      <div className="container-shell flex items-center justify-between gap-6">
         <Link href="/" className="text-accent text-lg font-bold tracking-tight">
           Iglu <span className="font-normal">tv</span>
         </Link>

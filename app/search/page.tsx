@@ -35,8 +35,8 @@ export default async function SearchPage({
       };
 
   return (
-    <div className="flex flex-1 flex-col bg-[#14181c] font-sans antialiased">
-      <main className="mx-auto w-full max-w-[950px] flex-1 px-3 pb-20 md:px-0">
+    <div className="flex flex-1 flex-col">
+      <main className="container-narrow flex-1 pb-20">
         <h1 className="mt-6 text-2xl font-semibold tracking-tight text-white md:mt-10">
           {query ? `Showing results for "${query}"` : 'Search'}
         </h1>
@@ -64,7 +64,7 @@ export default async function SearchPage({
             </div>
           </>
         ) : (
-          <p className="mt-6 text-sm text-[#678]">
+          <p className="text-text-faint mt-6 text-sm">
             Search for a show or a cast member.
           </p>
         )}

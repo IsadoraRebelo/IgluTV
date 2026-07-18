@@ -27,8 +27,9 @@ export function ShowOverview({
     <div>
       <p
         ref={paragraphRef}
-        className={`${marginTopClassName} max-w-[65ch] ${textSizeClassName} leading-relaxed text-[#c2d0dd] ${expanded ? '' : 'line-clamp-2 md:line-clamp-5'
-          }`}
+        className={`${marginTopClassName} max-w-[65ch] ${textSizeClassName} text-text-primary leading-relaxed ${
+          expanded ? '' : 'line-clamp-2 md:line-clamp-5'
+        }`}
       >
         {text}
       </p>
@@ -36,7 +37,7 @@ export function ShowOverview({
         <button
           type="button"
           onClick={() => setExpanded((prev) => !prev)}
-          className="mt-1 text-sm font-medium text-[#8a9bab] hover:text-white"
+          className="text-text-secondary mt-1 text-sm font-medium hover:text-white"
         >
           {expanded ? 'Show less' : 'Read more'}
         </button>

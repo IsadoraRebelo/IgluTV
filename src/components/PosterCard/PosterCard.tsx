@@ -46,7 +46,7 @@ export function PosterCard(
       <Link
         href={href}
         className={cn(
-          'relative aspect-[2/3] w-full overflow-hidden rounded-sm bg-[#2c3440]',
+          'bg-surface relative aspect-[2/3] w-full overflow-hidden rounded-sm',
           className
         )}
       >
@@ -81,7 +81,7 @@ export function PosterCard(
       href={`/show/${show.id}`}
       className={cn('flex flex-col gap-1', className)}
     >
-      <div className="relative aspect-[2/3] w-full overflow-hidden rounded-sm bg-[#2c3440]">
+      <div className="bg-surface relative aspect-[2/3] w-full overflow-hidden rounded-sm">
         {show.posterUrl ? (
           <Image
             src={show.posterUrl}
@@ -102,7 +102,7 @@ export function PosterCard(
         ) : null}
       </div>
       {caption ? (
-        <p className="truncate text-xs text-[#8a9bab]">{caption}</p>
+        <p className="text-text-secondary truncate text-xs">{caption}</p>
       ) : null}
     </Link>
   );

@@ -137,18 +137,18 @@ export default async function Home() {
   const heroBannerUrl = trendingShows[0]?.bannerUrl ?? null;
 
   return (
-    <div className="flex flex-1 flex-col bg-[#14181c] font-sans antialiased">
+    <div className="flex flex-1 flex-col">
       <Suspense fallback={null}>
         <RecoveryErrorToast />
       </Suspense>
 
       <HomeHero bannerUrl={heroBannerUrl}>
-        <div className="mx-auto w-full max-w-6xl px-4 md:px-15">
+        <div className="container-shell">
           <ShowCarouselRow title="Trending TV shows" shows={trendingShows} />
         </div>
       </HomeHero>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-8 pb-20 md:px-15">
+      <main className="container-shell flex-1 pt-8 pb-20">
         <div className="flex flex-col gap-10">
           <ShowCarouselRow
             title="Watch Next"

@@ -14,7 +14,7 @@ export function CastCreditCard({
 }) {
   return (
     <Link href={`/show/${credit.showId}`} className="flex flex-col gap-1">
-      <div className="relative aspect-[2/3] w-full overflow-hidden rounded-sm bg-[#2c3440]">
+      <div className="bg-surface relative aspect-[2/3] w-full overflow-hidden rounded-sm">
         {credit.posterUrl ? (
           <Image
             src={credit.posterUrl}
@@ -34,7 +34,7 @@ export function CastCreditCard({
           />
         ) : null}
       </div>
-      <p className="truncate text-xs text-[#8a9bab]">
+      <p className="text-text-secondary truncate text-xs">
         {credit.episodeCount} episode{credit.episodeCount === 1 ? '' : 's'}
       </p>
     </Link>

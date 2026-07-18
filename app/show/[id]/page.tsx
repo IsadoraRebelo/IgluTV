@@ -46,8 +46,10 @@ const SHOW_ACTIONS: {
 }[] = [
   {
     id: 'mark-watched',
-    icon: <EyeIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
-    reviveIcon: <PlayIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    icon: <EyeIcon className="text-text-secondary h-4 w-4 md:h-5 md:w-5" />,
+    reviveIcon: (
+      <PlayIcon className="text-text-secondary h-4 w-4 md:h-5 md:w-5" />
+    ),
     finishedIcon: (
       <RocketLaunchIcon className="h-4 w-4 text-yellow-500 md:h-5 md:w-5" />
     ),
@@ -56,37 +58,37 @@ const SHOW_ACTIONS: {
   },
   {
     id: 'favourite',
-    icon: <HeartIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    icon: <HeartIcon className="text-text-secondary h-4 w-4 md:h-5 md:w-5" />,
     label: 'Favourite',
     activeColor: '[&_svg]:!text-red-500',
   },
   {
     id: '1',
     status: 'watch_later',
-    icon: <ClockIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    icon: <ClockIcon className="text-text-secondary h-4 w-4 md:h-5 md:w-5" />,
     label: 'Add to watchlist',
     activeColor: '[&_svg]:!text-accent-foreground',
   },
   {
     id: '2',
     status: 'paused',
-    icon: <PauseIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    icon: <PauseIcon className="text-text-secondary h-4 w-4 md:h-5 md:w-5" />,
     label: 'Pause',
     activeColor: '[&_svg]:!text-paused',
   },
   {
     id: '3',
     status: 'dropped',
-    icon: <TrashIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    icon: <TrashIcon className="text-text-secondary h-4 w-4 md:h-5 md:w-5" />,
     label: 'Drop',
     activeColor: '[&_svg]:!text-dropped',
   },
   {
-    icon: <ImageIcon className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    icon: <ImageIcon className="text-text-secondary h-4 w-4 md:h-5 md:w-5" />,
     label: 'Change poster',
   },
   {
-    icon: <ImagePlus className="h-4 w-4 text-[#8a9bab] md:h-5 md:w-5" />,
+    icon: <ImagePlus className="text-text-secondary h-4 w-4 md:h-5 md:w-5" />,
     label: 'Change banner',
   },
 ];
@@ -159,7 +161,7 @@ export default async function ShowPage({
       tmdbStatus={details.status}
       isLoggedIn={isLoggedIn}
     >
-      <div className="flex flex-1 flex-col bg-[#14181c] font-sans antialiased">
+      <div className="flex flex-1 flex-col">
         <div className="relative mx-auto w-full max-w-6xl">
           <div className="relative h-[200px] w-full overflow-hidden sm:h-[450px]">
             {details.bannerUrl ? (
@@ -172,14 +174,14 @@ export default async function ShowPage({
                 className="object-cover object-top"
               />
             ) : null}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#14181c] via-[#14181c]/40 to-[#14181c]/10" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#14181c] via-transparent to-[#14181c]" />
+            <div className="from-background via-background/40 to-background/10 absolute inset-0 bg-gradient-to-t" />
+            <div className="from-background to-background absolute inset-0 bg-gradient-to-r via-transparent" />
             <div className="absolute top-15 right-4 z-10 sm:top-24 sm:right-6 lg:hidden">
               <ShowActionsMenu actions={SHOW_ACTIONS} />
             </div>
           </div>
 
-          <div className="relative z-10 mx-auto -mt-24 w-full max-w-[950px] px-3 sm:-mt-32 md:px-0">
+          <div className="container-narrow relative z-10 -mt-24 sm:-mt-32">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-8">
               <div className="relative hidden h-[345px] w-[230px] shrink-0 overflow-hidden rounded-md shadow-2xl ring-1 ring-white/10 md:block">
                 {details.posterUrl ? (
@@ -191,7 +193,7 @@ export default async function ShowPage({
                     className="object-cover"
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-[#2c3440] text-xs text-[#678]">
+                  <div className="bg-surface text-text-faint flex h-full w-full items-center justify-center text-xs">
                     No poster
                   </div>
                 )}
@@ -202,7 +204,7 @@ export default async function ShowPage({
                   {details.name}
                 </h1>
                 {metaLineParts.length > 0 ? (
-                  <p className="text-sm text-[#8a9bab]">
+                  <p className="text-text-secondary text-sm">
                     {metaLineParts.join(' · ')}
                   </p>
                 ) : null}
@@ -224,7 +226,7 @@ export default async function ShowPage({
           </div>
         </div>
 
-        <main className="mx-auto w-full max-w-[950px] flex-1 px-3 pb-20 md:px-0">
+        <main className="container-narrow flex-1 pb-20">
           <div className="mt-6 grid grid-cols-1 gap-10 md:mt-10 lg:grid-cols-[1fr_260px]">
             <div>
               <ShowTabs
@@ -305,7 +307,7 @@ function HomeTab({
 function CastTab({ cast }: { cast: ShowDetails['cast'] }) {
   if (cast.length === 0) {
     return (
-      <p className="text-sm text-[#678]">No cast information available.</p>
+      <p className="text-text-faint text-sm">No cast information available.</p>
     );
   }
 
@@ -328,7 +330,7 @@ function CastTab({ cast }: { cast: ShowDetails['cast'] }) {
 
 function SimilarTab({ shows }: { shows: ShowMeta['similar'] }) {
   if (shows.length === 0) {
-    return <p className="text-sm text-[#678]">No similar shows found.</p>;
+    return <p className="text-text-faint text-sm">No similar shows found.</p>;
   }
 
   return (

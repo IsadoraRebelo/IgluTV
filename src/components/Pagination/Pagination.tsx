@@ -1,6 +1,9 @@
 import { cn } from '@/utils';
 
-function getPageNumbers(page: number, totalPages: number): (number | 'ellipsis')[] {
+function getPageNumbers(
+  page: number,
+  totalPages: number
+): (number | 'ellipsis')[] {
   if (totalPages <= 5) {
     return Array.from({ length: totalPages }, (_, i) => i + 1);
   }
@@ -37,7 +40,7 @@ export function Pagination({
       <div className="flex items-center gap-2 text-sm">
         {getPageNumbers(page, totalPages).map((entry, i) =>
           entry === 'ellipsis' ? (
-            <span key={`ellipsis-${i}`} className="px-1 text-[#678]">
+            <span key={`ellipsis-${i}`} className="text-text-faint px-1">
               …
             </span>
           ) : (
@@ -49,7 +52,7 @@ export function Pagination({
                 'flex h-7 w-7 items-center justify-center rounded-md',
                 entry === page
                   ? 'bg-accent text-black'
-                  : 'text-[#9ab0bf] hover:bg-white/5'
+                  : 'text-text-tertiary hover:bg-white/5'
               )}
             >
               {entry}
@@ -62,7 +65,7 @@ export function Pagination({
         type="button"
         disabled={page >= totalPages}
         onClick={() => onPageChange(Math.min(page + 1, totalPages))}
-        className="rounded-md bg-white/5 px-4 py-2 text-sm text-[#c2d0dd] hover:bg-white/10 disabled:cursor-default disabled:opacity-40"
+        className="text-text-primary rounded-md bg-white/5 px-4 py-2 text-sm hover:bg-white/10 disabled:cursor-default disabled:opacity-40"
       >
         Older
       </button>
