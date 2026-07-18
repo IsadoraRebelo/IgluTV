@@ -117,6 +117,14 @@ h6 {
   font-family: var(--font-bricolage-grotesque-sans), sans-serif;
 }
 
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  overscroll-behavior-y: none;
+}
+
 button {
   cursor: pointer;
 }

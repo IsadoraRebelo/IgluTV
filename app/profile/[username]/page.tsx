@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -30,6 +31,22 @@ import {
 
 const RECENT_ACTIVITY_LIMIT = 15;
 const WATCHLIST_PREVIEW_LIMIT = 5;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}): Promise<Metadata> {
+  const { username } = await params;
+  const profile = await getProfileByUsername(username);
+  if (!profile) {
+    return { title: 'IgluTV' };
+  }
+
+  return {
+    title: `${profile.username} - IgluTV`,
+  };
+}
 
 export default async function ProfilePage({
   params,

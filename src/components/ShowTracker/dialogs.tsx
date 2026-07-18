@@ -24,7 +24,7 @@ export function CatchUpDialog({
     >
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="max-sm:data-[state=open]:animate-fade-in max-sm:data-[state=closed]:animate-fade-out fixed inset-0 z-50 bg-black/50" />
-        <DialogPrimitive.Content className="max-sm:data-[state=open]:animate-slide-up max-sm:data-[state=closed]:animate-slide-down bg-primary-foreground border-muted fixed inset-x-0 bottom-0 z-50 flex w-full flex-col gap-1 rounded-t-lg border text-center shadow-lg sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-xs sm:max-w-[250px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg">
+        <DialogPrimitive.Content className="max-sm:data-[state=open]:animate-slide-up max-sm:data-[state=closed]:animate-slide-down bg-primary-foreground border-muted fixed inset-x-0 bottom-0 z-50 flex w-full flex-col gap-1 rounded-t-lg border text-center shadow-lg max-sm:pb-[env(safe-area-inset-bottom)] sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-xs sm:max-w-[250px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg">
           <DialogPrimitive.Title className="text-foreground text-md pt-4 font-semibold">
             Mark previous episodes?
           </DialogPrimitive.Title>
@@ -102,7 +102,7 @@ export function DateChoiceDialog({
     >
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="max-sm:data-[state=open]:animate-fade-in max-sm:data-[state=closed]:animate-fade-out fixed inset-0 z-50 bg-black/50" />
-        <DialogPrimitive.Content className="max-sm:data-[state=open]:animate-slide-up max-sm:data-[state=closed]:animate-slide-down bg-primary-foreground border-muted fixed inset-x-0 bottom-0 z-50 flex w-full flex-col gap-1 rounded-t-lg border text-center shadow-lg sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-xs sm:max-w-[250px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg">
+        <DialogPrimitive.Content className="max-sm:data-[state=open]:animate-slide-up max-sm:data-[state=closed]:animate-slide-down bg-primary-foreground border-muted fixed inset-x-0 bottom-0 z-50 flex w-full flex-col gap-1 rounded-t-lg border text-center shadow-lg max-sm:pb-[env(safe-area-inset-bottom)] sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-xs sm:max-w-[250px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg">
           <DialogPrimitive.Title className="text-foreground text-md pt-4 font-semibold">
             {title}
           </DialogPrimitive.Title>
@@ -166,7 +166,7 @@ export function UnmarkShowDialog({
     >
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="max-sm:data-[state=open]:animate-fade-in max-sm:data-[state=closed]:animate-fade-out fixed inset-0 z-50 bg-black/50" />
-        <DialogPrimitive.Content className="max-sm:data-[state=open]:animate-slide-up max-sm:data-[state=closed]:animate-slide-down bg-primary-foreground border-muted fixed inset-x-0 bottom-0 z-50 flex w-full flex-col gap-1 rounded-t-lg border text-center shadow-lg sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-xs sm:max-w-[250px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg">
+        <DialogPrimitive.Content className="max-sm:data-[state=open]:animate-slide-up max-sm:data-[state=closed]:animate-slide-down bg-primary-foreground border-muted fixed inset-x-0 bottom-0 z-50 flex w-full flex-col gap-1 rounded-t-lg border text-center shadow-lg max-sm:pb-[env(safe-area-inset-bottom)] sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-xs sm:max-w-[250px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg">
           <DialogPrimitive.Title className="text-foreground text-md pt-4 font-semibold">
             Mark show as unwatched?
           </DialogPrimitive.Title>

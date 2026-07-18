@@ -8,6 +8,7 @@ import {
   TrashIcon,
 } from '@heroicons/react/24/solid';
 import { Image as ImageIcon, ImagePlus } from 'lucide-react';
+import type { Metadata } from 'next';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import type { ReactNode } from 'react';
@@ -34,6 +35,27 @@ import {
 import { getViewer } from '@/services/viewer';
 
 import type { ShowDetails, ShowMeta, ShowStatus } from '@/types';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const numericId = Number(id);
+  if (Number.isNaN(numericId)) {
+    return { title: 'IgluTV' };
+  }
+
+  const tmdbFull = await getTmdbShowFullDetails(numericId);
+  if (!tmdbFull) {
+    return { title: 'IgluTV' };
+  }
+
+  return {
+    title: `${tmdbFull.details.name} - IgluTV`,
+  };
+}
 
 const SHOW_ACTIONS: {
   id?: string;

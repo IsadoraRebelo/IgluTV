@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Bricolage_Grotesque, Inter } from 'next/font/google';
 
 import { Footer, Toaster } from '@/components';
@@ -22,6 +22,17 @@ const bricolageGrotesque = Bricolage_Grotesque({
 export const metadata: Metadata = {
   title: 'IgluTV',
   description: 'IgluTV - Your personalized TV show tracker',
+  appleWebApp: {
+    capable: true,
+    title: 'IgluTV',
+    statusBarStyle: 'black-translucent',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#14181c',
+  colorScheme: 'dark',
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({

@@ -48,7 +48,7 @@ function MobileFiltersSheet<TSortKey extends string>({
       </DialogPrimitive.Trigger>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out fixed inset-0 z-50 bg-black/70" />
-        <DialogPrimitive.Content className="data-[state=open]:animate-slide-up data-[state=closed]:animate-slide-down bg-background fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] w-full flex-col rounded-t-lg shadow-2xl">
+        <DialogPrimitive.Content className="data-[state=open]:animate-slide-up data-[state=closed]:animate-slide-down bg-background fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] w-full flex-col rounded-t-lg pb-[env(safe-area-inset-bottom)] shadow-2xl">
           <div className="relative flex shrink-0 items-center justify-center px-4 py-3 pt-5">
             <DialogPrimitive.Title className="text-muted-foreground text-center text-xs font-semibold uppercase">
               Filters

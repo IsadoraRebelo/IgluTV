@@ -60,7 +60,7 @@ export const AuthDialog = ({
       ) : null}
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="max-sm:data-[state=open]:animate-fade-in max-sm:data-[state=closed]:animate-fade-out fixed inset-0 z-50 bg-black/50" />
-        <DialogPrimitive.Content className="max-sm:data-[state=open]:animate-slide-up max-sm:data-[state=closed]:animate-slide-down bg-background border-muted fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] w-full flex-col gap-5 overflow-y-auto rounded-t-lg border p-6 shadow-lg sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-[90vw] sm:max-w-sm sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg">
+        <DialogPrimitive.Content className="max-sm:data-[state=open]:animate-slide-up max-sm:data-[state=closed]:animate-slide-down bg-background border-muted fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] w-full flex-col gap-5 overflow-y-auto rounded-t-lg border p-6 shadow-lg max-sm:pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-[90vw] sm:max-w-sm sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg">
           <div className="flex items-center justify-between">
             <DialogPrimitive.Title className="text-foreground text-lg font-semibold">
               {title}

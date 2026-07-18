@@ -28,7 +28,7 @@ export function NavBarClient() {
   return (
     <header
       className={cn(
-        'flex h-16 items-center',
+        'flex min-h-16 items-center pt-[env(safe-area-inset-top)]',
         isOverlay
           ? 'absolute inset-x-0 top-0 z-50 bg-transparent'
           : 'bg-background text-foreground'
