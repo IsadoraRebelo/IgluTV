@@ -4,6 +4,8 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 
+import { LogOutButton } from '@/components';
+
 import { ChangeEmailForm } from './ChangeEmailForm';
 import { ChangePasswordForm } from './ChangePasswordForm';
 import { DeleteAccountSection } from './DeleteAccountSection';
@@ -25,6 +27,7 @@ export function AccountView({ email }: { email: string }) {
 
       <ChangeEmailForm currentEmail={email} />
       <ChangePasswordForm />
+      <LogOutButton className="w-fit" />
       <DeleteAccountSection />
     </div>
   );

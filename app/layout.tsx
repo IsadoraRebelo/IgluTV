@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Bricolage_Grotesque, Inter } from 'next/font/google';
 
 import { Footer, Toaster } from '@/components';
+import { BottomTabBar } from '@/components/NavBar/BottomTabBar';
 import { NavBar } from '@/components/NavBar/NavBar';
 import { ViewerProvider } from '@/components/ViewerProvider/ViewerProvider';
 
@@ -47,12 +48,13 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${bricolageGrotesque.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">
+      <body className="flex min-h-full flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
         <ViewerProvider viewerPromise={viewerPromise}>
           <Toaster />
           <NavBar />
           {children}
           <Footer />
+          <BottomTabBar />
         </ViewerProvider>
       </body>
     </html>

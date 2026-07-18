@@ -7,6 +7,7 @@ import { Suspense, useState } from 'react';
 
 import { cn } from '@/utils';
 
+import { NavBarShowsLink } from './NavBarShowsLink';
 import { NavBarUserMenu } from './NavBarUserMenu';
 
 export function NavBarClient() {
@@ -28,18 +29,24 @@ export function NavBarClient() {
   return (
     <header
       className={cn(
-        'flex min-h-16 items-center pt-[env(safe-area-inset-top)]',
+        'hidden min-h-16 items-center pt-[env(safe-area-inset-top)] lg:flex',
         isOverlay
           ? 'absolute inset-x-0 top-0 z-50 bg-transparent'
           : 'bg-background text-foreground'
       )}
     >
       <div className="container-shell flex items-center justify-between gap-6">
-        <Link href="/" className="text-accent text-lg font-bold tracking-tight">
-          Iglu <span className="font-normal">tv</span>
+        <Link
+          href="/"
+          className="text-accent font-heading text-xl font-extrabold tracking-tight sm:text-2xl"
+        >
+          Iglu <span className="text-foreground font-normal">tv</span>
         </Link>
 
-        <nav className="flex items-center gap-6 text-sm font-semibold">
+        <nav className="hidden items-center gap-6 text-sm font-semibold lg:flex">
+          <Suspense fallback={null}>
+            <NavBarShowsLink isOverlay={isOverlay} />
+          </Suspense>
           <Link
             href="/tracking"
             className={cn(
@@ -49,7 +56,7 @@ export function NavBarClient() {
                 : 'text-foreground/80 hover:text-foreground'
             )}
           >
-            Tracker
+            My Tracker
           </Link>
         </nav>
 

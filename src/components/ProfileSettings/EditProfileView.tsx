@@ -1,8 +1,9 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { X } from 'lucide-react';
+import { ChevronRight, X } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
 import { SubmitHandler, useForm } from 'react-hook-form';
@@ -143,6 +144,15 @@ export function EditProfileView({
           Change banner
         </Button>
       </div>
+
+      <Link
+        href="/account"
+        onClick={onClose}
+        className="text-text-secondary hover:text-white -mx-1 flex items-center justify-between rounded-md px-1 py-2 text-sm"
+      >
+        Account settings
+        <ChevronRight className="h-4 w-4" />
+      </Link>
     </div>
   );
 }
