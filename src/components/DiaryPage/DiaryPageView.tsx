@@ -2,25 +2,32 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
 
+import { EmptyState } from '@/components/EmptyState/EmptyState';
+import { ListFilterBar } from '@/components/ListFilterBar/ListFilterBar';
 import { Pagination } from '@/components/Pagination/Pagination';
 
-import { type DiaryEntry, diaryEntryKey, formatDiaryDate } from '@/utils';
+import type { FacetDef, SortKeyDef } from '@/types/list-controls';
 
-import { DiaryFilterBar } from './DiaryFilterBar';
-import type { DiarySortDirection, DiarySortKey } from './types';
+import {
+  type DiaryEntry,
+  diaryEntryKey,
+  type DiaryMonthGroup,
+  formatDiaryDate,
+  groupDiaryEntriesByMonth,
+} from '@/utils';
+import { useListControls } from '@/hooks/useListControls';
+
+type DiarySortKey = 'watched-date' | 'release-date' | 'alphabetical';
 
 const PAGE_SIZE = 30;
 
-const SORT_DEFAULT_DIRECTION: Record<DiarySortKey, DiarySortDirection> = {
-  'watched-date': 'desc',
-  'release-date': 'desc',
-  alphabetical: 'asc',
-};
-
 function decadeOf(entry: DiaryEntry): number | null {
   return entry.show.year ? Math.floor(Number(entry.show.year) / 10) * 10 : null;
+}
+
+function diaryYearOf(entry: DiaryEntry): number {
+  return Number(formatDiaryDate(entry.watchedOn).year);
 }
 
 function diaryRowLabel(entry: DiaryEntry): string {
@@ -29,161 +36,127 @@ function diaryRowLabel(entry: DiaryEntry): string {
     : entry.show.name;
 }
 
-function toggleSetValue<T>(set: Set<T>, value: T): Set<T> {
-  const next = new Set(set);
-  if (next.has(value)) next.delete(value);
-  else next.add(value);
-  return next;
-}
+type DiaryRow = {
+  entry: DiaryEntry;
+  showMonthBadge: boolean;
+  showDay: boolean;
+};
 
-function sortEntries(
-  entries: DiaryEntry[],
-  sortKey: DiarySortKey,
-  direction: DiarySortDirection
-): DiaryEntry[] {
-  if (sortKey === 'release-date') {
-    const withYear = entries.filter((e) => e.show.year !== null);
-    const withoutYear = entries.filter((e) => e.show.year === null);
-    withYear.sort((a, b) => a.show.year!.localeCompare(b.show.year!));
-    if (direction === 'desc') withYear.reverse();
-    return [...withYear, ...withoutYear];
+// Flattens the month/day groups back into a single ordered row list,
+// tagging each row with whether it starts a new month (badge) or a new
+// day (date value). Running this over the FULL sorted list (before
+// pagination) — rather than comparing each page's rows only to their
+// immediate neighbor within that same page — is what fixes the bug where
+// an entry landing on the first row of page 2 always showed its month
+// badge, even if it shared a month with page 1's last row.
+function flattenDiaryGroups(groups: DiaryMonthGroup[]): DiaryRow[] {
+  const rows: DiaryRow[] = [];
+  for (const monthGroup of groups) {
+    monthGroup.days.forEach((dayGroup, dayIndex) => {
+      dayGroup.entries.forEach((entry, entryIndex) => {
+        rows.push({
+          entry,
+          showMonthBadge: dayIndex === 0 && entryIndex === 0,
+          showDay: entryIndex === 0,
+        });
+      });
+    });
   }
-
-  const sorted = [...entries].sort((a, b) => {
-    switch (sortKey) {
-      case 'watched-date':
-        return a.watchedOn.localeCompare(b.watchedOn);
-      case 'alphabetical':
-        return a.show.name.localeCompare(b.show.name);
-    }
-  });
-
-  if (direction === 'desc') sorted.reverse();
-  return sorted;
+  return rows;
 }
 
-export function DiaryPageView({ entries }: { entries: DiaryEntry[] }) {
-  const [selectedYears, setSelectedYears] = useState<Set<number>>(new Set());
-  const [selectedDecades, setSelectedDecades] = useState<Set<number>>(
-    new Set()
-  );
-  const [selectedGenres, setSelectedGenres] = useState<Set<string>>(new Set());
-  const [sortKey, setSortKey] = useState<DiarySortKey>('watched-date');
-  const [sortDirection, setSortDirection] = useState<DiarySortDirection>(
-    SORT_DEFAULT_DIRECTION['watched-date']
-  );
-  const [page, setPage] = useState(1);
-
-  const yearOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(entries.map((e) => Number(formatDiaryDate(e.watchedOn).year)))
-      ).sort((a, b) => b - a),
-    [entries]
-  );
-  const decadeOptions = useMemo(
-    () =>
+const FACETS: FacetDef<DiaryEntry>[] = [
+  {
+    key: 'year',
+    label: 'Diary Year',
+    getOptions: (entries) =>
+      Array.from(new Set(entries.map(diaryYearOf))).sort((a, b) => b - a),
+    getValues: (entry) => [diaryYearOf(entry)],
+    optionLabel: (value) => String(value),
+  },
+  {
+    key: 'decade',
+    label: 'Decade',
+    getOptions: (entries) =>
       Array.from(
         new Set(entries.map(decadeOf).filter((d): d is number => d !== null))
       ).sort((a, b) => b - a),
-    [entries]
-  );
-  const genreOptions = useMemo(
-    () =>
+    getValues: (entry) => {
+      const decade = decadeOf(entry);
+      return decade === null ? [] : [decade];
+    },
+    optionLabel: (value) => `${value}s`,
+  },
+  {
+    key: 'genre',
+    label: 'Genre',
+    getOptions: (entries) =>
       Array.from(new Set(entries.flatMap((e) => e.show.genres))).sort((a, b) =>
         a.localeCompare(b)
       ),
-    [entries]
-  );
+    getValues: (entry) => entry.show.genres,
+    optionLabel: (value) => String(value),
+  },
+];
 
-  const filteredEntries = useMemo(() => {
-    return entries.filter((entry) => {
-      if (
-        selectedYears.size > 0 &&
-        !selectedYears.has(Number(formatDiaryDate(entry.watchedOn).year))
-      ) {
-        return false;
-      }
-      const decade = decadeOf(entry);
-      if (
-        selectedDecades.size > 0 &&
-        (decade === null || !selectedDecades.has(decade))
-      ) {
-        return false;
-      }
-      if (
-        selectedGenres.size > 0 &&
-        !entry.show.genres.some((genre) => selectedGenres.has(genre))
-      ) {
-        return false;
-      }
-      return true;
-    });
-  }, [entries, selectedYears, selectedDecades, selectedGenres]);
+const SORT_KEYS: SortKeyDef<DiaryEntry, DiarySortKey>[] = [
+  {
+    key: 'watched-date',
+    label: 'Watched Date',
+    defaultDirection: 'desc',
+    strategy: {
+      kind: 'comparator',
+      compare: (a, b) => a.watchedOn.localeCompare(b.watchedOn),
+    },
+  },
+  {
+    key: 'release-date',
+    label: 'Release Date',
+    defaultDirection: 'desc',
+    strategy: { kind: 'nullable-string', getValue: (e) => e.show.year },
+  },
+  {
+    key: 'alphabetical',
+    label: 'Alphabetical',
+    defaultDirection: 'asc',
+    strategy: {
+      kind: 'comparator',
+      compare: (a, b) => a.show.name.localeCompare(b.show.name),
+    },
+  },
+];
 
-  const sortedEntries = useMemo(
-    () => sortEntries(filteredEntries, sortKey, sortDirection),
-    [filteredEntries, sortKey, sortDirection]
-  );
+export function DiaryPageView({ entries }: { entries: DiaryEntry[] }) {
+  const controls = useListControls<DiaryEntry, DiarySortKey, DiaryRow>({
+    entries,
+    facets: FACETS,
+    sortKeys: SORT_KEYS,
+    initialSortKey: 'watched-date',
+    pageSize: PAGE_SIZE,
+    postProcess: (sorted) =>
+      flattenDiaryGroups(groupDiaryEntriesByMonth(sorted)),
+  });
 
-  const totalPages = Math.max(1, Math.ceil(sortedEntries.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const pageEntries = sortedEntries.slice(
-    (currentPage - 1) * PAGE_SIZE,
-    currentPage * PAGE_SIZE
-  );
-
-  function resetToFirstPage() {
-    setPage(1);
-  }
-
-  function handleSortChange(key: DiarySortKey) {
-    if (key === sortKey) {
-      setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortKey(key);
-      setSortDirection(SORT_DEFAULT_DIRECTION[key]);
-    }
-    resetToFirstPage();
-  }
-
-  if (entries.length === 0) {
-    return (
-      <p className="py-24 text-center text-[#9ab0bf]">No diary entries yet.</p>
-    );
+  if (controls.isEmpty) {
+    return <EmptyState message="No diary entries yet." />;
   }
 
   return (
     <div className="flex flex-col gap-3">
-      <DiaryFilterBar
+      <ListFilterBar
         title="Diary"
-        yearOptions={yearOptions}
-        decadeOptions={decadeOptions}
-        genreOptions={genreOptions}
-        selectedYears={selectedYears}
-        selectedDecades={selectedDecades}
-        selectedGenres={selectedGenres}
-        onToggleYear={(value) => {
-          setSelectedYears((s) => toggleSetValue(s, value));
-          resetToFirstPage();
-        }}
-        onToggleDecade={(value) => {
-          setSelectedDecades((s) => toggleSetValue(s, value));
-          resetToFirstPage();
-        }}
-        onToggleGenre={(value) => {
-          setSelectedGenres((s) => toggleSetValue(s, value));
-          resetToFirstPage();
-        }}
-        sortKey={sortKey}
-        sortDirection={sortDirection}
-        onSortChange={handleSortChange}
+        facets={controls.facets}
+        sortKey={controls.sortKey}
+        sortDirection={controls.sortDirection}
+        sortLabels={controls.sortLabels}
+        onSortChange={controls.onSortChange}
+        controlsRowClassName="flex flex-wrap items-center gap-4"
+        desktopFacetsClassName="hidden flex-wrap items-center gap-5 sm:flex"
+        sortDropdownWrapperClassName="hidden sm:block"
       />
 
-      {pageEntries.length === 0 ? (
-        <p className="py-24 text-center text-[#9ab0bf]">
-          No entries match these filters.
-        </p>
+      {controls.hasNoMatches ? (
+        <EmptyState message="No entries match these filters." />
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
@@ -198,74 +171,66 @@ export function DiaryPageView({ entries }: { entries: DiaryEntry[] }) {
               </tr>
             </thead>
             <tbody>
-              {pageEntries.map((entry, i) => {
-                const prev = i > 0 ? pageEntries[i - 1] : null;
-                const current = formatDiaryDate(entry.watchedOn);
-                const prevFormatted = prev
-                  ? formatDiaryDate(prev.watchedOn)
-                  : null;
-                const showMonthBadge =
-                  !prevFormatted ||
-                  prevFormatted.month !== current.month ||
-                  prevFormatted.year !== current.year;
-                const showDay = !prev || prev.watchedOn !== entry.watchedOn;
-
-                return (
-                  <tr
-                    key={diaryEntryKey(entry)}
-                    className="border-b border-white/5 hover:bg-white/[0.03]"
-                  >
-                    <td className="py-3 pr-3 align-top">
-                      {showMonthBadge ? (
-                        <div className="flex w-14 flex-col items-center rounded-md bg-white/[0.06] py-1">
-                          <span className="text-[10px] font-bold tracking-wide text-[#8a9bab] uppercase">
-                            {current.month}
+              {controls.pageEntries.map(
+                ({ entry, showMonthBadge, showDay }) => {
+                  const current = formatDiaryDate(entry.watchedOn);
+                  return (
+                    <tr
+                      key={diaryEntryKey(entry)}
+                      className="border-b border-white/5 hover:bg-white/[0.03]"
+                    >
+                      <td className="py-3 pr-3 align-top">
+                        {showMonthBadge ? (
+                          <div className="flex w-14 flex-col items-center rounded-md bg-white/[0.06] py-1">
+                            <span className="text-[10px] font-bold tracking-wide text-[#8a9bab] uppercase">
+                              {current.month}
+                            </span>
+                            <span className="text-[10px] font-bold tracking-wide text-[#8a9bab] uppercase">
+                              {current.year}
+                            </span>
+                          </div>
+                        ) : null}
+                      </td>
+                      <td className="text-accent-foreground py-3 pr-3 align-top text-sm">
+                        {showDay ? current.day : null}
+                      </td>
+                      <td className="py-3 pr-3 align-top">
+                        <Link
+                          href={`/show/${entry.show.id}`}
+                          className="flex min-w-0 items-center gap-3"
+                        >
+                          <div className="relative aspect-[2/3] w-10 shrink-0 overflow-hidden rounded-md bg-[#2c3440]">
+                            {entry.show.posterUrl ? (
+                              <Image
+                                src={entry.show.posterUrl}
+                                alt={entry.show.name}
+                                fill
+                                sizes="40px"
+                                className="object-cover"
+                              />
+                            ) : null}
+                          </div>
+                          <span className="truncate text-sm font-semibold text-white">
+                            {diaryRowLabel(entry)}
                           </span>
-                          <span className="text-[10px] font-bold tracking-wide text-[#8a9bab] uppercase">
-                            {current.year}
-                          </span>
-                        </div>
-                      ) : null}
-                    </td>
-                    <td className="text-accent-foreground py-3 pr-3 align-top text-sm">
-                      {showDay ? current.day : null}
-                    </td>
-                    <td className="py-3 pr-3 align-top">
-                      <Link
-                        href={`/show/${entry.show.id}`}
-                        className="flex min-w-0 items-center gap-3"
-                      >
-                        <div className="relative aspect-[2/3] w-10 shrink-0 overflow-hidden rounded-md bg-[#2c3440]">
-                          {entry.show.posterUrl ? (
-                            <Image
-                              src={entry.show.posterUrl}
-                              alt={entry.show.name}
-                              fill
-                              sizes="40px"
-                              className="object-cover"
-                            />
-                          ) : null}
-                        </div>
-                        <span className="truncate text-sm font-semibold text-white">
-                          {diaryRowLabel(entry)}
-                        </span>
-                      </Link>
-                    </td>
-                    <td className="text-muted-foreground hidden py-3 pr-3 align-top text-sm sm:table-cell">
-                      {entry.show.year ?? '—'}
-                    </td>
-                  </tr>
-                );
-              })}
+                        </Link>
+                      </td>
+                      <td className="text-muted-foreground hidden py-3 pr-3 align-top text-sm sm:table-cell">
+                        {entry.show.year ?? '—'}
+                      </td>
+                    </tr>
+                  );
+                }
+              )}
             </tbody>
           </table>
         </div>
       )}
 
       <Pagination
-        page={currentPage}
-        totalPages={totalPages}
-        onPageChange={setPage}
+        page={controls.page}
+        totalPages={controls.totalPages}
+        onPageChange={controls.onPageChange}
       />
     </div>
   );

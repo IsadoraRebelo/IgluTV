@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 
 import { ProfileSubNav, WatchedShowsView } from '@/components';
 import { getDisplayStatus } from '@/components/ShowTracker/utils';
-import type { WatchedShowEntry } from '@/components/WatchedShows/types';
+import type { WatchedShowEntry } from '@/components/WatchedShows/WatchedShowsView';
 
 import { getProfileByUsername } from '@/services/profile';
 import {

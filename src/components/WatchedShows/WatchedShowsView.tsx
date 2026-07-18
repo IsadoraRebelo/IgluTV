@@ -1,19 +1,28 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-
+import { EmptyState } from '@/components/EmptyState/EmptyState';
+import { ListFilterBar } from '@/components/ListFilterBar/ListFilterBar';
 import { Pagination } from '@/components/Pagination/Pagination';
 import { PosterCard } from '@/components/PosterCard/PosterCard';
-import type { DisplayStatus } from '@/types';
-import { cn } from '@/utils';
+import { PosterGrid } from '@/components/PosterGrid/PosterGrid';
 
-import type {
-  Density,
-  SortDirection,
-  SortKey,
-  WatchedShowEntry,
-} from './types';
-import { WatchedShowsFilterBar } from './WatchedShowsFilterBar';
+import type { DisplayStatus, ShowStatus, ShowSummary } from '@/types';
+import type { Density, FacetDef, SortKeyDef } from '@/types/list-controls';
+
+import { cn } from '@/utils';
+import { useListControls } from '@/hooks/useListControls';
+
+export type WatchedShowEntry = {
+  show: ShowSummary;
+  watchedCount: number;
+  status: ShowStatus;
+  displayStatus: DisplayStatus;
+  decade: number | null;
+  createdAt: string;
+};
+
+type WatchedShowSortKey =
+  'release-date' | 'alphabetical' | 'date-added' | 'progress';
 
 const STATUS_OPTIONS: { id: DisplayStatus; label: string }[] = [
   { id: 'ongoing', label: 'Ongoing' },
@@ -26,13 +35,6 @@ const STATUS_OPTIONS: { id: DisplayStatus; label: string }[] = [
 const PAGE_SIZE: Record<Density, number> = {
   dense: 66,
   large: 36,
-};
-
-const SORT_DEFAULT_DIRECTION: Record<SortKey, SortDirection> = {
-  'release-date': 'desc',
-  alphabetical: 'asc',
-  'date-added': 'desc',
-  progress: 'desc',
 };
 
 const DENSITY_GRID_CLASSES: Record<Density, string> = {
@@ -59,73 +61,41 @@ function progressRatio(entry: WatchedShowEntry): number {
     : 0;
 }
 
-function sortEntries(
-  entries: WatchedShowEntry[],
-  sortKey: SortKey,
-  direction: SortDirection
-): WatchedShowEntry[] {
-  if (sortKey === 'release-date') {
-    const withYear = entries.filter((e) => e.show.year !== null);
-    const withoutYear = entries.filter((e) => e.show.year === null);
-    withYear.sort((a, b) => a.show.year!.localeCompare(b.show.year!));
-    if (direction === 'desc') withYear.reverse();
-    return [...withYear, ...withoutYear];
-  }
-
-  const sorted = [...entries].sort((a, b) => {
-    switch (sortKey) {
-      case 'alphabetical':
-        return a.show.name.localeCompare(b.show.name);
-      case 'date-added':
-        return a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0;
-      case 'progress':
-        return progressRatio(a) - progressRatio(b);
-    }
-  });
-
-  if (direction === 'desc') sorted.reverse();
-  return sorted;
-}
-
-function toggleSetValue<T>(set: Set<T>, value: T): Set<T> {
-  const next = new Set(set);
-  if (next.has(value)) next.delete(value);
-  else next.add(value);
-  return next;
-}
-
-export function WatchedShowsView({ entries }: { entries: WatchedShowEntry[] }) {
-  const [selectedStatuses, setSelectedStatuses] = useState<Set<DisplayStatus>>(
-    new Set()
-  );
-  const [selectedDecades, setSelectedDecades] = useState<Set<number>>(new Set());
-  const [selectedGenres, setSelectedGenres] = useState<Set<string>>(new Set());
-  const [selectedServices, setSelectedServices] = useState<Set<string>>(
-    new Set()
-  );
-  const [sortKey, setSortKey] = useState<SortKey>('release-date');
-  const [sortDirection, setSortDirection] = useState<SortDirection>(
-    SORT_DEFAULT_DIRECTION['release-date']
-  );
-  const [density, setDensity] = useState<Density>('dense');
-  const [page, setPage] = useState(1);
-
-  const decadeOptions = useMemo(
-    () =>
-      Array.from(new Set(entries.map((e) => e.decade).filter((d): d is number => d !== null))).sort(
-        (a, b) => b - a
-      ),
-    [entries]
-  );
-  const genreOptions = useMemo(
-    () =>
+const FACETS: FacetDef<WatchedShowEntry>[] = [
+  {
+    key: 'status',
+    label: 'Status',
+    getOptions: () => STATUS_OPTIONS.map((s) => s.id),
+    getValues: (entry) => [entry.displayStatus],
+    optionLabel: (value) =>
+      STATUS_OPTIONS.find((s) => s.id === value)?.label ?? String(value),
+  },
+  {
+    key: 'decade',
+    label: 'Decade',
+    getOptions: (entries) =>
+      Array.from(
+        new Set(
+          entries.map((e) => e.decade).filter((d): d is number => d !== null)
+        )
+      ).sort((a, b) => b - a),
+    getValues: (entry) => (entry.decade === null ? [] : [entry.decade]),
+    optionLabel: (value) => `${value}s`,
+  },
+  {
+    key: 'genre',
+    label: 'Genre',
+    getOptions: (entries) =>
       Array.from(new Set(entries.flatMap((e) => e.show.genres))).sort((a, b) =>
         a.localeCompare(b)
       ),
-    [entries]
-  );
-  const serviceOptions = useMemo(
-    () =>
+    getValues: (entry) => entry.show.genres,
+    optionLabel: (value) => String(value),
+  },
+  {
+    key: 'service',
+    label: 'Service',
+    getOptions: (entries) =>
       Array.from(
         new Set(
           entries
@@ -133,118 +103,82 @@ export function WatchedShowsView({ entries }: { entries: WatchedShowEntry[] }) {
             .filter((n): n is string => n !== null)
         )
       ).sort((a, b) => a.localeCompare(b)),
-    [entries]
-  );
+    getValues: (entry) =>
+      entry.show.network === null ? [] : [entry.show.network],
+    optionLabel: (value) => String(value),
+  },
+];
 
-  const filteredEntries = useMemo(() => {
-    return entries.filter((entry) => {
-      if (selectedStatuses.size > 0 && !selectedStatuses.has(entry.displayStatus)) {
-        return false;
-      }
-      if (
-        selectedDecades.size > 0 &&
-        (entry.decade === null || !selectedDecades.has(entry.decade))
-      ) {
-        return false;
-      }
-      if (
-        selectedGenres.size > 0 &&
-        !entry.show.genres.some((genre) => selectedGenres.has(genre))
-      ) {
-        return false;
-      }
-      if (
-        selectedServices.size > 0 &&
-        (entry.show.network === null || !selectedServices.has(entry.show.network))
-      ) {
-        return false;
-      }
-      return true;
-    });
-  }, [entries, selectedStatuses, selectedDecades, selectedGenres, selectedServices]);
+const SORT_KEYS: SortKeyDef<WatchedShowEntry, WatchedShowSortKey>[] = [
+  {
+    key: 'release-date',
+    label: 'Release Date',
+    defaultDirection: 'desc',
+    strategy: { kind: 'nullable-string', getValue: (e) => e.show.year },
+  },
+  {
+    key: 'alphabetical',
+    label: 'Alphabetical',
+    defaultDirection: 'asc',
+    strategy: {
+      kind: 'comparator',
+      compare: (a, b) => a.show.name.localeCompare(b.show.name),
+    },
+  },
+  {
+    key: 'date-added',
+    label: 'Date Added',
+    defaultDirection: 'desc',
+    strategy: {
+      kind: 'comparator',
+      compare: (a, b) =>
+        a.createdAt < b.createdAt ? -1 : a.createdAt > b.createdAt ? 1 : 0,
+    },
+  },
+  {
+    key: 'progress',
+    label: 'Progress',
+    defaultDirection: 'desc',
+    strategy: {
+      kind: 'comparator',
+      compare: (a, b) => progressRatio(a) - progressRatio(b),
+    },
+  },
+];
 
-  const sortedEntries = useMemo(
-    () => sortEntries(filteredEntries, sortKey, sortDirection),
-    [filteredEntries, sortKey, sortDirection]
-  );
+export function WatchedShowsView({ entries }: { entries: WatchedShowEntry[] }) {
+  const controls = useListControls<WatchedShowEntry, WatchedShowSortKey>({
+    entries,
+    facets: FACETS,
+    sortKeys: SORT_KEYS,
+    initialSortKey: 'release-date',
+    pageSize: { initial: 'dense', pageSizeByDensity: PAGE_SIZE },
+  });
 
-  const pageSize = PAGE_SIZE[density];
-  const totalPages = Math.max(1, Math.ceil(sortedEntries.length / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const pageEntries = sortedEntries.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
-
-  function resetToFirstPage() {
-    setPage(1);
+  if (controls.isEmpty) {
+    return <EmptyState message="No shows watched yet." />;
   }
 
-  function handleSortChange(key: SortKey) {
-    if (key === sortKey) {
-      setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortKey(key);
-      setSortDirection(SORT_DEFAULT_DIRECTION[key]);
-    }
-    resetToFirstPage();
-  }
-
-  function handleDensityChange(next: Density) {
-    setDensity(next);
-    resetToFirstPage();
-  }
-
-  if (entries.length === 0) {
-    return (
-      <p className="py-24 text-center text-[#9ab0bf]">
-        No shows watched yet.
-      </p>
-    );
-  }
+  const density = controls.density ?? 'dense';
 
   return (
     <div className="flex flex-col gap-3">
-      <WatchedShowsFilterBar
+      <ListFilterBar
         title="Shows"
-        statusOptions={STATUS_OPTIONS}
-        decadeOptions={decadeOptions}
-        genreOptions={genreOptions}
-        serviceOptions={serviceOptions}
-        selectedStatuses={selectedStatuses}
-        selectedDecades={selectedDecades}
-        selectedGenres={selectedGenres}
-        selectedServices={selectedServices}
-        onToggleStatus={(value) => {
-          setSelectedStatuses((s) => toggleSetValue(s, value));
-          resetToFirstPage();
-        }}
-        onToggleDecade={(value) => {
-          setSelectedDecades((s) => toggleSetValue(s, value));
-          resetToFirstPage();
-        }}
-        onToggleGenre={(value) => {
-          setSelectedGenres((s) => toggleSetValue(s, value));
-          resetToFirstPage();
-        }}
-        onToggleService={(value) => {
-          setSelectedServices((s) => toggleSetValue(s, value));
-          resetToFirstPage();
-        }}
-        sortKey={sortKey}
-        sortDirection={sortDirection}
-        onSortChange={handleSortChange}
+        facets={controls.facets}
+        sortKey={controls.sortKey}
+        sortDirection={controls.sortDirection}
+        sortLabels={controls.sortLabels}
+        onSortChange={controls.onSortChange}
         density={density}
-        onDensityChange={handleDensityChange}
+        onDensityChange={controls.onDensityChange}
       />
 
-      {pageEntries.length === 0 ? (
-        <p className="py-24 text-center text-[#9ab0bf]">
-          No shows match these filters.
-        </p>
+      {controls.hasNoMatches ? (
+        <EmptyState message="No shows match these filters." />
       ) : (
-        <div className={cn('grid gap-3', DENSITY_GRID_CLASSES[density])}>
-          {pageEntries.map((entry) => (
+        <PosterGrid className={cn('gap-3', DENSITY_GRID_CLASSES[density])}>
+          {controls.pageEntries.map((entry) => (
             <PosterCard
               key={entry.show.id}
               show={entry.show}
@@ -256,13 +190,13 @@ export function WatchedShowsView({ entries }: { entries: WatchedShowEntry[] }) {
               }}
             />
           ))}
-        </div>
+        </PosterGrid>
       )}
 
       <Pagination
-        page={currentPage}
-        totalPages={totalPages}
-        onPageChange={setPage}
+        page={controls.page}
+        totalPages={controls.totalPages}
+        onPageChange={controls.onPageChange}
       />
     </div>
   );

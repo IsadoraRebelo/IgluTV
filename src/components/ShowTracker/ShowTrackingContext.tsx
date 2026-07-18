@@ -1,17 +1,9 @@
 'use client';
 
-import * as DialogPrimitive from '@radix-ui/react-dialog';
-import {
-  createContext,
-  type ReactNode,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
-import { AuthDialog, Button } from '@/components';
+import { AuthDialog } from '@/components';
 
 import type { EpisodeWatch, Season, SeasonEpisode, ShowStatus } from '@/types';
 
@@ -29,6 +21,15 @@ import {
   unmarkSeasonWatchedAction,
   updateEpisodeWatchDateAction,
 } from './actions';
+import { ShowTrackingContext, type ShowTrackingContextValue } from './context';
+import { CatchUpDialog, DateChoiceDialog, UnmarkShowDialog } from './dialogs';
+import {
+  getDisplayedShowStatus,
+  getIsShowCaughtUp,
+  getIsShowCompleted,
+  getIsShowFullyWatched,
+  getRegularMarkableSeasons,
+} from './selectors';
 import {
   buildWatchedDatesMap,
   episodeKey,
@@ -36,9 +37,10 @@ import {
   getPriorUnwatchedAiredEpisodes,
   getWatchCount,
   getWatchedDates,
-  isShowFinished,
 } from './utils';
 import type { EpisodeRef } from './utils';
+
+export { useShowTrackingContext } from './context';
 
 const MARK_SHOW_WATCHED_KEY = 'mark-show-watched';
 const SHOW_STATUS_KEY = 'show-status';
@@ -50,250 +52,6 @@ function todayIso(): string {
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
-}
-
-type ShowTrackingContextValue = {
-  watchedDates: Map<string, (string | null)[]>;
-  pendingKeys: Set<string>;
-  onToggleEpisode: (seasonNumber: number, episodeNumber: number) => void;
-  onRewatchEpisode: (seasonNumber: number, episodeNumber: number) => void;
-  onRemoveLastEpisodeRewatch: (
-    seasonNumber: number,
-    episodeNumber: number
-  ) => void;
-  onUpdateEpisodeWatchDate: (
-    seasonNumber: number,
-    episodeNumber: number,
-    previousDate: string | null,
-    nextDate: string | null
-  ) => void;
-  onToggleSeason: (season: Season) => void;
-  onRewatchSeason: (season: Season) => void;
-  onRemoveLastSeasonRewatch: (season: Season) => void;
-  onMarkShowWatched: () => void;
-  isMarkingShowWatched: boolean;
-  isShowFullyWatched: boolean;
-  isShowCompleted: boolean;
-  isShowCaughtUp: boolean;
-  showStatus: ShowStatus | null;
-  onSetShowStatus: (status: ShowStatus) => void;
-  isSettingShowStatus: boolean;
-  isFavourite: boolean;
-  onToggleFavourite: () => void;
-  isTogglingFavourite: boolean;
-  isLoggedIn: boolean;
-  openAuthDialog: () => void;
-};
-
-const ShowTrackingContext = createContext<ShowTrackingContextValue | null>(
-  null
-);
-
-export function useShowTrackingContext(): ShowTrackingContextValue {
-  const value = useContext(ShowTrackingContext);
-  if (!value) {
-    throw new Error(
-      'useShowTrackingContext must be used within a ShowTrackingProvider'
-    );
-  }
-  return value;
-}
-
-function CatchUpDialog({
-  onYesToday,
-  onYesNoDate,
-  onNo,
-  onNever,
-}: {
-  onYesToday: () => void;
-  onYesNoDate: () => void;
-  onNo: () => void;
-  onNever: () => void;
-}) {
-  return (
-    <DialogPrimitive.Root
-      open
-      onOpenChange={(open) => {
-        if (!open) onNo();
-      }}
-    >
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="max-sm:data-[state=open]:animate-fade-in max-sm:data-[state=closed]:animate-fade-out fixed inset-0 z-50 bg-black/50" />
-        <DialogPrimitive.Content className="max-sm:data-[state=open]:animate-slide-up max-sm:data-[state=closed]:animate-slide-down bg-primary-foreground border-muted fixed inset-x-0 bottom-0 z-50 flex w-full flex-col gap-1 rounded-t-lg border text-center shadow-lg sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-xs sm:max-w-[250px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg">
-          <DialogPrimitive.Title className="text-foreground text-md pt-4 font-semibold">
-            Mark previous episodes?
-          </DialogPrimitive.Title>
-          <DialogPrimitive.Description className="text-muted-foreground px-4 text-xs">
-            Do you want to mark all previous episodes as watched?
-          </DialogPrimitive.Description>
-          <div className="flex flex-col pt-4">
-            <div className="border-t border-white/10 py-1">
-              <Button
-                variant="primary"
-                className="text-accent w-full font-bold"
-                size="sm"
-                onClick={onYesToday}
-              >
-                Yes, today
-              </Button>
-            </div>
-            <div className="border-t border-white/10 py-1">
-              <Button
-                variant="primary"
-                className="text-accent w-full font-bold"
-                size="sm"
-                onClick={onYesNoDate}
-              >
-                Yes, no date
-              </Button>
-            </div>
-            <div className="border-t border-white/10 py-1">
-              <Button
-                variant="primary"
-                className="text-accent w-full font-bold"
-                size="sm"
-                onClick={onNo}
-              >
-                No
-              </Button>
-            </div>
-            <div className="border-t border-white/10 py-1">
-              <Button
-                variant="primary"
-                className="text-accent w-full font-bold"
-                size="sm"
-                onClick={onNever}
-              >
-                Never for this show
-              </Button>
-            </div>
-          </div>
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
-  );
-}
-
-// Offered before any bulk mark-as-watched action (whole show, full season)
-// to let the user choose whether the newly-marked episodes are logged with
-// today's date or with no date at all.
-function DateChoiceDialog({
-  title,
-  onPickToday,
-  onPickNoDate,
-  onCancel,
-}: {
-  title: string;
-  onPickToday: () => void;
-  onPickNoDate: () => void;
-  onCancel: () => void;
-}) {
-  return (
-    <DialogPrimitive.Root
-      open
-      onOpenChange={(open) => {
-        if (!open) onCancel();
-      }}
-    >
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="max-sm:data-[state=open]:animate-fade-in max-sm:data-[state=closed]:animate-fade-out fixed inset-0 z-50 bg-black/50" />
-        <DialogPrimitive.Content className="max-sm:data-[state=open]:animate-slide-up max-sm:data-[state=closed]:animate-slide-down bg-primary-foreground border-muted fixed inset-x-0 bottom-0 z-50 flex w-full flex-col gap-1 rounded-t-lg border text-center shadow-lg sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-xs sm:max-w-[250px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg">
-          <DialogPrimitive.Title className="text-foreground text-md pt-4 font-semibold">
-            {title}
-          </DialogPrimitive.Title>
-          <DialogPrimitive.Description className="text-muted-foreground px-4 text-xs">
-            Log these episodes with today&apos;s date, or without a date?
-          </DialogPrimitive.Description>
-          <div className="flex flex-col pt-4">
-            <div className="border-t border-white/10 py-1">
-              <Button
-                variant="primary"
-                className="text-accent w-full font-bold"
-                size="sm"
-                onClick={onPickToday}
-              >
-                Today
-              </Button>
-            </div>
-            <div className="border-t border-white/10 py-1">
-              <Button
-                variant="primary"
-                className="text-accent w-full font-bold"
-                size="sm"
-                onClick={onPickNoDate}
-              >
-                No date
-              </Button>
-            </div>
-            <div className="border-t border-white/10 py-1">
-              <Button
-                variant="primary"
-                className="text-accent w-full font-bold"
-                size="sm"
-                onClick={onCancel}
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
-  );
-}
-
-// Offered when clicking "Mark watched" while the show is already fully
-// watched — lets the user unmark the whole show instead of the click
-// silently doing nothing.
-function UnmarkShowDialog({
-  onYes,
-  onNo,
-}: {
-  onYes: () => void;
-  onNo: () => void;
-}) {
-  return (
-    <DialogPrimitive.Root
-      open
-      onOpenChange={(open) => {
-        if (!open) onNo();
-      }}
-    >
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="max-sm:data-[state=open]:animate-fade-in max-sm:data-[state=closed]:animate-fade-out fixed inset-0 z-50 bg-black/50" />
-        <DialogPrimitive.Content className="max-sm:data-[state=open]:animate-slide-up max-sm:data-[state=closed]:animate-slide-down bg-primary-foreground border-muted fixed inset-x-0 bottom-0 z-50 flex w-full flex-col gap-1 rounded-t-lg border text-center shadow-lg sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-xs sm:max-w-[250px] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg">
-          <DialogPrimitive.Title className="text-foreground text-md pt-4 font-semibold">
-            Mark show as unwatched?
-          </DialogPrimitive.Title>
-          <DialogPrimitive.Description className="text-muted-foreground px-4 text-xs">
-            This will remove every watched episode for this show.
-          </DialogPrimitive.Description>
-          <div className="flex flex-col pt-4">
-            <div className="border-t border-white/10 py-1">
-              <Button
-                variant="primary"
-                className="text-accent w-full font-bold"
-                size="sm"
-                onClick={onYes}
-              >
-                Yes
-              </Button>
-            </div>
-            <div className="border-t border-white/10 py-1">
-              <Button
-                variant="primary"
-                className="text-accent w-full font-bold"
-                size="sm"
-                onClick={onNo}
-              >
-                No
-              </Button>
-            </div>
-          </div>
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
-  );
 }
 
 export function ShowTrackingProvider({
@@ -333,42 +91,19 @@ export function ShowTrackingProvider({
   );
   const [isFavourite, setIsFavourite] = useState(initialIsFavourite);
 
-  // Regular seasons (season 0 excluded) that have at least one markable
-  // (aired) episode — the target set for both the bulk mark and bulk
-  // unmark actions, and for deciding whether the whole show counts as
-  // "fully watched".
-  const regularMarkableSeasons = seasons
-    .filter((season) => season.seasonNumber > 0)
-    .map((season) => ({
-      season,
-      markableEpisodes: season.episodes.filter(
-        (ep) => getDaysUntilAir(ep.airDate) === null
-      ),
-    }))
-    .filter(({ markableEpisodes }) => markableEpisodes.length > 0);
-
-  const isShowFullyWatched =
-    regularMarkableSeasons.length > 0 &&
-    regularMarkableSeasons.every(({ season, markableEpisodes }) =>
-      markableEpisodes.every(
-        (ep) =>
-          getWatchCount(
-            watchedDates,
-            episodeKey(season.seasonNumber, ep.episodeNumber)
-          ) > 0
-      )
-    );
-
-  const isShowCompleted = isShowFullyWatched && isShowFinished(tmdbStatus);
-  const isShowCaughtUp = isShowFullyWatched && !isShowFinished(tmdbStatus);
-
+  const regularMarkableSeasons = getRegularMarkableSeasons(seasons);
+  const isShowFullyWatched = getIsShowFullyWatched(
+    regularMarkableSeasons,
+    watchedDates
+  );
+  const isShowCompleted = getIsShowCompleted(isShowFullyWatched, tmdbStatus);
+  const isShowCaughtUp = getIsShowCaughtUp(isShowFullyWatched, tmdbStatus);
   const hasStartedWatching = watchedDates.size > 0;
-  const displayedShowStatus: ShowStatus | null = isShowCompleted
-    ? 'completed'
-    : (showStatus === null || showStatus === 'watch_later') &&
-      hasStartedWatching
-      ? 'watching'
-      : showStatus;
+  const displayedShowStatus = getDisplayedShowStatus(
+    isShowCompleted,
+    showStatus,
+    hasStartedWatching
+  );
 
   const watchedDatesRef = useRef(watchedDates);
   useEffect(() => {

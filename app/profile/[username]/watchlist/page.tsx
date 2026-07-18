@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 
 import { ProfileSubNav, WatchlistView } from '@/components';
-import type { WatchlistEntry } from '@/components/WatchlistGrid/types';
+import type { WatchlistEntry } from '@/components/WatchlistGrid/WatchlistView';
 
 import { getProfileByUsername } from '@/services/profile';
 import { getShowsForUser } from '@/services/tracking';

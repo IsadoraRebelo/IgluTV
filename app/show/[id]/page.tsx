@@ -9,11 +9,12 @@ import {
 } from '@heroicons/react/24/solid';
 import { Image as ImageIcon, ImagePlus } from 'lucide-react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { ReactNode } from 'react';
 
 import {
+  DetailRow,
+  PosterCard,
   ShowActionsMenu,
   ShowActionsSidebar,
   ShowOverview,
@@ -301,22 +302,6 @@ function HomeTab({
   );
 }
 
-function DetailRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number | null | undefined;
-}) {
-  if (value === null || value === undefined || value === '') return null;
-  return (
-    <div className="flex items-center justify-between py-2.5">
-      <span className="text-[#8a9bab]">{label}</span>
-      <span className="text-[#c2d0dd]">{value}</span>
-    </div>
-  );
-}
-
 function CastTab({ cast }: { cast: ShowDetails['cast'] }) {
   if (cast.length === 0) {
     return (
@@ -327,30 +312,15 @@ function CastTab({ cast }: { cast: ShowDetails['cast'] }) {
   return (
     <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
       {cast.map((member) => (
-        <Link
+        <PosterCard
           key={member.actorId}
+          variant="overlay"
           href={`/cast/${member.actorId}`}
-          className="relative aspect-[2/3] w-full overflow-hidden rounded-sm bg-[#2c3440]"
-        >
-          {member.imageUrl ? (
-            <Image
-              src={member.imageUrl}
-              alt={member.actorName}
-              fill
-              sizes="(max-width: 640px) 33vw, 20vw"
-              className="object-cover"
-            />
-          ) : null}
-          <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-black/60 to-transparent" />
-          <div className="absolute right-0 bottom-0 left-0 p-3">
-            <div className="truncate text-base font-semibold text-white">
-              {member.actorName}
-            </div>
-            <div className="truncate text-xs tracking-wide text-white/70 uppercase">
-              {member.character}
-            </div>
-          </div>
-        </Link>
+          posterUrl={member.imageUrl}
+          imageAlt={member.actorName}
+          sizes="(max-width: 640px) 33vw, 20vw"
+          overlay={{ title: member.actorName, subtitle: member.character }}
+        />
       ))}
     </div>
   );
@@ -364,23 +334,11 @@ function SimilarTab({ shows }: { shows: ShowMeta['similar'] }) {
   return (
     <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
       {shows.map((similarShow) => (
-        <Link
+        <PosterCard
           key={similarShow.id}
-          href={`/show/${similarShow.id}`}
-          className="flex flex-col gap-3"
-        >
-          <div className="relative aspect-[2/3] w-full overflow-hidden rounded-md bg-[#2c3440]">
-            {similarShow.posterUrl ? (
-              <Image
-                src={similarShow.posterUrl}
-                alt={similarShow.name}
-                fill
-                sizes="(max-width: 640px) 33vw, 20vw"
-                className="object-cover"
-              />
-            ) : null}
-          </div>
-        </Link>
+          show={similarShow}
+          sizes="(max-width: 640px) 33vw, 20vw"
+        />
       ))}
     </div>
   );
