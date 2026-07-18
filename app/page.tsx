@@ -19,8 +19,7 @@ import {
   getTrendingTvShowIds,
   resolveShowSummaries,
 } from '@/services/tv-shows';
-
-import { createClient } from '@/supabase/server';
+import { getViewerId } from '@/services/viewer';
 
 import type { EpisodeWatch, ShowSummary, ShowTracking } from '@/types';
 
@@ -95,13 +94,11 @@ function pickShows(
 }
 
 export default async function Home() {
-  const supabase = await createClient();
-  const [trendingIds, animeIds, userResult] = await Promise.all([
+  const [trendingIds, animeIds, userId] = await Promise.all([
     getTrendingTvShowIds(),
     getTrendingAnimeShowIds(),
-    supabase.auth.getUser(),
+    getViewerId(),
   ]);
-  const userId = userResult.data.user?.id ?? null;
 
   const [watchingShows, wishlistShows]: [ShowTracking[], ShowTracking[]] =
     userId

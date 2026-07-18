@@ -1,9 +1,11 @@
-import { getCurrentUsername } from '@/services/profile';
+import { Suspense } from 'react';
 
 import { NavBarClient } from './NavBarClient';
 
-export async function NavBar() {
-  const username = await getCurrentUsername();
-
-  return <NavBarClient username={username} />;
+export function NavBar() {
+  return (
+    <Suspense fallback={<header className="h-16" aria-hidden="true" />}>
+      <NavBarClient />
+    </Suspense>
+  );
 }

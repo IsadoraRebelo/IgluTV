@@ -1,6 +1,5 @@
-'use server';
-
-import { unstable_cache } from 'next/cache';
+import { cacheLife, cacheTag } from 'next/cache';
+import 'server-only';
 
 import { TMDB_API_BASE_URL, TMDB_IMAGE_BASE_URL } from '@/consts';
 
@@ -11,9 +10,13 @@ import type {
   TMDBPersonTvCreditsRaw,
 } from '@/types';
 
-async function fetchTmdbPersonDetails(
+export async function getTmdbPersonDetails(
   id: number
 ): Promise<PersonDetails | null> {
+  'use cache';
+  cacheLife('hours');
+  cacheTag('tmdb-person-details');
+
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) {
     console.warn('[person] TMDB_API_KEY not set');
@@ -22,8 +25,7 @@ async function fetchTmdbPersonDetails(
 
   try {
     const res = await fetch(
-      `${TMDB_API_BASE_URL}/person/${id}?api_key=${apiKey}&language=en-US`,
-      { cache: 'no-store' }
+      `${TMDB_API_BASE_URL}/person/${id}?api_key=${apiKey}&language=en-US`
     );
 
     if (!res.ok) {
@@ -45,12 +47,6 @@ async function fetchTmdbPersonDetails(
     return null;
   }
 }
-
-export const getTmdbPersonDetails = unstable_cache(
-  fetchTmdbPersonDetails,
-  ['tmdb-person-details'],
-  { revalidate: 3600, tags: ['tmdb-person-details'] }
-);
 
 // TMDB returns one credit per role, not per show — a person with two
 // separate roles in the same show (a recast, a voice-only episode, a
@@ -79,9 +75,13 @@ function dedupeByShow(credits: PersonCastCredit[]): PersonCastCredit[] {
   return Array.from(byShowId.values());
 }
 
-async function fetchTmdbPersonTvCredits(
+export async function getTmdbPersonTvCredits(
   id: number
 ): Promise<PersonCastCredit[]> {
+  'use cache';
+  cacheLife('hours');
+  cacheTag('tmdb-person-tv-credits');
+
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) {
     console.warn('[person] TMDB_API_KEY not set');
@@ -90,8 +90,7 @@ async function fetchTmdbPersonTvCredits(
 
   try {
     const res = await fetch(
-      `${TMDB_API_BASE_URL}/person/${id}/tv_credits?api_key=${apiKey}&language=en-US`,
-      { cache: 'no-store' }
+      `${TMDB_API_BASE_URL}/person/${id}/tv_credits?api_key=${apiKey}&language=en-US`
     );
 
     if (!res.ok) {
@@ -122,9 +121,3 @@ async function fetchTmdbPersonTvCredits(
     return [];
   }
 }
-
-export const getTmdbPersonTvCredits = unstable_cache(
-  fetchTmdbPersonTvCredits,
-  ['tmdb-person-tv-credits'],
-  { revalidate: 3600, tags: ['tmdb-person-tv-credits'] }
-);

@@ -1,8 +1,9 @@
-'use server';
+import 'server-only';
 
 import { createClient } from '@/supabase/server';
 
 import { ServiceError } from './errors';
+import { requireViewer } from './viewer';
 
 export async function signInWithPassword(email: string, password: string) {
   const supabase = await createClient();
@@ -55,18 +56,18 @@ export async function updatePassword(password: string) {
 }
 
 export async function verifyPassword(password: string): Promise<void> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user?.email) throw new ServiceError('Not authenticated', 'not_authenticated');
+  const viewer = await requireViewer();
+  if (!viewer.email)
+    throw new ServiceError('Not authenticated', 'not_authenticated');
 
+  const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({
-    email: user.email,
+    email: viewer.email,
     password,
   });
 
-  if (error) throw new ServiceError('Incorrect password', 'invalid_credentials');
+  if (error)
+    throw new ServiceError('Incorrect password', 'invalid_credentials');
 }
 
 export async function updateEmail(newEmail: string) {

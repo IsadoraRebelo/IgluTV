@@ -23,8 +23,7 @@ import {
   getWatchedEpisodesForShows,
 } from '@/services/tracking';
 import { getTmdbShowFullDetails } from '@/services/tv-shows';
-
-import { createClient } from '@/supabase/server';
+import { getViewer } from '@/services/viewer';
 
 import type {
   CastMember,
@@ -295,12 +294,9 @@ function renderWatchListEntry(entry: WatchListEntry) {
 }
 
 export default async function TrackingPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const viewer = await getViewer();
 
-  if (!user) redirect('/');
+  if (!viewer) redirect('/');
 
   const trackedShows = await getMyShows('watching');
   const wishlistShows = await getMyShows('watch_later');
@@ -315,7 +311,7 @@ export default async function TrackingPage() {
     ])
   );
   const watchedEpisodesByShow = await getWatchedEpisodesForShows(
-    user.id,
+    viewer.id,
     allShowIds
   );
 

@@ -1,20 +1,15 @@
 'use client';
 
-import * as HoverCard from '@radix-ui/react-hover-card';
-import { ChevronDown, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
-
-import { AuthDialog, LogOutButton } from '@/components';
+import { Suspense, useState } from 'react';
 
 import { cn } from '@/utils';
 
-type NavBarClientProps = {
-  username: string | null;
-};
+import { NavBarUserMenu } from './NavBarUserMenu';
 
-export function NavBarClient({ username }: NavBarClientProps) {
+export function NavBarClient() {
   const pathname = usePathname();
   const router = useRouter();
   const [query, setQuery] = useState('');
@@ -89,73 +84,13 @@ export function NavBarClient({ username }: NavBarClientProps) {
             />
           </form>
 
-          {username ? (
-            <HoverCard.Root openDelay={100} closeDelay={150}>
-              <div className="relative">
-                {/* Reserves the closed-state footprint so the absolutely
-                    positioned trigger below can grow open without reflowing
-                    the rest of the navbar. */}
-                <span
-                  aria-hidden="true"
-                  className="invisible flex items-center gap-1 text-sm font-semibold"
-                >
-                  {username}
-                  <ChevronDown className="h-3 w-3" />
-                </span>
-                <HoverCard.Trigger asChild>
-                  <button
-                    type="button"
-                    className={cn(
-                      'absolute top-0 right-0 flex items-center gap-1 text-sm font-semibold transition-colors',
-                      'data-[state=open]:z-50 data-[state=open]:w-40 data-[state=open]:justify-start data-[state=open]:rounded-t-lg data-[state=open]:border data-[state=open]:border-b-0 data-[state=open]:border-white/10 data-[state=open]:bg-muted data-[state=open]:px-3 data-[state=open]:py-2 data-[state=open]:shadow-2xl',
-                      isOverlay
-                        ? 'text-white/80 hover:text-white'
-                        : 'text-foreground/80 hover:text-foreground'
-                    )}
-                  >
-                    {username}
-                    <ChevronDown className="h-3 w-3" />
-                  </button>
-                </HoverCard.Trigger>
-                <HoverCard.Portal>
-                  <HoverCard.Content
-                    side="bottom"
-                    align="end"
-                    sideOffset={0}
-                    className="data-[state=open]:animate-fade-in px-3 data-[state=closed]:animate-fade-out z-50 w-40 rounded-b-lg border border-white/10 bg-muted p-2 shadow-2xl"
-                  >
-                    {[
-                      { href: `/profile/${username}`, label: 'Profile' },
-                      { href: `/profile/${username}/shows`, label: 'Shows' },
-                      { href: `/profile/${username}/diary`, label: 'Diary' },
-                      {
-                        href: `/profile/${username}/watchlist`,
-                        label: 'Watchlist',
-                      },
-                      { href: '/account', label: 'Account' },
-                    ].map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className={cn(
-                          'block rounded-md py-1 text-sm outline-none',
-                          pathname === item.href
-                            ? 'text-white'
-                            : 'text-[#c2d0dd]'
-                        )}
-                      >
-                        {item.label}
-                      </Link>
-                    ))}
-                    <div className="my-1 border-t border-white/10" />
-                    <LogOutButton className="block w-full rounded-md py-1 text-left text-sm text-[#c2d0dd] no-underline outline-none" />
-                  </HoverCard.Content>
-                </HoverCard.Portal>
-              </div>
-            </HoverCard.Root>
-          ) : (
-            <AuthDialog />
-          )}
+          <Suspense
+            fallback={
+              <div className="h-4 w-16 animate-pulse rounded-full bg-white/10" />
+            }
+          >
+            <NavBarUserMenu isOverlay={isOverlay} />
+          </Suspense>
         </div>
       </div>
     </header>

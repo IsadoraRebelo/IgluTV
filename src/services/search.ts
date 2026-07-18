@@ -1,4 +1,4 @@
-'use server';
+import 'server-only';
 
 import { TMDB_API_BASE_URL, TMDB_IMAGE_BASE_URL } from '@/consts';
 
@@ -25,9 +25,8 @@ export type SearchType = 'all' | 'shows' | 'anime' | 'cast';
 // page once PAGE_SIZE is reached.
 export type SearchCursor = { tmdbPage: number; skip: number };
 
-// Not exported: a 'use server' file may only export async functions, so a
-// shared cursor constant can't live here. Callers outside this file build
-// their own `{ tmdbPage: 1, skip: 0 }` literal for the first batch.
+// Not exported — callers outside this file build their own
+// `{ tmdbPage: 1, skip: 0 }` literal for the first batch.
 const INITIAL_SEARCH_CURSOR: SearchCursor = { tmdbPage: 1, skip: 0 };
 
 export type SearchPageResult = {

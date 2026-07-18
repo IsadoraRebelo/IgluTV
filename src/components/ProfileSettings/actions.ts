@@ -1,17 +1,19 @@
 'use server';
 
 import { ServiceError } from '@/services/errors';
-import { updateBannerUrl, updateUsername, uploadAvatar } from '@/services/profile';
+import {
+  updateBannerUrl,
+  updateUsername,
+  uploadAvatar,
+} from '@/services/profile';
 import { getShowsForUser } from '@/services/tracking';
 import { getTmdbShowImages, resolveShowSummaries } from '@/services/tv-shows';
-
-import { createClient } from '@/supabase/server';
+import { getViewerId } from '@/services/viewer';
 
 import type { ShowBackdropImage } from '@/types';
 
 export type ProfileSettingsActionResult =
-  | { ok: true }
-  | { ok: false; message: string };
+  { ok: true } | { ok: false; message: string };
 
 async function toResult(
   work: Promise<void>
@@ -54,13 +56,10 @@ export type BannerShowOption = {
 export async function getMyShowsForBannerPickerAction(): Promise<
   BannerShowOption[]
 > {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
+  const userId = await getViewerId();
+  if (!userId) return [];
 
-  const tracked = await getShowsForUser(user.id);
+  const tracked = await getShowsForUser(userId);
   const summaries = await resolveShowSummaries(
     tracked.map((show) => show.tmdbShowId)
   );

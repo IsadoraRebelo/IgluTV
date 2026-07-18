@@ -30,8 +30,7 @@ import {
   getTmdbShowFullDetails,
   getTmdbWatchProviders,
 } from '@/services/tv-shows';
-
-import { createClient } from '@/supabase/server';
+import { getViewer } from '@/services/viewer';
 
 import type { ShowDetails, ShowMeta, ShowStatus } from '@/types';
 
@@ -114,23 +113,22 @@ export default async function ShowPage({
     notFound();
   }
 
-  const supabase = await createClient();
   const [
     tmdbFull,
     watchedEpisodes,
     tracking,
-    userResult,
+    viewer,
     watchProviders,
     userCountry,
   ] = await Promise.all([
     getTmdbShowFullDetails(numericId),
     getWatchedEpisodes(numericId),
     getShowTracking(numericId),
-    supabase.auth.getUser(),
+    getViewer(),
     getTmdbWatchProviders(numericId),
     getUserCountry(),
   ]);
-  const isLoggedIn = userResult.data.user !== null;
+  const isLoggedIn = viewer !== null;
 
   if (!tmdbFull) {
     notFound();

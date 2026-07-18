@@ -15,8 +15,7 @@ import {
   getWatchStatsForUser,
 } from '@/services/tracking';
 import { resolveShowSummaries } from '@/services/tv-shows';
-
-import { createClient } from '@/supabase/server';
+import { getViewerId } from '@/services/viewer';
 
 import type { ShowSummary } from '@/types';
 
@@ -53,11 +52,8 @@ export default async function ProfilePage({
   const profile = await getProfileByUsername(username);
   if (!profile) notFound();
 
-  const supabase = await createClient();
-  const {
-    data: { user: viewer },
-  } = await supabase.auth.getUser();
-  const isOwner = viewer?.id === profile.id;
+  const viewerId = await getViewerId();
+  const isOwner = viewerId === profile.id;
 
   const [
     stats,

@@ -2,14 +2,11 @@
 
 import { useState, useTransition } from 'react';
 
-import {
-  loadMoreSearchResults,
-  type SearchCursor,
-  type SearchType,
-} from '@/services/search';
+import type { SearchCursor, SearchType } from '@/services/search';
 
 import type { PersonSearchResult, TvShowSearchResult } from '@/types';
 
+import { loadMoreSearchResultsAction } from './actions';
 import { PersonResultRow, ShowResultRow } from './SearchResultRow';
 
 export function SearchResults({
@@ -35,7 +32,7 @@ export function SearchResults({
 
   function handleLoadMore() {
     startTransition(async () => {
-      const result = await loadMoreSearchResults(query, type, cursor);
+      const result = await loadMoreSearchResultsAction(query, type, cursor);
 
       // The service accumulates a full batch itself, so a defensive
       // ID check here only guards against TMDB occasionally repeating a

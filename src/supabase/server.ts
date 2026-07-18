@@ -1,8 +1,7 @@
-'use server';
-
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { cache } from 'react';
+import 'server-only';
 
 import { Database } from './database.types';
 

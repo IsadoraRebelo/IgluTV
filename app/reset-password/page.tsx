@@ -1,16 +1,13 @@
 import { redirect } from 'next/navigation';
 
-import { createClient } from '@/supabase/server';
+import { getViewer } from '@/services/viewer';
 
 import { ResetPasswordForm } from './ResetPasswordForm';
 
 export default async function ResetPasswordPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const viewer = await getViewer();
 
-  if (!user) redirect('/');
+  if (!viewer) redirect('/');
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-50 px-6 dark:bg-black">

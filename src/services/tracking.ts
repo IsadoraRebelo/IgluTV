@@ -1,4 +1,4 @@
-'use server';
+import 'server-only';
 
 import { isShowFinished } from '@/components/ShowTracker/utils';
 
@@ -8,6 +8,7 @@ import type { EpisodeWatch, ShowStatus, ShowTracking } from '@/types';
 
 import { ServiceError } from './errors';
 import { getTmdbShowFullDetails, resolveShowSummaries } from './tv-shows';
+import { getViewerId, requireViewer } from './viewer';
 
 const STATUS_CODES: Record<ShowStatus, number> = {
   watching: 1,
@@ -61,8 +62,7 @@ export async function getShowTrackingForUser(
 export async function getShowTracking(
   showId: number
 ): Promise<ShowTracking | null> {
-  const supabase = await createClient();
-  const userId = await getOptionalUserId(supabase);
+  const userId = await getOptionalUserId();
   if (!userId) return null;
 
   return getShowTrackingForUser(userId, showId);
@@ -121,8 +121,7 @@ export async function getWatchedEpisodesForUser(
 export async function getWatchedEpisodes(
   showId: number
 ): Promise<EpisodeWatch[]> {
-  const supabase = await createClient();
-  const userId = await getOptionalUserId(supabase);
+  const userId = await getOptionalUserId();
   if (!userId) return [];
 
   return getWatchedEpisodesForUser(userId, showId);
@@ -213,8 +212,7 @@ export async function getRecentWatchedEpisodesForUser(
 export async function getRecentWatchedEpisodes(
   limit: number
 ): Promise<RecentWatchedEpisodeRow[]> {
-  const supabase = await createClient();
-  const userId = await getOptionalUserId(supabase);
+  const userId = await getOptionalUserId();
   if (!userId) return [];
 
   return getRecentWatchedEpisodesForUser(userId, limit);
@@ -436,8 +434,7 @@ export async function getShowsForUser(
 }
 
 export async function getMyShows(status?: ShowStatus): Promise<ShowTracking[]> {
-  const supabase = await createClient();
-  const userId = await getOptionalUserId(supabase);
+  const userId = await getOptionalUserId();
   if (!userId) return [];
 
   return getShowsForUser(userId, status);
@@ -564,26 +561,13 @@ export async function getWatchStatsForUser(userId: string): Promise<{
   };
 }
 
-async function requireUserId(
-  supabase: Awaited<ReturnType<typeof createClient>>
-): Promise<string> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) throw new ServiceError('Not authenticated', 'not_authenticated');
-
-  return user.id;
+async function requireUserId(): Promise<string> {
+  const viewer = await requireViewer();
+  return viewer.id;
 }
 
-async function getOptionalUserId(
-  supabase: Awaited<ReturnType<typeof createClient>>
-): Promise<string | null> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  return user?.id ?? null;
+async function getOptionalUserId(): Promise<string | null> {
+  return getViewerId();
 }
 
 export async function setShowStatus(
@@ -591,7 +575,7 @@ export async function setShowStatus(
   status: ShowStatus
 ): Promise<void> {
   const supabase = await createClient();
-  const userId = await requireUserId(supabase);
+  const userId = await requireUserId();
 
   const { error } = await supabase
     .from('show_tracking')
@@ -604,7 +588,7 @@ export async function setShowStatus(
 }
 export async function removeShowTracking(showId: number): Promise<void> {
   const supabase = await createClient();
-  const userId = await requireUserId(supabase);
+  const userId = await requireUserId();
 
   const { error } = await supabase
     .from('show_tracking')
@@ -620,7 +604,7 @@ export async function setSkipCatchUpPrompt(
   skip: boolean
 ): Promise<void> {
   const supabase = await createClient();
-  const userId = await requireUserId(supabase);
+  const userId = await requireUserId();
 
   const { error } = await supabase
     .from('show_tracking')
@@ -636,7 +620,7 @@ export async function toggleFavourite(
   next: boolean
 ): Promise<void> {
   const supabase = await createClient();
-  const userId = await requireUserId(supabase);
+  const userId = await requireUserId();
 
   const { data: existing, error: selectError } = await supabase
     .from('show_tracking')
@@ -679,7 +663,7 @@ export async function markEpisodeWatched(
   watchedOn?: string
 ): Promise<void> {
   const supabase = await createClient();
-  const userId = await requireUserId(supabase);
+  const userId = await requireUserId();
 
   const insertRow: {
     user_id: string;
@@ -709,7 +693,7 @@ export async function updateEpisodeWatchDate(
   nextDate: string | null
 ): Promise<void> {
   const supabase = await createClient();
-  const userId = await requireUserId(supabase);
+  const userId = await requireUserId();
 
   let query = supabase
     .from('episode_watches')
@@ -850,7 +834,7 @@ export async function unmarkEpisodeWatched(
   episode: number
 ): Promise<void> {
   const supabase = await createClient();
-  const userId = await requireUserId(supabase);
+  const userId = await requireUserId();
 
   const { error } = await supabase
     .from('episode_watches')
@@ -871,7 +855,7 @@ export async function removeLastEpisodeRewatch(
   episode: number
 ): Promise<void> {
   const supabase = await createClient();
-  const userId = await requireUserId(supabase);
+  const userId = await requireUserId();
 
   const { data: rows, error: selectError } = await supabase
     .from('episode_watches')
@@ -908,7 +892,7 @@ export async function markSeasonWatched(
   watchedOn: string | null
 ): Promise<void> {
   const supabase = await createClient();
-  const userId = await requireUserId(supabase);
+  const userId = await requireUserId();
 
   const { data: existingRows, error: existingError } = await supabase
     .from('episode_watches')
@@ -949,7 +933,7 @@ export async function rewatchSeason(
   episodeNumbers: number[]
 ): Promise<void> {
   const supabase = await createClient();
-  const userId = await requireUserId(supabase);
+  const userId = await requireUserId();
 
   const { error } = await supabase.from('episode_watches').insert(
     episodeNumbers.map((episodeNumber) => ({
@@ -971,7 +955,7 @@ export async function removeLastSeasonRewatch(
   episodeNumbers: number[]
 ): Promise<void> {
   const supabase = await createClient();
-  const userId = await requireUserId(supabase);
+  const userId = await requireUserId();
 
   const { data: rows, error: selectError } = await supabase
     .from('episode_watches')
@@ -1014,7 +998,7 @@ export async function unmarkSeasonWatched(
   season: number
 ): Promise<void> {
   const supabase = await createClient();
-  const userId = await requireUserId(supabase);
+  const userId = await requireUserId();
 
   const { error } = await supabase
     .from('episode_watches')
@@ -1030,7 +1014,7 @@ export async function unmarkSeasonWatched(
 
 export async function deleteWatch(watchId: number): Promise<void> {
   const supabase = await createClient();
-  const userId = await requireUserId(supabase);
+  const userId = await requireUserId();
 
   const { data, error } = await supabase
     .from('episode_watches')

@@ -1,6 +1,5 @@
-'use server';
-
-import { unstable_cache } from 'next/cache';
+import { cacheLife, cacheTag } from 'next/cache';
+import 'server-only';
 
 import {
   TMDB_API_BASE_URL,
@@ -35,7 +34,11 @@ import {
   isAnime,
 } from '@/utils';
 
-async function fetchTrendingTvShowIds(): Promise<number[]> {
+export async function getTrendingTvShowIds(): Promise<number[]> {
+  'use cache';
+  cacheLife('hours');
+  cacheTag('trending-tv-show-ids');
+
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) {
     console.warn('[tv-shows] TMDB_API_KEY not set');
@@ -44,8 +47,7 @@ async function fetchTrendingTvShowIds(): Promise<number[]> {
 
   try {
     const res = await fetch(
-      `${TMDB_API_BASE_URL}/trending/tv/week?api_key=${apiKey}&language=en-US`,
-      { cache: 'no-store' }
+      `${TMDB_API_BASE_URL}/trending/tv/week?api_key=${apiKey}&language=en-US`
     );
 
     if (!res.ok) {
@@ -61,15 +63,13 @@ async function fetchTrendingTvShowIds(): Promise<number[]> {
   }
 }
 
-export const getTrendingTvShowIds = unstable_cache(
-  fetchTrendingTvShowIds,
-  ['trending-tv-show-ids'],
-  { revalidate: 3600, tags: ['trending-tv-show-ids'] }
-);
-
 // Discover-by-popularity rather than filtering /trending/tv into anime: the
 // trending feed alone is often too sparse in anime to fill a carousel row.
-async function fetchTrendingAnimeShowIds(): Promise<number[]> {
+export async function getTrendingAnimeShowIds(): Promise<number[]> {
+  'use cache';
+  cacheLife('hours');
+  cacheTag('trending-anime-show-ids');
+
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) {
     console.warn('[tv-shows] TMDB_API_KEY not set');
@@ -78,8 +78,7 @@ async function fetchTrendingAnimeShowIds(): Promise<number[]> {
 
   try {
     const res = await fetch(
-      `${TMDB_API_BASE_URL}/discover/tv?api_key=${apiKey}&language=en-US&with_genres=${ANIME_GENRE_ID}&with_origin_country=JP&sort_by=popularity.desc&page=1`,
-      { cache: 'no-store' }
+      `${TMDB_API_BASE_URL}/discover/tv?api_key=${apiKey}&language=en-US&with_genres=${ANIME_GENRE_ID}&with_origin_country=JP&sort_by=popularity.desc&page=1`
     );
 
     if (!res.ok) {
@@ -97,16 +96,14 @@ async function fetchTrendingAnimeShowIds(): Promise<number[]> {
   }
 }
 
-export const getTrendingAnimeShowIds = unstable_cache(
-  fetchTrendingAnimeShowIds,
-  ['trending-anime-show-ids'],
-  { revalidate: 3600, tags: ['trending-anime-show-ids'] }
-);
-
-async function fetchTmdbSeasonEpisodes(
+export async function getTmdbSeasonEpisodes(
   showId: number,
   seasonNumber: number
 ): Promise<SeasonEpisode[]> {
+  'use cache';
+  cacheLife('hours');
+  cacheTag('tmdb-season-episodes');
+
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) {
     console.warn('[tv-shows] TMDB_API_KEY not set');
@@ -115,8 +112,7 @@ async function fetchTmdbSeasonEpisodes(
 
   try {
     const res = await fetch(
-      `${TMDB_API_BASE_URL}/tv/${showId}/season/${seasonNumber}?api_key=${apiKey}&language=en-US`,
-      { cache: 'no-store' }
+      `${TMDB_API_BASE_URL}/tv/${showId}/season/${seasonNumber}?api_key=${apiKey}&language=en-US`
     );
 
     if (!res.ok) {
@@ -146,15 +142,13 @@ async function fetchTmdbSeasonEpisodes(
   }
 }
 
-export const getTmdbSeasonEpisodes = unstable_cache(
-  fetchTmdbSeasonEpisodes,
-  ['tmdb-season-episodes'],
-  { revalidate: 3600, tags: ['tmdb-season-episodes'] }
-);
-
-async function fetchTmdbAnimeArcNames(
+export async function getTmdbAnimeArcNames(
   showId: number
 ): Promise<Map<string, string> | null> {
+  'use cache';
+  cacheLife('hours');
+  cacheTag('tmdb-anime-arc-names');
+
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) {
     console.warn('[tv-shows] TMDB_API_KEY not set');
@@ -163,8 +157,7 @@ async function fetchTmdbAnimeArcNames(
 
   try {
     const listRes = await fetch(
-      `${TMDB_API_BASE_URL}/tv/${showId}/episode_groups?api_key=${apiKey}`,
-      { cache: 'no-store' }
+      `${TMDB_API_BASE_URL}/tv/${showId}/episode_groups?api_key=${apiKey}`
     );
 
     if (!listRes.ok) {
@@ -191,8 +184,7 @@ async function fetchTmdbAnimeArcNames(
       );
 
     const detailRes = await fetch(
-      `${TMDB_API_BASE_URL}/tv/episode_group/${chosen.id}?api_key=${apiKey}`,
-      { cache: 'no-store' }
+      `${TMDB_API_BASE_URL}/tv/episode_group/${chosen.id}?api_key=${apiKey}`
     );
 
     if (!detailRes.ok) {
@@ -221,17 +213,15 @@ async function fetchTmdbAnimeArcNames(
   }
 }
 
-export const getTmdbAnimeArcNames = unstable_cache(
-  fetchTmdbAnimeArcNames,
-  ['tmdb-anime-arc-names'],
-  { revalidate: 3600, tags: ['tmdb-anime-arc-names'] }
-);
-
 // One TMDB request per show: everything PosterCard/carousels need to render
 // a poster tile, without the season/episode-group fan-out that
-// fetchTmdbShowFullDetails does. Full details remain a separate, heavier
+// getTmdbShowFullDetails does. Full details remain a separate, heavier
 // tier for the show page and tracking views that need per-episode data.
-async function fetchTmdbShowSummary(id: number): Promise<ShowSummary | null> {
+export async function getShowSummary(id: number): Promise<ShowSummary | null> {
+  'use cache';
+  cacheLife('hours');
+  cacheTag('tmdb-show-summary');
+
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) {
     console.warn('[tv-shows] TMDB_API_KEY not set');
@@ -240,8 +230,7 @@ async function fetchTmdbShowSummary(id: number): Promise<ShowSummary | null> {
 
   try {
     const res = await fetch(
-      `${TMDB_API_BASE_URL}/tv/${id}?api_key=${apiKey}&language=en-US`,
-      { cache: 'no-store' }
+      `${TMDB_API_BASE_URL}/tv/${id}?api_key=${apiKey}&language=en-US`
     );
 
     if (!res.ok) {
@@ -314,20 +303,18 @@ async function fetchTmdbShowSummary(id: number): Promise<ShowSummary | null> {
   }
 }
 
-export const getShowSummary = unstable_cache(
-  fetchTmdbShowSummary,
-  ['tmdb-show-summary'],
-  { revalidate: 3600, tags: ['tmdb-show-summary'] }
-);
-
 // Fetched unconditionally for every show detail page: `details` covers
 // name/overview/images/genres/cast/network/status/etc, while `meta`
 // (season summaries with their episodes, latest episode, recommendations)
 // comes from here too, since TMDB returns it all in a ready-to-render
 // shape.
-async function fetchTmdbShowFullDetails(
+export async function getTmdbShowFullDetails(
   id: number
 ): Promise<{ details: ShowDetails; meta: ShowMeta } | null> {
+  'use cache';
+  cacheLife('hours');
+  cacheTag('tmdb-show-full-details');
+
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) {
     console.warn('[tv-shows] TMDB_API_KEY not set');
@@ -336,8 +323,7 @@ async function fetchTmdbShowFullDetails(
 
   try {
     const res = await fetch(
-      `${TMDB_API_BASE_URL}/tv/${id}?api_key=${apiKey}&language=en-US&append_to_response=credits,content_ratings,recommendations`,
-      { cache: 'no-store' }
+      `${TMDB_API_BASE_URL}/tv/${id}?api_key=${apiKey}&language=en-US&append_to_response=credits,content_ratings,recommendations`
     );
 
     if (!res.ok) {
@@ -478,12 +464,6 @@ async function fetchTmdbShowFullDetails(
   }
 }
 
-export const getTmdbShowFullDetails = unstable_cache(
-  fetchTmdbShowFullDetails,
-  ['tmdb-show-full-details'],
-  { revalidate: 3600, tags: ['tmdb-show-full-details'] }
-);
-
 export async function resolveShowSummaries(
   showIds: number[]
 ): Promise<Map<number, ShowSummary>> {
@@ -498,9 +478,13 @@ export async function resolveShowSummaries(
   return map;
 }
 
-async function fetchTmdbShowImages(
+export async function getTmdbShowImages(
   showId: number
 ): Promise<ShowBackdropImage[]> {
+  'use cache';
+  cacheLife('hours');
+  cacheTag('tmdb-show-images');
+
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) {
     console.warn('[tv-shows] TMDB_API_KEY not set');
@@ -509,8 +493,7 @@ async function fetchTmdbShowImages(
 
   try {
     const res = await fetch(
-      `${TMDB_API_BASE_URL}/tv/${showId}/images?api_key=${apiKey}&include_image_language=en,null`,
-      { cache: 'no-store' }
+      `${TMDB_API_BASE_URL}/tv/${showId}/images?api_key=${apiKey}&include_image_language=en,null`
     );
 
     if (!res.ok) {
@@ -530,12 +513,6 @@ async function fetchTmdbShowImages(
     return [];
   }
 }
-
-export const getTmdbShowImages = unstable_cache(
-  fetchTmdbShowImages,
-  ['tmdb-show-images'],
-  { revalidate: 3600, tags: ['tmdb-show-images'] }
-);
 
 // TMDB/JustWatch list ad-supported or channel-billed tiers as separate
 // providers (e.g. "Netflix" and "Netflix Standard with Ads"). Stripping these
@@ -574,7 +551,13 @@ function normalizeProviderName(name: string): string {
 // TMDB returns flatrate (subscription) providers per country in one response
 // (sourced from JustWatch); we invert that into provider -> countries so the
 // UI can show "Netflix - US, UK" instead of a wall of per-country sections.
-async function fetchTmdbWatchProviders(id: number): Promise<WatchProvider[]> {
+export async function getTmdbWatchProviders(
+  id: number
+): Promise<WatchProvider[]> {
+  'use cache';
+  cacheLife('hours');
+  cacheTag('tmdb-watch-providers');
+
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) {
     console.warn('[tv-shows] TMDB_API_KEY not set');
@@ -583,8 +566,7 @@ async function fetchTmdbWatchProviders(id: number): Promise<WatchProvider[]> {
 
   try {
     const res = await fetch(
-      `${TMDB_API_BASE_URL}/tv/${id}/watch/providers?api_key=${apiKey}`,
-      { cache: 'no-store' }
+      `${TMDB_API_BASE_URL}/tv/${id}/watch/providers?api_key=${apiKey}`
     );
 
     if (!res.ok) {
@@ -693,9 +675,3 @@ async function fetchTmdbWatchProviders(id: number): Promise<WatchProvider[]> {
     return [];
   }
 }
-
-export const getTmdbWatchProviders = unstable_cache(
-  fetchTmdbWatchProviders,
-  ['tmdb-watch-providers'],
-  { revalidate: 3600, tags: ['tmdb-watch-providers'] }
-);

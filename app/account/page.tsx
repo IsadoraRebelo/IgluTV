@@ -1,16 +1,13 @@
 import { redirect } from 'next/navigation';
 
-import { createClient } from '@/supabase/server';
+import { getViewer } from '@/services/viewer';
 
 import { AccountView } from './AccountView';
 
 export default async function AccountPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const viewer = await getViewer();
 
-  if (!user?.email) redirect('/');
+  if (!viewer?.email) redirect('/');
 
-  return <AccountView email={user.email} />;
+  return <AccountView email={viewer.email} />;
 }

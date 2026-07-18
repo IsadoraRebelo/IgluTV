@@ -11,8 +11,7 @@ import {
   getShowsForUser,
   getWatchedEpisodeCountsForUser,
 } from '@/services/tracking';
-
-import { createClient } from '@/supabase/server';
+import { getViewerId } from '@/services/viewer';
 
 export default async function CastPage({
   params,
@@ -26,18 +25,15 @@ export default async function CastPage({
     notFound();
   }
 
-  const supabase = await createClient();
-  const [person, credits, userResult] = await Promise.all([
+  const [person, credits, userId] = await Promise.all([
     getTmdbPersonDetails(numericId),
     getTmdbPersonTvCredits(numericId),
-    supabase.auth.getUser(),
+    getViewerId(),
   ]);
 
   if (!person) {
     notFound();
   }
-
-  const userId = userResult.data.user?.id ?? null;
 
   let watchedCounts: Map<number, number> | null = null;
   let completedShowIds: Set<number> | null = null;
