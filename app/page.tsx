@@ -1,140 +1,33 @@
 import { Suspense } from 'react';
 
 import { HomeHero, RecoveryErrorToast, ShowCarouselRow } from '@/components';
-import {
-  buildWatchedDatesMap,
-  getEpisodeSectionState,
-  getFirstEpisode,
-  hasEpisodeAired,
-} from '@/components/ShowTracker/utils';
+import { PersonalizedShowRows } from '@/components/Home/PersonalizedShowRows';
+import { PersonalizedShowRowsSkeleton } from '@/components/Home/PersonalizedShowRowsSkeleton';
 
-import {
-  getMyShows,
-  getWatchedEpisodeCountsForUser,
-  getWatchedEpisodesForShows,
-} from '@/services/tracking';
 import {
   getTmdbShowFullDetails,
   getTrendingAnimeShowIds,
   getTrendingTvShowIds,
+  pickShows,
   resolveShowSummaries,
 } from '@/services/tv-shows';
-import { getViewerId } from '@/services/viewer';
-
-import type { EpisodeWatch, ShowSummary, ShowTracking } from '@/types';
-
-async function getWatchNextShowIds(
-  watchingShows: ShowTracking[],
-  watchedEpisodesByShow: Map<number, EpisodeWatch[]>
-): Promise<number[]> {
-  const results = await Promise.all(
-    watchingShows.map(async (tracked) => {
-      let tmdbFull: Awaited<ReturnType<typeof getTmdbShowFullDetails>>;
-      try {
-        tmdbFull = await getTmdbShowFullDetails(tracked.tmdbShowId);
-      } catch (err) {
-        console.warn('[home] watch-next entry fetch failed', err);
-        return null;
-      }
-      if (!tmdbFull) return null;
-
-      const watchedEpisodes =
-        watchedEpisodesByShow.get(tracked.tmdbShowId) ?? [];
-      const watchedDates = buildWatchedDatesMap(watchedEpisodes);
-      const section = getEpisodeSectionState(
-        tmdbFull.meta,
-        tmdbFull.details,
-        watchedDates
-      );
-
-      if (section.kind === 'hidden' || section.kind === 'caught-up') {
-        return null;
-      }
-      if (
-        section.kind === 'next' &&
-        !hasEpisodeAired(section.episode.airDate)
-      ) {
-        return null;
-      }
-
-      return tracked.tmdbShowId;
-    })
-  );
-
-  return results.filter((id): id is number => id !== null);
-}
-
-async function getStartNextShowIds(
-  wishlistShows: ShowTracking[]
-): Promise<number[]> {
-  const results = await Promise.all(
-    wishlistShows.map(async (tracked) => {
-      const tmdbFull = await getTmdbShowFullDetails(tracked.tmdbShowId);
-      if (!tmdbFull) return null;
-
-      const firstEpisode = getFirstEpisode(tmdbFull.meta.seasons);
-      if (!firstEpisode || !hasEpisodeAired(firstEpisode.airDate)) {
-        return null;
-      }
-
-      return tracked.tmdbShowId;
-    })
-  );
-
-  return results.filter((id): id is number => id !== null);
-}
-
-function pickShows(
-  ids: number[],
-  summaries: Map<number, ShowSummary>
-): ShowSummary[] {
-  return ids
-    .map((id) => summaries.get(id))
-    .filter((show): show is ShowSummary => show !== undefined);
-}
 
 export default async function Home() {
-  const [trendingIds, animeIds, userId] = await Promise.all([
+  const [trendingIds, animeIds] = await Promise.all([
     getTrendingTvShowIds(),
     getTrendingAnimeShowIds(),
-    getViewerId(),
   ]);
 
-  const [watchingShows, wishlistShows]: [ShowTracking[], ShowTracking[]] =
-    userId
-      ? await Promise.all([getMyShows('watching'), getMyShows('watch_later')])
-      : [[], []];
-
-  const watchedEpisodesByShow = userId
-    ? await getWatchedEpisodesForShows(
-        userId,
-        watchingShows.map((tracked) => tracked.tmdbShowId)
-      )
-    : new Map<number, EpisodeWatch[]>();
-
-  const [watchNextIds, startNextIds] = await Promise.all([
-    getWatchNextShowIds(watchingShows, watchedEpisodesByShow),
-    getStartNextShowIds(wishlistShows),
-  ]);
-
-  const allShowIds = Array.from(
-    new Set([...trendingIds, ...animeIds, ...watchNextIds, ...startNextIds])
-  );
+  const allShowIds = Array.from(new Set([...trendingIds, ...animeIds]));
   const summaries = await resolveShowSummaries(allShowIds);
-
-  const watchedCounts = userId
-    ? await getWatchedEpisodeCountsForUser(userId, [
-        ...watchNextIds,
-        ...startNextIds,
-      ])
-    : new Map<number, number>();
 
   const trendingShows = pickShows(trendingIds, summaries);
   const animeShows = pickShows(animeIds, summaries);
-  const watchNextShows = pickShows(watchNextIds, summaries);
-  const startNextShows = pickShows(startNextIds, summaries);
 
-  const heroBannerUrl = trendingShows[0]?.bannerUrl ?? null;
+  const heroShow = trendingShows[0] ?? null;
+  const heroDetails = heroShow
+    ? await getTmdbShowFullDetails(heroShow.id)
+    : null;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -142,27 +35,23 @@ export default async function Home() {
         <RecoveryErrorToast />
       </Suspense>
 
-      <HomeHero bannerUrl={heroBannerUrl}>
+      <HomeHero
+        bannerUrl={heroShow?.bannerUrl ?? null}
+        show={heroShow}
+        overview={heroDetails?.details.overview ?? null}
+      >
         <div className="container-shell">
           <ShowCarouselRow title="Trending TV shows" shows={trendingShows} />
         </div>
       </HomeHero>
 
-      <main className="container-shell flex-1 pt-8 pb-20">
-        <div className="flex flex-col gap-10">
-          <ShowCarouselRow
-            title="Watch Next"
-            shows={watchNextShows}
-            watchedCounts={watchedCounts}
-            status="watching"
-          />
-          <ShowCarouselRow
-            title="Start Next"
-            shows={startNextShows}
-            watchedCounts={watchedCounts}
-            status="watch_later"
-          />
+      <main className="container-shell flex-1 pb-5">
+        <div className="flex flex-col gap-5 md:gap-10">
           <ShowCarouselRow title="Trending Animes" shows={animeShows} />
+
+          <Suspense fallback={<PersonalizedShowRowsSkeleton />}>
+            <PersonalizedShowRows />
+          </Suspense>
         </div>
       </main>
     </div>

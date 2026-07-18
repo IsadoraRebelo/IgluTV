@@ -478,6 +478,15 @@ export async function resolveShowSummaries(
   return map;
 }
 
+export function pickShows(
+  ids: number[],
+  summaries: Map<number, ShowSummary>
+): ShowSummary[] {
+  return ids
+    .map((id) => summaries.get(id))
+    .filter((show): show is ShowSummary => show !== undefined);
+}
+
 export async function getTmdbShowImages(
   showId: number
 ): Promise<ShowBackdropImage[]> {
