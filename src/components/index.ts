@@ -32,6 +32,7 @@ export * from './ShowTabs/ShowTabs';
 export * from './ShowTracker/ShowActionsSidebar';
 export * from './ShowTracker/ShowTracker';
 export * from './ShowTracker/ShowTrackingContext';
+export * from './ShowTracker/ShowTrackingSectionSkeleton';
 export * from './ShowTracker/WatchedToggleButton';
 export * from './StatTile/StatTile';
 export * from './Toaster/Toaster';
