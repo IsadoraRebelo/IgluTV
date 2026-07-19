@@ -48,9 +48,9 @@ export function ProfileSettingsButton({
         <button
           type="button"
           aria-label="Profile settings"
-          className="absolute right-2 bottom-0 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 md:right-25 md:h-9 md:w-9"
+          className="absolute right-4 md:right-2 top-5 md:top-auto md:bottom-0 z-10 flex h-9 w-9 md:h-5 md:w-5 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 md:right-25 md:h-9 md:w-9"
         >
-          <Settings className="h-5 w-5" />
+          <Settings className="md:h-5 md:w-5 h-4 w-4" />
         </button>
       </DialogPrimitive.Trigger>
       <DialogPrimitive.Portal>

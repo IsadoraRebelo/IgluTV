@@ -294,7 +294,10 @@ export async function getShowSummary(id: number): Promise<ShowSummary | null> {
       genres: (json.genres ?? []).map((genre) => genre.name),
       network: json.networks?.[0]?.name ?? null,
       isAnime: showIsAnime,
-      averageRuntime: json.episode_run_time?.[0] ?? null,
+      // episode_run_time is frequently empty on TMDB nowadays; fall back to
+      // the last aired episode's own runtime.
+      averageRuntime:
+        json.episode_run_time?.[0] ?? json.last_episode_to_air?.runtime ?? null,
       seasons,
     };
   } catch (err) {
@@ -358,7 +361,10 @@ export async function getTmdbShowFullDetails(
       // "Ongoing" instead.
       status:
         json.status === 'Returning Series' ? 'Ongoing' : (json.status ?? null),
-      averageRuntime: json.episode_run_time?.[0] ?? null,
+      // episode_run_time is frequently empty on TMDB nowadays; fall back to
+      // the last aired episode's own runtime.
+      averageRuntime:
+        json.episode_run_time?.[0] ?? json.last_episode_to_air?.runtime ?? null,
       originalLanguage: getLanguageDisplayName(json.original_language),
       originalCountry: getCountryDisplayName(json.origin_country?.[0]),
       contentRating:

@@ -1,3 +1,9 @@
+import {
+  CalendarIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  ComputerDesktopIcon,
+} from '@heroicons/react/24/solid';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -150,7 +156,7 @@ export default async function ProfilePage({
   return (
     <div className="flex flex-1 flex-col">
       <div className="container-wide relative">
-        <div className="relative h-[140px] w-full overflow-hidden sm:h-[350px]">
+        <div className="relative h-[250px] w-full overflow-hidden md:h-[350px]">
           {bannerUrl ? (
             <Image
               src={bannerUrl}
@@ -172,8 +178,8 @@ export default async function ProfilePage({
           ) : null}
         </div>
 
-        <div className="mt-[-50px] ml-2 flex items-end md:ml-24">
-          <div className="border-accent-foreground bg-surface relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-1 md:h-20 md:w-20">
+        <div className="mt-[-70px] md:mt-[-50px] px-2 flex items-end md:px-15">
+          <div className="border-accent-foreground bg-surface relative h-18 w-18 shrink-0 overflow-hidden rounded-full border-1 md:h-20 md:w-20">
             {profile.avatarUrl ? (
               <Image
                 src={profile.avatarUrl}
@@ -196,22 +202,37 @@ export default async function ProfilePage({
         </div>
       </div>
 
-      <main className="container-narrow flex-1 pb-20">
-        <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
-          <StatTile
-            label="Time Watching"
-            value={formatWatchDuration(stats.totalWatchMinutes)}
-          />
-          <StatTile label="Episodes" value={stats.totalEpisodes} />
-          <StatTile label="Episodes this year" value={stats.episodesThisYear} />
-          <StatTile label="Finished Shows" value={stats.finishedShowsCount} />
+      <main className="container-shell flex-1 pb-5">
+        <div className="mt-5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatTile
+              icon={ClockIcon}
+              label="Time Watching"
+              value={formatWatchDuration(stats.totalWatchMinutes)}
+            />
+            <StatTile
+              icon={ComputerDesktopIcon}
+              label="Episodes"
+              value={stats.totalEpisodes}
+            />
+            <StatTile
+              icon={CalendarIcon}
+              label="Episodes this year"
+              value={stats.episodesThisYear}
+            />
+            <StatTile
+              icon={CheckCircleIcon}
+              label="Finished Shows"
+              value={stats.finishedShowsCount}
+            />
+          </div>
         </div>
 
-        <div className="mt-10 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_260px]">
-          <div className="flex min-w-0 flex-col gap-10">
+        <div className="mt-5 md:mt-10 grid grid-cols-1 gap-5 md:gap-10 lg:grid-cols-[1fr_260px]">
+          <div className="flex min-w-0 flex-col gap-5 md:gap-10">
             {favouriteShowSummaries.length > 0 ? (
               <section>
-                <h2 className="border-muted-foreground text-muted-foreground mb-4 border-b px-1 pb-2 text-sm font-semibold">
+                <h2 className="border-muted-foreground text-white mb-2 md:mb-4 border-b px-1 pb-2 text-sm font-semibold">
                   FAVOURITE SHOWS
                 </h2>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -233,7 +254,7 @@ export default async function ProfilePage({
 
             {favouriteAnimeSummaries.length > 0 ? (
               <section>
-                <h2 className="border-muted-foreground text-muted-foreground mb-4 border-b px-1 pb-2 text-sm font-semibold">
+                <h2 className="border-muted-foreground text-white mb-2 md:mb-4 border-b px-1 pb-2 text-sm font-semibold">
                   FAVOURITE ANIME
                 </h2>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -255,8 +276,8 @@ export default async function ProfilePage({
 
             {recentActivity.length > 0 ? (
               <section className="min-w-0">
-                <div className="text-muted-foreground border-muted-foreground mb-4 flex items-center justify-between border-b px-1 pb-2">
-                  <h2 className="text-sm font-semibold">RECENT ACTIVITY</h2>
+                <div className="text-white border-muted-foreground mb-2 md:mb-4 flex items-center justify-between border-b px-1 pb-2">
+                  <h2 className="text-sm font-semibold">MY SHOWS</h2>
                   <Link
                     href={`/profile/${profile.username}/shows`}
                     className="hover:text-accent text-xs font-semibold tracking-wide uppercase"
@@ -285,24 +306,19 @@ export default async function ProfilePage({
             ) : null}
           </div>
 
-          <aside className="flex flex-col gap-8">
+          <aside className="flex flex-col gap-5 md:gap-10 hidden md:flex">
             {watchlistSummaries.length > 0 ? (
               <div>
-                <div className="flex items-center justify-between px-1">
+                <div className="text-white border-muted-foreground mb-2 flex items-center justify-between border-b px-1 pb-2">
+                  <Link href={`/profile/${profile.username}/watchlist`} className="font-heading text-sm font-semibold hover:text-accent">WATCHLIST</Link>
                   <Link
                     href={`/profile/${profile.username}/watchlist`}
-                    className="text-muted-foreground hover:text-accent text-sm font-semibold tracking-wide uppercase"
-                  >
-                    Watchlist
-                  </Link>
-                  <Link
-                    href={`/profile/${profile.username}/watchlist`}
-                    className="text-muted-foreground hover:text-accent text-xs font-semibold tracking-wide uppercase"
+                    className="text-white hover:text-accent text-xs font-semibold tracking-wide uppercase"
                   >
                     {watchlistShows.length}
                   </Link>
                 </div>
-                <div className="border-muted-foreground mt-1 flex gap-2 overflow-x-auto border-t pt-3">
+                <div className="flex gap-2 overflow-x-auto pt-2">
                   {watchlistSummaries.map((show) => (
                     <Link
                       key={show.id}
@@ -326,21 +342,15 @@ export default async function ProfilePage({
 
             {finishedEntries.length > 0 ? (
               <div>
-                <div className="flex items-center justify-between py-1">
+                <div className="text-white border-muted-foreground mb-2 flex items-center justify-between border-b px-1 pb-2">
+                  <Link href={`/profile/${profile.username}/diary`} className="font-heading text-sm font-semibold hover:text-accent">DIARY</Link>
                   <Link
                     href={`/profile/${profile.username}/diary`}
-                    className="text-muted-foreground hover:text-accent text-sm font-semibold tracking-wide uppercase"
-                  >
-                    Diary
-                  </Link>
-                  <Link
-                    href={`/profile/${profile.username}/diary`}
-                    className="text-muted-foreground hover:text-accent text-xs font-semibold tracking-wide uppercase"
+                    className="text-white hover:text-accent text-xs font-semibold tracking-wide uppercase"
                   >
                     {finishedEntries.length}
                   </Link>
                 </div>
-                <div className="border-muted-foreground mt-1 border-t" />
                 <div className="flex flex-col">
                   {diaryGroups.map((group, i) => (
                     <div key={group.key}>
@@ -361,7 +371,7 @@ export default async function ProfilePage({
                                   <Link
                                     key={diaryEntryKey(entry)}
                                     href={`/show/${entry.show.id}`}
-                                    className="text-muted-foreground hover:text-accent truncate text-sm font-semibold"
+                                    className="text-white hover:text-accent truncate text-sm font-semibold"
                                   >
                                     {diaryEntryLabel(entry)}
                                   </Link>
