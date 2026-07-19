@@ -60,16 +60,16 @@ export function ShowActionsMenu({
         <button
           type="button"
           aria-label="More options"
-          className="flex h-6 w-6 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 md:h-9 md:w-9"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 md:h-9 md:w-9"
         >
-          <MoreHorizontal className="h-3 w-3 md:h-5 md:w-5" />
+          <MoreHorizontal className="h-4 w-4" />
         </button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content
           align="end"
           sideOffset={8}
-          className="data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out bg-muted z-50 w-64 rounded-lg p-2 shadow-2xl ring-1 ring-white/10"
+          className="data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out bg-muted/90 z-50 w-64 rounded-lg p-2 shadow-2xl ring-1 ring-white/10"
         >
           {!isLoggedIn ? (
             <DropdownMenu.Item
@@ -97,7 +97,7 @@ export function ShowActionsMenu({
                       isSettingShowStatus || (isActiveStatus && !isWatchLater)
                     }
                     onSelect={() => onSetShowStatus(status)}
-                    className="text-text-primary flex items-center gap-3 rounded-md px-3 py-2.5 text-sm outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-white/5"
+                    className="text-foreground flex items-center gap-2 rounded-md px-3 py-2 text-sm outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-white/5"
                   >
                     <span className={cn(isActiveStatus && activeColor)}>
                       {icon}
@@ -146,9 +146,8 @@ export function ShowActionsMenu({
                         ? onToggleFavourite
                         : undefined
                   }
-                  className={`text-text-primary flex items-center gap-3 rounded-md px-3 py-2.5 text-sm outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-white/5 ${
-                    isInteractive ? '' : 'cursor-default'
-                  }`}
+                  className={`text-foreground flex items-center gap-2 rounded-md px-3 py-2 text-sm outline-none data-[disabled]:opacity-50 data-[highlighted]:bg-white/5 ${isInteractive ? '' : 'cursor-default'
+                    }`}
                 >
                   <span className={cn(shouldUseActiveColor && activeColor)}>
                     {displayIcon}
