@@ -35,11 +35,11 @@ export function ShowTracker({
   const isCurrentEpisodePending =
     episodeSection.kind === 'latest' || episodeSection.kind === 'next'
       ? pendingKeys.has(
-          episodeKey(
-            episodeSection.episode.seasonNumber,
-            episodeSection.episode.episodeNumber
-          )
+        episodeKey(
+          episodeSection.episode.seasonNumber,
+          episodeSection.episode.episodeNumber
         )
+      )
       : false;
 
   return (
@@ -56,7 +56,7 @@ export function ShowTracker({
 
       {seasons.length > 0 ? (
         <section>
-          <h2 className="mb-4 text-lg font-semibold text-white">
+          <h2 className="mb-2 md:mb-4 text-lg font-semibold text-white">
             Seasons ({meta?.numberOfSeasons ?? seasons.length})
           </h2>
           <SeasonAccordion

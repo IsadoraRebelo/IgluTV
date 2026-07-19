@@ -66,12 +66,12 @@ export function WatchNextCard({
 
   return (
     <section>
-      <h2 className="mb-4 text-lg font-semibold text-white">
+      <h2 className="md:mb-4 mb-2 text-lg font-semibold text-white">
         {displayedSection.title}
       </h2>
       <div className={animationClassName} onAnimationEnd={handleAnimationEnd}>
         {displayedSection.kind === 'latest' ||
-        displayedSection.kind === 'next' ? (
+          displayedSection.kind === 'next' ? (
           <LatestEpisodeCard
             episode={displayedSection.episode}
             cast={cast}

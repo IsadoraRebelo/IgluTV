@@ -81,16 +81,14 @@ export function WatchProviders({
       >
         <h2 className="text-sm font-semibold text-white">Where to watch</h2>
         <ChevronDown
-          className={`text-text-faint h-4 w-4 shrink-0 transition-transform duration-300 ease-in-out ${
-            isExpanded ? 'rotate-180' : ''
-          }`}
+          className={`text-text-faint h-4 w-4 shrink-0 transition-transform duration-300 ease-in-out ${isExpanded ? 'rotate-180' : ''
+            }`}
         />
       </button>
 
       <div
-        className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${
-          isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-        }`}
+        className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+          }`}
       >
         <div className="overflow-hidden">
           <ul className="grid grid-cols-2 gap-2">
@@ -99,32 +97,38 @@ export function WatchProviders({
                 provider.countries,
                 country
               );
-              const countryLabel = availability.countries
+              const countryCodeLabel = availability.countries
+                .map((code) => code.toUpperCase())
+                .join(', ');
+              const countryNameLabel = availability.countries
                 .map((code) => getCountryDisplayName(code) ?? code)
                 .join(', ');
 
               return (
                 <li
                   key={provider.providerId}
-                  className="flex items-center gap-3 rounded-md bg-white/[0.03] px-3 py-2"
+                  className="flex items-center gap-3 rounded-md px-1 py-1"
                 >
                   {provider.logoUrl ? (
                     <Image
                       src={provider.logoUrl}
                       alt=""
-                      width={32}
-                      height={32}
+                      width={40}
+                      height={40}
                       className="rounded-md"
                     />
                   ) : (
                     <div className="bg-surface h-8 w-8 shrink-0 rounded-md" />
                   )}
                   <div className="flex flex-col">
-                    <span className="text-text-primary text-sm">
+                    <span className="text-text-primary hidden text-sm md:block">
                       {provider.providerName}
                     </span>
-                    <span className="text-text-secondary text-xs">
-                      {countryLabel}
+                    <span className="text-text-secondary text-xs md:hidden">
+                      {countryCodeLabel}
+                    </span>
+                    <span className="text-text-secondary hidden text-xs md:block">
+                      {countryNameLabel}
                     </span>
                   </div>
                 </li>

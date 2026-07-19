@@ -73,7 +73,6 @@ export default async function CastPage({
               <ShowOverview
                 text={person.biography}
                 marginTopClassName="mt-0"
-                textSizeClassName="text-sm"
               />
             ) : null}
             <a

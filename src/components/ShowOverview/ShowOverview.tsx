@@ -5,13 +5,11 @@ import { useEffect, useRef, useState } from 'react';
 type ShowOverviewProps = {
   text: string;
   marginTopClassName?: string;
-  textSizeClassName?: string;
 };
 
 export function ShowOverview({
   text,
   marginTopClassName = 'mt-2',
-  textSizeClassName = 'text-[15px]',
 }: ShowOverviewProps) {
   const [expanded, setExpanded] = useState(false);
   const [isTruncated, setIsTruncated] = useState(false);
@@ -27,9 +25,8 @@ export function ShowOverview({
     <div>
       <p
         ref={paragraphRef}
-        className={`${marginTopClassName} max-w-[65ch] ${textSizeClassName} text-text-primary leading-relaxed ${
-          expanded ? '' : 'line-clamp-2 md:line-clamp-5'
-        }`}
+        className={`${marginTopClassName} max-w-[65ch] text-sm md:text-md leading-relaxed text-text-primary ${expanded ? '' : 'line-clamp-2 md:line-clamp-5'
+          }`}
       >
         {text}
       </p>
@@ -37,7 +34,7 @@ export function ShowOverview({
         <button
           type="button"
           onClick={() => setExpanded((prev) => !prev)}
-          className="text-text-secondary mt-1 text-sm font-medium hover:text-white"
+          className="mt-1 text-sm font-medium text-text-secondary hover:text-white"
         >
           {expanded ? 'Show less' : 'Read more'}
         </button>

@@ -185,7 +185,7 @@ export default async function ShowPage({
     >
       <div className="flex flex-1 flex-col">
         <div className="relative mx-auto w-full max-w-6xl">
-          <div className="relative h-[300px] w-full overflow-hidden sm:h-[450px]">
+          <div className="relative h-[400px] w-full overflow-hidden sm:h-[450px]">
             {details.bannerUrl ? (
               <Image
                 src={details.bannerUrl}
@@ -222,11 +222,11 @@ export default async function ShowPage({
               </div>
 
               <div className="flex flex-1 flex-col pb-1 md:gap-2">
-                <h1 className="mt-5 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+                <h1 className="md:mt-5 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
                   {details.name}
                 </h1>
                 {metaLineParts.length > 0 ? (
-                  <p className="text-text-secondary text-sm">
+                  <p className="text-text-secondary text-xs md:text-sm">
                     {metaLineParts.join(' · ')}
                   </p>
                 ) : null}
@@ -248,8 +248,8 @@ export default async function ShowPage({
           </div>
         </div>
 
-        <main className="container-shell flex-1 pb-20">
-          <div className="mt-6 grid grid-cols-1 gap-10 md:mt-10 lg:grid-cols-[1fr_260px]">
+        <main className="container-shell flex-1 pb-5">
+          <div className="mt-2 md:mt-5 grid grid-cols-1 gap-10 md:mt-10 lg:grid-cols-[1fr_260px]">
             <div>
               <ShowTabs
                 home={<HomeTab meta={meta} details={details} />}
@@ -276,7 +276,7 @@ function HomeTab({
   details: ShowDetails;
 }) {
   return (
-    <div className="flex flex-col gap-7 md:gap-10">
+    <div className="flex flex-col gap-5 md:gap-10">
       <ShowTracker
         seasons={meta?.seasons ?? []}
         cast={details.cast}
@@ -285,7 +285,7 @@ function HomeTab({
       />
 
       <section>
-        <h2 className="mb-3 px-1 text-lg font-semibold text-white">Details</h2>
+        <h2 className="md:mb-4 mb-2 px-1 text-lg font-semibold text-white">Details</h2>
         <div className="flex flex-col divide-y divide-white/10 px-1 text-sm">
           <DetailRow label="Seasons" value={meta?.numberOfSeasons} />
           <DetailRow label="Episodes" value={meta?.numberOfEpisodes} />

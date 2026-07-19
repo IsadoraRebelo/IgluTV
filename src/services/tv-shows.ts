@@ -303,11 +303,6 @@ export async function getShowSummary(id: number): Promise<ShowSummary | null> {
   }
 }
 
-// Fetched unconditionally for every show detail page: `details` covers
-// name/overview/images/genres/cast/network/status/etc, while `meta`
-// (season summaries with their episodes, latest episode, recommendations)
-// comes from here too, since TMDB returns it all in a ready-to-render
-// shape.
 export async function getTmdbShowFullDetails(
   id: number
 ): Promise<{ details: ShowDetails; meta: ShowMeta } | null> {
