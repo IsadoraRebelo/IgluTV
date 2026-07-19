@@ -1,11 +1,10 @@
 import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
 
-import { ProfileSubNav, WatchlistView } from '@/components';
-import type { WatchlistEntry } from '@/components/WatchlistGrid/WatchlistView';
+import { ProfileSubNav, WatchlistSectionSkeleton } from '@/components';
+import { WatchlistSection } from '@/components/Profile/WatchlistSection';
 
 import { getProfileByUsername } from '@/services/profile';
-import { getShowsForUser } from '@/services/tracking';
-import { resolveShowSummaries } from '@/services/tv-shows';
 
 export default async function WatchlistPage({
   params,
@@ -17,26 +16,6 @@ export default async function WatchlistPage({
   const profile = await getProfileByUsername(username);
   if (!profile) notFound();
 
-  const watchlistTracking = await getShowsForUser(profile.id, 'watch_later');
-  const summaries = await resolveShowSummaries(
-    watchlistTracking.map((s) => s.tmdbShowId)
-  );
-
-  const entries: WatchlistEntry[] = watchlistTracking
-    .map((tracking): WatchlistEntry | null => {
-      const show = summaries.get(tracking.tmdbShowId);
-      if (!show) return null;
-
-      const decade = show.year ? Math.floor(Number(show.year) / 10) * 10 : null;
-
-      return {
-        show,
-        decade,
-        createdAt: tracking.createdAt,
-      };
-    })
-    .filter((entry): entry is WatchlistEntry => entry !== null);
-
   return (
     <div className="flex flex-1 flex-col">
       <main className="container-wide flex-1 pt-10 pb-20">
@@ -45,7 +24,9 @@ export default async function WatchlistPage({
           avatarUrl={profile.avatarUrl}
           active="watchlist"
         />
-        <WatchlistView entries={entries} />
+        <Suspense fallback={<WatchlistSectionSkeleton />}>
+          <WatchlistSection userId={profile.id} />
+        </Suspense>
       </main>
     </div>
   );
