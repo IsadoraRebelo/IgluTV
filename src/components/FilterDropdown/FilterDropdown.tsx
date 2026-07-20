@@ -56,7 +56,7 @@ export function FilterDropdown<T extends string | number>({
             side="bottom"
             align="start"
             sideOffset={0}
-            className="data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out w-fit-content bg-muted z-50 max-h-80 overflow-y-auto rounded-b-sm border border-white/10 p-2 px-3 shadow-2xl"
+            className="data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out w-fit-content bg-muted z-50 max-h-80 overflow-y-auto rounded-b-sm border border-white/10 shadow-2xl"
           >
             {options.map((option) => {
               const isSelected = selected.has(option);
@@ -68,7 +68,7 @@ export function FilterDropdown<T extends string | number>({
                   aria-checked={isSelected}
                   onClick={() => onToggle(option)}
                   className={cn(
-                    'flex w-full items-center gap-2 rounded-md py-1 text-left text-sm outline-none',
+                    'flex w-full items-center gap-2 text-left text-sm outline-none p-2 px-4 hover:bg-white/10',
                     isSelected ? 'text-white' : 'text-text-primary'
                   )}
                 >

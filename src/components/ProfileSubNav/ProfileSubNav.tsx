@@ -21,7 +21,7 @@ export function ProfileSubNav({
   active: ProfileTab;
 }) {
   return (
-    <div className="mb-6 flex items-center gap-6 rounded-sm bg-[#181f26] px-4 py-3">
+    <div className="mb-5 hidden md:flex items-center gap-6 rounded-sm bg-[#181f26] px-4 py-3">
       <Link
         href={`/profile/${username}`}
         className="flex shrink-0 items-center gap-2"

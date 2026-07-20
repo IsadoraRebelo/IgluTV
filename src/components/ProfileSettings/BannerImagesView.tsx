@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft } from 'lucide-react';
+import { ArrowUturnLeftIcon } from '@heroicons/react/24/solid';
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
@@ -49,22 +49,21 @@ export function BannerImagesView({
       return;
     }
 
-    toast.success('Banner updated');
     onApplied();
   }
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center gap-3 border-b border-white/10 p-4">
+      <div className="relative flex shrink-0 items-center justify-center px-4 py-3 pt-5">
         <button
           type="button"
           onClick={onBack}
           aria-label="Back to shows"
-          className="flex h-8 w-8 items-center justify-center rounded-full text-white transition-colors hover:bg-white/10"
+          className="text-text-secondary absolute left-4 top-1/2 -translate-y-1/2 text-sm hover:text-white"
         >
-          <ChevronLeft className="h-5 w-5" />
+          <ArrowUturnLeftIcon className="h-4 w-4 text-text-secondary" />
         </button>
-        <h2 className="truncate text-base font-semibold text-white">
+        <h2 className="text-muted-foreground text-center text-xs font-semibold uppercase">
           {show.name}
         </h2>
       </div>

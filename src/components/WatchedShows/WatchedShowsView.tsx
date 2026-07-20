@@ -162,7 +162,7 @@ export function WatchedShowsView({ entries }: { entries: WatchedShowEntry[] }) {
   const density = controls.density ?? 'dense';
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 md:gap-5">
       <ListFilterBar
         title="Shows"
         facets={controls.facets}
