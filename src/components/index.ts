@@ -4,6 +4,7 @@ export * from './Auth/AuthDialog';
 export * from './Auth/LogOutButton';
 export * from './Auth/RecoveryErrorToast';
 export * from './CastPage/CastCreditCard';
+export * from './CastPage/CastDetailsSectionSkeleton';
 export * from './CastPage/CastPageView';
 export * from './CastPage/CastWatchProgress';
 export * from './DetailRow/DetailRow';
