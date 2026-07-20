@@ -13,18 +13,15 @@ export async function ShowsSection({ userId }: { userId: string }) {
   const trackedNotWatchlist = trackedShows.filter(
     (s) => s.status !== 'watch_later'
   );
+  const trackedNotWatchlistIds = trackedNotWatchlist.map((s) => s.tmdbShowId);
 
-  const watchedCounts = await getWatchedEpisodeCountsForUser(
-    userId,
-    trackedNotWatchlist.map((s) => s.tmdbShowId)
-  );
+  const [watchedCounts, summaries] = await Promise.all([
+    getWatchedEpisodeCountsForUser(userId, trackedNotWatchlistIds),
+    resolveShowSummaries(trackedNotWatchlistIds),
+  ]);
 
   const watchedTracking = trackedNotWatchlist.filter(
     (s) => (watchedCounts.get(s.tmdbShowId) ?? 0) > 0
-  );
-
-  const summaries = await resolveShowSummaries(
-    watchedTracking.map((s) => s.tmdbShowId)
   );
 
   const entries: WatchedShowEntry[] = watchedTracking
