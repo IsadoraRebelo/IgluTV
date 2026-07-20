@@ -13,6 +13,7 @@ export * from './EpisodeModal/EpisodeModal';
 export * from './Footer/Footer';
 export * from './Form/Form';
 export * from './Home/HomeHero';
+export * from './Home/HomeSearchBar';
 export * from './Home/RecommendedForYouSkeleton';
 export * from './Home/ShowCarouselRow';
 export * from './LatestEpisodeCard/LatestEpisodeCard';

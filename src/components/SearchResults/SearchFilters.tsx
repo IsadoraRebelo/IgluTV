@@ -1,14 +1,24 @@
+import {
+  FilmIcon,
+  Squares2X2Icon,
+  TvIcon,
+  UsersIcon,
+} from '@heroicons/react/24/solid';
 import Link from 'next/link';
 
 import type { SearchType } from '@/services/search';
 
 import { cn } from '@/utils';
 
-const FILTERS: { id: SearchType; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'shows', label: 'TV Shows' },
-  { id: 'anime', label: 'Anime' },
-  { id: 'cast', label: 'Cast' },
+const FILTERS: {
+  id: SearchType;
+  label: string;
+  icon: typeof Squares2X2Icon;
+}[] = [
+  { id: 'all', label: 'All', icon: Squares2X2Icon },
+  { id: 'shows', label: 'TV Shows', icon: TvIcon },
+  { id: 'anime', label: 'Anime', icon: FilmIcon },
+  { id: 'cast', label: 'Cast', icon: UsersIcon },
 ];
 
 function filterHref(query: string, type: SearchType): string {
@@ -52,10 +62,11 @@ export function SearchFilters({
           key={filter.id}
           href={filterHref(query, filter.id)}
           className={cn(
-            'text-md rounded-md px-3 py-2.5 text-left hover:bg-white/5',
+            'text-md flex items-center gap-2.5 rounded-md px-3 py-2.5 text-left hover:bg-white/5',
             active === filter.id ? 'text-white' : 'text-text-primary'
           )}
         >
+          <filter.icon className="h-4 w-4 shrink-0" />
           {filter.label}
         </Link>
       ))}

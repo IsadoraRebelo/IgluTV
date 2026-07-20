@@ -70,7 +70,7 @@ export function SearchResults({
       {people.length > 0 ? (
         <>
           {type === 'all' && shows.length > 0 ? (
-            <h2 className="mt-6 mb-2 px-2 text-lg font-semibold text-white">
+            <h2 className="mt-5 mb-2 px-2 text-lg font-semibold text-white">
               Cast
             </h2>
           ) : null}
@@ -85,7 +85,7 @@ export function SearchResults({
           type="button"
           onClick={handleLoadMore}
           disabled={isPending}
-          className="mt-6 self-center rounded-full bg-white/10 px-5 py-2 text-sm font-medium text-white hover:bg-white/15 disabled:opacity-50"
+          className="mt-5 self-center rounded-full bg-white/10 px-5 py-2 text-sm font-medium text-white hover:bg-white/15 disabled:opacity-50"
         >
           {isPending ? 'Loading...' : 'Load more'}
         </button>

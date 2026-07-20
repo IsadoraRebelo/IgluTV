@@ -9,7 +9,7 @@ export function ShowResultRow({ show }: { show: TvShowSearchResult }) {
   return (
     <Link
       href={`/show/${show.id}`}
-      className="flex gap-4 rounded-md p-2 hover:bg-white/5"
+      className="flex gap-4 rounded-md p-1 md:p-2 hover:bg-white/5"
     >
       <div className="bg-surface relative h-[105px] w-[70px] shrink-0 overflow-hidden rounded-sm">
         {show.posterUrl ? (
@@ -50,7 +50,7 @@ export function PersonResultRow({ person }: { person: PersonSearchResult }) {
   return (
     <Link
       href={`/cast/${person.id}`}
-      className="flex gap-4 rounded-md p-2 hover:bg-white/5"
+      className="flex gap-4 rounded-md p-1 md:p-2 hover:bg-white/5"
     >
       <div className="bg-surface relative h-[70px] w-[70px] shrink-0 overflow-hidden rounded-full">
         {person.profileUrl ? (
