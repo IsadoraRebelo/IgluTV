@@ -1,12 +1,12 @@
 import { Suspense } from 'react';
 
-import { SearchResultsSection } from '@/components/SearchResults/SearchResultsSection';
-
 import {
   HomeSearchBar,
   SearchFilters,
   SearchResultsSkeleton,
 } from '@/components';
+import { SearchResultsSection } from '@/components/SearchResults/SearchResultsSection';
+
 
 import type { SearchType } from '@/services/search';
 

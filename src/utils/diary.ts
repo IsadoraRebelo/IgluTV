@@ -1,12 +1,13 @@
 import type { ShowSummary } from '@/types';
 
 export type DiaryEntry =
-  | { kind: 'show'; show: ShowSummary; watchedOn: string }
+  | { kind: 'show'; show: ShowSummary; watchedOn: string; rewatch: boolean }
   | {
       kind: 'season';
       show: ShowSummary;
       seasonNumber: number;
       watchedOn: string;
+      rewatch: boolean;
     };
 
 export type DiaryDayGroup = { day: string; entries: DiaryEntry[] };
@@ -20,12 +21,16 @@ export function formatDiaryDate(dateStr: string): {
   month: string;
   day: string;
   year: string;
+  dayOfWeek: string;
 } {
   const date = new Date(`${dateStr}T00:00:00`);
   return {
     month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
     day: String(date.getDate()),
     year: String(date.getFullYear()),
+    dayOfWeek: date
+      .toLocaleDateString('en-US', { weekday: 'short' })
+      .toUpperCase(),
   };
 }
 
@@ -42,11 +47,12 @@ export function diaryEntryKey(entry: DiaryEntry): string {
 }
 
 export function buildDiaryEntries(
-  finishedShowRows: { tmdbShowId: number; watchedOn: string }[],
+  finishedShowRows: { tmdbShowId: number; watchedOn: string; rewatch: boolean }[],
   finishedSeasonRows: {
     tmdbShowId: number;
     seasonNumber: number;
     watchedOn: string;
+    rewatch: boolean;
   }[],
   summaries: Map<number, ShowSummary>
 ): DiaryEntry[] {
@@ -54,7 +60,12 @@ export function buildDiaryEntries(
     .map((row): DiaryEntry | null => {
       const show = summaries.get(row.tmdbShowId);
       if (!show) return null;
-      return { kind: 'show', show, watchedOn: row.watchedOn };
+      return {
+        kind: 'show',
+        show,
+        watchedOn: row.watchedOn,
+        rewatch: row.rewatch,
+      };
     })
     .filter((entry): entry is DiaryEntry => entry !== null);
 
@@ -67,6 +78,7 @@ export function buildDiaryEntries(
         show,
         seasonNumber: row.seasonNumber,
         watchedOn: row.watchedOn,
+        rewatch: row.rewatch,
       };
     })
     .filter((entry): entry is DiaryEntry => entry !== null);

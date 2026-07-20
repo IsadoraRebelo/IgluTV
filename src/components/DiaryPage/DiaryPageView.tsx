@@ -1,5 +1,6 @@
 'use client';
 
+import { ChevronRight, RotateCcw } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -31,9 +32,16 @@ function diaryYearOf(entry: DiaryEntry): number {
 }
 
 function diaryRowLabel(entry: DiaryEntry): string {
-  return entry.kind === 'season'
-    ? `${entry.show.name} — Season ${entry.seasonNumber}`
-    : entry.show.name;
+  return entry.show.name;
+}
+
+function diaryRowMeta(entry: DiaryEntry): string {
+  const parts: string[] = [];
+  parts.push(
+    entry.kind === 'season' ? `Season ${entry.seasonNumber}` : 'Completed'
+  );
+  if (entry.show.genres[0]) parts.push(entry.show.genres[0]);
+  return parts.join(' · ');
 }
 
 type DiaryRow = {
@@ -89,17 +97,6 @@ const FACETS: FacetDef<DiaryEntry>[] = [
     optionLabel: (value) => `${value}s`,
     width: 110,
   },
-  {
-    key: 'genre',
-    label: 'Genre',
-    getOptions: (entries) =>
-      Array.from(new Set(entries.flatMap((e) => e.show.genres))).sort((a, b) =>
-        a.localeCompare(b)
-      ),
-    getValues: (entry) => entry.show.genres,
-    optionLabel: (value) => String(value),
-    width: 200,
-  },
 ];
 
 const SORT_KEYS: SortKeyDef<DiaryEntry, DiarySortKey>[] = [
@@ -145,7 +142,7 @@ export function DiaryPageView({ entries }: { entries: DiaryEntry[] }) {
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-3 md:gap-5">
       <ListFilterBar
         title="Diary"
         facets={controls.facets}
@@ -160,72 +157,74 @@ export function DiaryPageView({ entries }: { entries: DiaryEntry[] }) {
       {controls.hasNoMatches ? (
         <EmptyState message="No entries match these filters." />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="text-muted-foreground border-b border-white/10 text-left text-[10px] font-semibold tracking-wide uppercase">
-                <th className="py-2 pr-3 font-semibold">Month</th>
-                <th className="py-2 pr-3 font-semibold">Day</th>
-                <th className="py-2 pr-3 font-semibold">Film</th>
-                <th className="hidden py-2 pr-3 font-semibold sm:table-cell">
-                  Released
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {controls.pageEntries.map(
-                ({ entry, showMonthBadge, showDay }) => {
-                  const current = formatDiaryDate(entry.watchedOn);
-                  return (
-                    <tr
-                      key={diaryEntryKey(entry)}
-                      className="border-b border-white/5 hover:bg-white/[0.03]"
-                    >
-                      <td className="py-3 pr-3 align-top">
-                        {showMonthBadge ? (
-                          <div className="flex w-14 flex-col items-center rounded-md bg-white/[0.06] py-1">
-                            <span className="text-text-secondary text-[10px] font-bold tracking-wide uppercase">
-                              {current.month}
-                            </span>
-                            <span className="text-text-secondary text-[10px] font-bold tracking-wide uppercase">
-                              {current.year}
-                            </span>
-                          </div>
-                        ) : null}
-                      </td>
-                      <td className="text-accent-foreground py-3 pr-3 align-top text-sm">
-                        {showDay ? current.day : null}
-                      </td>
-                      <td className="py-3 pr-3 align-top">
-                        <Link
-                          href={`/show/${entry.show.id}`}
-                          className="flex min-w-0 items-center gap-3"
-                        >
-                          <div className="bg-surface relative aspect-[2/3] w-10 shrink-0 overflow-hidden rounded-md">
-                            {entry.show.posterUrl ? (
-                              <Image
-                                src={entry.show.posterUrl}
-                                alt={entry.show.name}
-                                fill
-                                sizes="40px"
-                                className="object-cover"
-                              />
-                            ) : null}
-                          </div>
-                          <span className="truncate text-sm font-semibold text-white">
-                            {diaryRowLabel(entry)}
-                          </span>
-                        </Link>
-                      </td>
-                      <td className="text-muted-foreground hidden py-3 pr-3 align-top text-sm sm:table-cell">
-                        {entry.show.year ?? '—'}
-                      </td>
-                    </tr>
-                  );
-                }
-              )}
-            </tbody>
-          </table>
+        <div className="flex flex-col">
+          {controls.pageEntries.map(({ entry, showMonthBadge, showDay }) => {
+            const current = formatDiaryDate(entry.watchedOn);
+            return (
+              <div key={diaryEntryKey(entry)}>
+                {showMonthBadge ? (
+                  <div className="flex items-center gap-2.5 md:gap-3 sm:pb-2">
+                    <span className="text-accent text-[11px] font-bold tracking-widest sm:text-xs">
+                      {current.month} {current.year}
+                    </span>
+                    <span className="h-px flex-1 bg-white/[0.08]" />
+                  </div>
+                ) : null}
+                <Link
+                  href={`/show/${entry.show.id}`}
+                  className="flex items-center gap-3 rounded-lg border-b border-white/5 px-0.5 py-2.5 hover:bg-white/[0.03] sm:gap-4 sm:px-2 sm:py-3"
+                >
+                  <div className="w-[30px] shrink-0 text-center sm:w-10">
+                    <div className="font-heading text-[19px] leading-none font-extrabold text-white sm:text-2xl">
+                      {showDay ? current.day : ''}
+                    </div>
+                    <div className="text-text-faint mt-1 text-[8.5px] font-semibold tracking-widest sm:text-[9px]">
+                      {showDay ? current.dayOfWeek : ''}
+                    </div>
+                  </div>
+
+                  <div className="bg-surface relative aspect-[2/3] w-[38px] shrink-0 overflow-hidden rounded-md sm:w-11">
+                    {entry.show.posterUrl ? (
+                      <Image
+                        src={entry.show.posterUrl}
+                        alt={entry.show.name}
+                        fill
+                        sizes="44px"
+                        className="object-cover"
+                      />
+                    ) : null}
+                    {entry.rewatch ? (
+                      <div className="bg-accent text-background absolute right-[3px] bottom-[3px] flex h-[15px] w-[15px] items-center justify-center rounded-full shadow-sm sm:hidden">
+                        <RotateCcw className="h-[9px] w-[9px]" />
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-semibold text-white sm:text-[15px]">
+                      {diaryRowLabel(entry)}
+                    </div>
+                    <div className="text-text-secondary mt-0.5 truncate text-[11px] sm:text-xs">
+                      {diaryRowMeta(entry)}
+                    </div>
+                  </div>
+
+                  {entry.rewatch ? (
+                    <span className="text-accent bg-accent/10 hidden shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] font-semibold sm:inline-flex">
+                      <RotateCcw className="h-2.5 w-2.5" />
+                      Rewatch
+                    </span>
+                  ) : null}
+
+                  <div className="text-text-faint hidden w-[88px] shrink-0 text-right text-xs sm:block">
+                    {entry.show.year ? `Released ${entry.show.year}` : null}
+                  </div>
+
+                  <ChevronRight className="text-text-faint h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+                </Link>
+              </div>
+            );
+          })}
         </div>
       )}
 

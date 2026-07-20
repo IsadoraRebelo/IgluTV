@@ -264,11 +264,15 @@ export async function getRecentWatchedShowsForUser(
   return deduped;
 }
 
+type FinishedShowRow = RecentWatchedEpisodeRow & { rewatch: boolean };
+
 // Diary entries: one per show the user has marked 'completed', dated by
-// that show's most recently watched episode (its finishing date).
+// that show's most recently watched episode (its finishing date). Marked
+// as a rewatch when that representative episode has more than one
+// episode_watches row (i.e. it's been watched more than once).
 export async function getFinishedShowsForUser(
   userId: string
-): Promise<RecentWatchedEpisodeRow[]> {
+): Promise<FinishedShowRow[]> {
   const supabase = await createClient();
 
   const { data: completedShows, error: completedError } = await supabase
@@ -295,20 +299,32 @@ export async function getFinishedShowsForUser(
 
   if (error) throw new ServiceError(error.message, error.code);
 
+  const episodeKey = (showId: number, season: number, episode: number) =>
+    `${showId}-${season}-${episode}`;
+
+  const watchCounts = new Map<string, number>();
+  for (const row of data ?? []) {
+    if (row.watched_on === null) continue;
+    const key = episodeKey(row.tmdb_show_id, row.season_number, row.episode_number);
+    watchCounts.set(key, (watchCounts.get(key) ?? 0) + 1);
+  }
+
   const seenShows = new Set<number>();
-  const deduped: RecentWatchedEpisodeRow[] = [];
+  const deduped: FinishedShowRow[] = [];
 
   for (const row of data ?? []) {
     if (row.watched_on === null) continue;
     if (seenShows.has(row.tmdb_show_id)) continue;
     seenShows.add(row.tmdb_show_id);
 
+    const key = episodeKey(row.tmdb_show_id, row.season_number, row.episode_number);
     deduped.push({
       id: row.id,
       tmdbShowId: row.tmdb_show_id,
       seasonNumber: row.season_number,
       episodeNumber: row.episode_number,
       watchedOn: row.watched_on,
+      rewatch: (watchCounts.get(key) ?? 0) > 1,
     });
   }
 
@@ -319,6 +335,7 @@ type FinishedSeasonRow = {
   tmdbShowId: number;
   seasonNumber: number;
   watchedOn: string;
+  rewatch: boolean;
 };
 
 // Diary entries: one per regular season the user has fully watched,
@@ -400,6 +417,7 @@ export async function getFinishedSeasonsForUser(
       tmdbShowId: season.tmdbShowId,
       seasonNumber: season.seasonNumber,
       watchedOn: dates.sort()[0],
+      rewatch: dates.length > 1,
     });
   }
 
