@@ -48,14 +48,14 @@ export function ProfileSettingsButton({
         <button
           type="button"
           aria-label="Profile settings"
-          className="absolute right-2 bottom-0 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 md:right-25 md:h-9 md:w-9"
+          className="absolute right-4 md:right-2 top-5 md:top-auto md:bottom-0 z-10 flex h-9 w-9 md:h-5 md:w-5 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 md:right-25 md:h-9 md:w-9"
         >
-          <Settings className="h-5 w-5" />
+          <Settings className="md:h-5 md:w-5 h-4 w-4" />
         </button>
       </DialogPrimitive.Trigger>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="max-sm:data-[state=open]:animate-fade-in max-sm:data-[state=closed]:animate-fade-out fixed inset-0 z-50 bg-black/70" />
-        <DialogPrimitive.Content className="max-sm:data-[state=open]:animate-slide-up max-sm:data-[state=closed]:animate-slide-down bg-background fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] w-full flex-col overflow-hidden rounded-t-lg shadow-2xl max-sm:pb-[env(safe-area-inset-bottom)] sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-[90vw] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg">
+        <DialogPrimitive.Content className="max-sm:data-[state=open]:animate-slide-up max-sm:data-[state=closed]:animate-slide-down bg-muted/90 fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] w-full flex-col overflow-hidden rounded-t-lg shadow-2xl max-sm:pb-[env(safe-area-inset-bottom)] sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:max-w-sm sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-md">
           <DialogPrimitive.Title className="sr-only">
             Profile settings
           </DialogPrimitive.Title>

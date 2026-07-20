@@ -19,6 +19,10 @@ export type FacetDef<TEntry> = {
   getOptions: (entries: TEntry[]) => FacetValue[];
   getValues: (entry: TEntry) => FacetValue[];
   optionLabel: (value: FacetValue) => string;
+  // Open-state dropdown width in pixels, sized to that facet's own option
+  // text (e.g. narrow for "1990s", wider for "Action & Adventure"). Falls
+  // back to FilterDropdown's default when omitted.
+  width?: number;
 };
 
 // The hook's per-render output for one facet: the static config plus live
@@ -31,6 +35,7 @@ export type FacetState = {
   optionLabel: (value: FacetValue) => string;
   selected: Set<FacetValue>;
   onToggle: (value: FacetValue) => void;
+  width?: number;
 };
 
 // Every sort key in all four families is one of exactly two shapes:

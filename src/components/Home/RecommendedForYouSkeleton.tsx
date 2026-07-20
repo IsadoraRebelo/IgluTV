@@ -20,11 +20,6 @@ function ShowCarouselRowSkeleton({
   );
 }
 
-export function PersonalizedShowRowsSkeleton() {
-  return (
-    <>
-      <ShowCarouselRowSkeleton titleWidthClassName="w-28" />
-      <ShowCarouselRowSkeleton titleWidthClassName="w-24" />
-    </>
-  );
+export function RecommendedForYouSkeleton() {
+  return <ShowCarouselRowSkeleton titleWidthClassName="w-40" />;
 }

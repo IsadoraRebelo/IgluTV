@@ -22,11 +22,11 @@ type WatchlistSortKey = 'release-date' | 'alphabetical' | 'date-added';
 const PAGE_SIZE = 36;
 
 // Always the larger card size — this page has no density toggle, unlike
-// the Shows page — so these match WatchedShowsView's `large` variant.
+// the Shows page.
 const GRID_CLASSES =
-  'grid-cols-[repeat(2,minmax(0,1fr))] sm:grid-cols-[repeat(3,minmax(0,1fr))] md:grid-cols-[repeat(4,minmax(0,1fr))] lg:grid-cols-[repeat(6,minmax(0,1fr))] gap-3';
+  'grid-cols-[repeat(3,minmax(0,1fr))] md:grid-cols-[repeat(4,minmax(0,1fr))] lg:grid-cols-[repeat(6,minmax(0,1fr))] gap-3';
 const IMAGE_SIZES =
-  '(max-width: 640px) 47vw, (max-width: 768px) 31vw, (max-width: 1024px) 23vw, 16vw';
+  '(max-width: 768px) 31vw, (max-width: 1024px) 23vw, 16vw';
 
 const FACETS: FacetDef<WatchlistEntry>[] = [
   {
@@ -40,6 +40,7 @@ const FACETS: FacetDef<WatchlistEntry>[] = [
       ).sort((a, b) => b - a),
     getValues: (entry) => (entry.decade === null ? [] : [entry.decade]),
     optionLabel: (value) => `${value}s`,
+    width: 110,
   },
   {
     key: 'genre',
@@ -50,6 +51,7 @@ const FACETS: FacetDef<WatchlistEntry>[] = [
       ),
     getValues: (entry) => entry.show.genres,
     optionLabel: (value) => String(value),
+    width: 200,
   },
   {
     key: 'service',
@@ -65,6 +67,7 @@ const FACETS: FacetDef<WatchlistEntry>[] = [
     getValues: (entry) =>
       entry.show.network === null ? [] : [entry.show.network],
     optionLabel: (value) => String(value),
+    width: 150,
   },
 ];
 
@@ -110,7 +113,7 @@ export function WatchlistView({ entries }: { entries: WatchlistEntry[] }) {
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 md:gap-5">
       <ListFilterBar
         title="Watchlist"
         facets={controls.facets}

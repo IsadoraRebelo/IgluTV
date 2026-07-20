@@ -49,7 +49,7 @@ async function fetchTmdbTvSearch(
   try {
     const res = await fetch(
       `${TMDB_API_BASE_URL}/search/tv?api_key=${apiKey}&language=en-US&query=${encodeURIComponent(query)}&page=${page}`,
-      { cache: 'no-store' }
+      { next: { revalidate: 60 } }
     );
 
     if (!res.ok) {
@@ -97,7 +97,7 @@ async function fetchTmdbPersonSearch(
   try {
     const res = await fetch(
       `${TMDB_API_BASE_URL}/search/person?api_key=${apiKey}&language=en-US&query=${encodeURIComponent(query)}&page=${page}`,
-      { cache: 'no-store' }
+      { next: { revalidate: 60 } }
     );
 
     if (!res.ok) {
@@ -275,18 +275,15 @@ export async function loadMoreSearchResults(
   }
 
   // type === 'all': shows are paginated normally; cast is a fixed,
-  // capped preview that only exists on the very first batch.
-  const { results, hasMore, nextCursor } = await collectTvShows(
-    query,
-    () => true,
-    cursor
-  );
-  const people = isInitialCursor(cursor)
-    ? (await fetchTmdbPersonSearch(query, 1)).results.slice(
-        0,
-        CAST_PREVIEW_LIMIT
-      )
-    : [];
+  // capped preview that only exists on the very first batch. The two are
+  // independent, so fetch them concurrently rather than back-to-back.
+  const [{ results, hasMore, nextCursor }, personResult] = await Promise.all([
+    collectTvShows(query, () => true, cursor),
+    isInitialCursor(cursor)
+      ? fetchTmdbPersonSearch(query, 1)
+      : Promise.resolve({ results: [], hasMore: false }),
+  ]);
+  const people = personResult.results.slice(0, CAST_PREVIEW_LIMIT);
 
   return { shows: results, people, hasMore, nextCursor };
 }

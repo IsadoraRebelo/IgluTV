@@ -48,7 +48,7 @@ function MobileFiltersSheet<TSortKey extends string>({
       </DialogPrimitive.Trigger>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="data-[state=open]:animate-fade-in data-[state=closed]:animate-fade-out fixed inset-0 z-50 bg-black/70" />
-        <DialogPrimitive.Content className="data-[state=open]:animate-slide-up data-[state=closed]:animate-slide-down bg-background fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] w-full flex-col rounded-t-lg pb-[env(safe-area-inset-bottom)] shadow-2xl">
+        <DialogPrimitive.Content className="data-[state=open]:animate-slide-up data-[state=closed]:animate-slide-down bg-muted/90 fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] w-full flex-col rounded-t-lg pb-[env(safe-area-inset-bottom)] shadow-2xl">
           <div className="relative flex shrink-0 items-center justify-center px-4 py-3 pt-5">
             <DialogPrimitive.Title className="text-muted-foreground text-center text-xs font-semibold uppercase">
               Filters
@@ -118,7 +118,9 @@ type ListFilterBarSectionProps<TSortKey extends string> = {
   onDensityChange?: (density: Density) => void;
   controlsRowClassName?: string;
   desktopFacetsClassName?: string;
-  sortDropdownWrapperClassName?: string;
+  // Open-state width (px) for the sort dropdown, sized to the page's
+  // longest "Sort by X" label.
+  sortWidth?: number;
 };
 
 type ListFilterBarCompactProps<TSortKey extends string> = {
@@ -128,6 +130,7 @@ type ListFilterBarCompactProps<TSortKey extends string> = {
   sortDirection: SortDirection;
   sortLabels: Record<TSortKey, string>;
   onSortChange: (key: TSortKey) => void;
+  sortWidth?: number;
 };
 
 export function ListFilterBar<TSortKey extends string>(
@@ -135,10 +138,11 @@ export function ListFilterBar<TSortKey extends string>(
     ListFilterBarSectionProps<TSortKey> | ListFilterBarCompactProps<TSortKey>
 ) {
   if (props.layout === 'compact') {
-    const { facets, sortKey, sortDirection, sortLabels, onSortChange } = props;
+    const { facets, sortKey, sortDirection, sortLabels, onSortChange, sortWidth } =
+      props;
     return (
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-2">
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           {facets.map((facet) => (
             <FilterDropdown
               key={facet.key}
@@ -147,6 +151,7 @@ export function ListFilterBar<TSortKey extends string>(
               optionLabel={facet.optionLabel}
               selected={facet.selected}
               onToggle={facet.onToggle}
+              width={facet.width}
             />
           ))}
         </div>
@@ -156,6 +161,7 @@ export function ListFilterBar<TSortKey extends string>(
           sortDirection={sortDirection}
           labels={sortLabels}
           onSortChange={onSortChange}
+          width={sortWidth}
         />
       </div>
     );
@@ -168,15 +174,15 @@ export function ListFilterBar<TSortKey extends string>(
     sortDirection,
     sortLabels,
     onSortChange,
+    sortWidth,
     density,
     onDensityChange,
-    controlsRowClassName = 'flex flex-wrap items-center gap-3',
-    desktopFacetsClassName = 'hidden flex-wrap items-center gap-3 sm:flex',
-    sortDropdownWrapperClassName = 'hidden sm:block ml-3',
+    controlsRowClassName = 'flex flex-wrap items-center gap-2',
+    desktopFacetsClassName = 'hidden flex-wrap items-center gap-2 sm:flex',
   } = props;
 
   return (
-    <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-1">
+    <div className="md:mt-5 flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-1">
       <h2 className="text-muted-foreground text-sm font-semibold tracking-widest uppercase">
         {title}
       </h2>
@@ -191,6 +197,7 @@ export function ListFilterBar<TSortKey extends string>(
               optionLabel={facet.optionLabel}
               selected={facet.selected}
               onToggle={facet.onToggle}
+              width={facet.width}
             />
           ))}
         </div>
@@ -205,12 +212,13 @@ export function ListFilterBar<TSortKey extends string>(
           />
         </div>
 
-        <div className={sortDropdownWrapperClassName}>
+        <div className="hidden sm:block ml-2">
           <SortDropdown
             sortKey={sortKey}
             sortDirection={sortDirection}
             labels={sortLabels}
             onSortChange={onSortChange}
+            width={sortWidth}
           />
         </div>
 
@@ -221,9 +229,9 @@ export function ListFilterBar<TSortKey extends string>(
               aria-label="Dense grid"
               onClick={() => onDensityChange('dense')}
               className={cn(
-                'flex h-7 w-7 items-center justify-center rounded-md',
+                'flex h-5 w-5 items-center justify-center',
                 density === 'dense'
-                  ? 'bg-white/10 text-white'
+                  ? 'text-white'
                   : 'text-text-faint hover:text-text-tertiary'
               )}
             >
@@ -234,9 +242,9 @@ export function ListFilterBar<TSortKey extends string>(
               aria-label="Large grid"
               onClick={() => onDensityChange('large')}
               className={cn(
-                'flex h-7 w-7 items-center justify-center rounded-md',
+                'flex h-5 w-5 items-center justify-center',
                 density === 'large'
-                  ? 'bg-white/10 text-white'
+                  ? 'text-white'
                   : 'text-text-faint hover:text-text-tertiary'
               )}
             >

@@ -34,7 +34,7 @@ export function ShowProgressBar({
       watchedCount={watchedCount}
       markableCount={markableEpisodes.length}
       showStatus={showStatus}
-      className={`h-7 rounded-md px-2 md:h-5 ${className}`}
+      className={`h-4 rounded-xs px-2 md:h-3 ${className}`}
     />
   );
 }

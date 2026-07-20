@@ -4,9 +4,17 @@ import { Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-export function HomeSearchBar() {
+import { cn } from '@/utils';
+
+export function HomeSearchBar({
+  containerClassName = 'container-shell',
+  initialQuery = '',
+}: {
+  containerClassName?: string;
+  initialQuery?: string;
+} = {}) {
   const router = useRouter();
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -16,7 +24,10 @@ export function HomeSearchBar() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="container-shell lg:hidden">
+    <form
+      onSubmit={handleSubmit}
+      className={cn(containerClassName, 'lg:hidden')}
+    >
       <div className="flex h-10 items-center gap-3 rounded-xl border border-white/10 bg-black/40 px-5 backdrop-blur-xl">
         <Search className="h-4 w-4 shrink-0 text-white/50" />
         <input

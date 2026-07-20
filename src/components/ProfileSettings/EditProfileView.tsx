@@ -18,7 +18,6 @@ import { updateUsernameAction } from './actions';
 export function EditProfileView({
   username,
   avatarUrl,
-  bannerUrl,
   onClose,
   onChangeBanner,
   onChangePicture,
@@ -53,20 +52,20 @@ export function EditProfileView({
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-6 overflow-y-auto p-5">
-      <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-white">Edit Profile</h2>
+    <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto">
+      <div className="relative flex shrink-0 items-center justify-center px-4 py-3 pt-5">
+        <h2 className="text-muted-foreground text-center text-xs font-semibold uppercase">Edit Profile</h2>
         <button
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="flex h-8 w-8 items-center justify-center rounded-full text-white transition-colors hover:bg-white/10"
+          className="absolute top-1 right-2 flex h-8 w-8 items-center justify-center text-white"
         >
           <X className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center pb-2 gap-4 px-4">
         <div className="bg-surface relative h-16 w-16 shrink-0 overflow-hidden rounded-full">
           {avatarUrl ? (
             <Image
@@ -97,7 +96,7 @@ export function EditProfileView({
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmitHandler)}
-          className="flex items-end gap-2"
+          className="flex items-end gap-2 px-4"
         >
           <FormField
             control={form.control}
@@ -122,37 +121,27 @@ export function EditProfileView({
         </form>
       </Form>
 
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative h-14 w-24 shrink-0 overflow-hidden rounded-md bg-gradient-to-br from-[#1c2733] to-[#0b1319]">
-          {bannerUrl ? (
-            <Image
-              src={bannerUrl}
-              alt=""
-              fill
-              sizes="96px"
-              className="object-cover"
-            />
-          ) : null}
-        </div>
+      <div className="flex flex-col gap-2 px-4 pb-4">
         <Button
           variant="default"
           size="sm"
           type="button"
-          className="flex-1"
+          className="text-white bg-transparent w-full hover:text-white flex items-center justify-between rounded-md px-2 py-3 text-sm"
           onClick={onChangeBanner}
         >
           Change banner
+          <ChevronRight className="h-4 w-4" />
         </Button>
-      </div>
 
-      <Link
-        href="/account"
-        onClick={onClose}
-        className="text-text-secondary hover:text-white -mx-1 flex items-center justify-between rounded-md px-1 py-2 text-sm"
-      >
-        Account settings
-        <ChevronRight className="h-4 w-4" />
-      </Link>
+        <Link
+          href="/account"
+          onClick={onClose}
+          className="text-white hover:text-white flex items-center justify-between rounded-md px-2 py-3 text-sm hover:bg-primary-foreground/95"
+        >
+          Account settings
+          <ChevronRight className="h-4 w-4" />
+        </Link>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { Search } from 'lucide-react';
+import { ArrowUturnLeftIcon } from '@heroicons/react/24/solid';
 import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -36,15 +37,16 @@ export function BannerShowsView({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center justify-between border-b border-white/10 p-4">
+      <div className="relative flex shrink-0 items-center justify-center px-4 py-3 pt-5">
         <button
           type="button"
           onClick={onCancel}
-          className="text-text-secondary text-sm hover:text-white"
+          className="text-text-secondary absolute left-4 top-1/2 -translate-y-1/2 text-sm hover:text-white"
         >
-          Cancel
+          <ArrowUturnLeftIcon className="h-4 w-4" />
         </button>
-        <h2 className="text-base font-semibold text-white">Banner</h2>
+        <h2 className="text-muted-foreground text-center text-xs font-semibold uppercase">
+          Banner</h2>
         <span className="w-12" aria-hidden="true" />
       </div>
 

@@ -38,6 +38,7 @@ const FACETS: FacetDef<PersonCastCredit>[] = [
       return decade === null ? [] : [decade];
     },
     optionLabel: (value) => `${value}s`,
+    width: 110,
   },
   {
     key: 'genre',
@@ -48,6 +49,7 @@ const FACETS: FacetDef<PersonCastCredit>[] = [
       ),
     getValues: (entry) => genreNamesOf(entry),
     optionLabel: (value) => String(value),
+    width: 200,
   },
 ];
 
@@ -98,7 +100,7 @@ export function CastPageView({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 md:gap-5">
       <ListFilterBar
         layout="compact"
         facets={controls.facets}

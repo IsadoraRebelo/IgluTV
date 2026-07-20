@@ -32,3 +32,12 @@ export const TMDB_TV_GENRES: Record<number, string> = {
   10768: 'War & Politics',
   37: 'Western',
 };
+
+// Inverted lookup for turning a show's genre name (as stored on
+// ShowSummary/ShowDetails, e.g. "Sci-Fi & Fantasy") back into the id
+// /discover/tv?with_genres= expects. Derived from TMDB_TV_GENRES so there's
+// one source of truth for the id<->name mapping.
+export const TMDB_TV_GENRE_IDS_BY_NAME: Record<string, number> =
+  Object.fromEntries(
+    Object.entries(TMDB_TV_GENRES).map(([id, name]) => [name, Number(id)])
+  );

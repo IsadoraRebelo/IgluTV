@@ -13,7 +13,7 @@ export function CastWatchProgress({
     <div className="rounded-sm bg-white/[0.03] ring-1 ring-white/10">
       <div className="flex items-baseline justify-between px-3 pt-2">
         <p className="text-text-primary text-xs">
-          You&apos;ve watched {watchedCount} of {totalCount}
+          You&apos;ve finished {watchedCount} of {totalCount}
         </p>
         <span className="text-lg font-semibold text-white">{percentage}%</span>
       </div>

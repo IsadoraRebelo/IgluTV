@@ -96,6 +96,81 @@ export async function getTrendingAnimeShowIds(): Promise<number[]> {
   }
 }
 
+// watch_region alone does not filter or re-rank /discover/tv results — it
+// only annotates each result with provider metadata. Pairing it with
+// with_watch_monetization_types=flatrate actually restricts results to
+// shows with a subscription-streaming offering in that region before
+// sorting by popularity, which is what makes this country-specific instead
+// of silently returning the same global list for every country.
+export async function getPopularTvShowIdsForCountry(
+  country: string
+): Promise<number[]> {
+  'use cache';
+  // TMDB's watch_region is case-sensitive (a lowercase code returns no
+  // results) — normalize once so the fetch and the cache tag always agree.
+  const normalizedCountry = country.toUpperCase();
+  cacheLife('hours');
+  cacheTag(`popular-tv-${normalizedCountry}`);
+
+  const apiKey = process.env.TMDB_API_KEY;
+  if (!apiKey) {
+    console.warn('[tv-shows] TMDB_API_KEY not set');
+    return [];
+  }
+
+  try {
+    const res = await fetch(
+      `${TMDB_API_BASE_URL}/discover/tv?api_key=${apiKey}&language=en-US&watch_region=${normalizedCountry}&with_watch_monetization_types=flatrate&sort_by=popularity.desc&page=1`
+    );
+
+    if (!res.ok) {
+      console.warn(
+        `[tv-shows] TMDB popular-by-country ${res.status}: ${res.statusText}`
+      );
+      return [];
+    }
+
+    const json: { results?: { id: number }[] } = await res.json();
+    return (json.results ?? []).map((show) => show.id);
+  } catch (err) {
+    console.warn('[tv-shows] popular-by-country fetch failed', err);
+    return [];
+  }
+}
+
+export async function getDiscoverTvIdsByGenre(
+  genreId: number
+): Promise<number[]> {
+  'use cache';
+  cacheLife('hours');
+  cacheTag(`popular-tv-genre-${genreId}`);
+
+  const apiKey = process.env.TMDB_API_KEY;
+  if (!apiKey) {
+    console.warn('[tv-shows] TMDB_API_KEY not set');
+    return [];
+  }
+
+  try {
+    const res = await fetch(
+      `${TMDB_API_BASE_URL}/discover/tv?api_key=${apiKey}&language=en-US&with_genres=${genreId}&sort_by=popularity.desc&page=1`
+    );
+
+    if (!res.ok) {
+      console.warn(
+        `[tv-shows] TMDB discover-by-genre ${res.status}: ${res.statusText}`
+      );
+      return [];
+    }
+
+    const json: { results?: { id: number }[] } = await res.json();
+    return (json.results ?? []).map((show) => show.id);
+  } catch (err) {
+    console.warn('[tv-shows] discover-by-genre fetch failed', err);
+    return [];
+  }
+}
+
 export async function getTmdbSeasonEpisodes(
   showId: number,
   seasonNumber: number
@@ -294,7 +369,10 @@ export async function getShowSummary(id: number): Promise<ShowSummary | null> {
       genres: (json.genres ?? []).map((genre) => genre.name),
       network: json.networks?.[0]?.name ?? null,
       isAnime: showIsAnime,
-      averageRuntime: json.episode_run_time?.[0] ?? null,
+      // episode_run_time is frequently empty on TMDB nowadays; fall back to
+      // the last aired episode's own runtime.
+      averageRuntime:
+        json.episode_run_time?.[0] ?? json.last_episode_to_air?.runtime ?? null,
       seasons,
     };
   } catch (err) {
@@ -358,7 +436,10 @@ export async function getTmdbShowFullDetails(
       // "Ongoing" instead.
       status:
         json.status === 'Returning Series' ? 'Ongoing' : (json.status ?? null),
-      averageRuntime: json.episode_run_time?.[0] ?? null,
+      // episode_run_time is frequently empty on TMDB nowadays; fall back to
+      // the last aired episode's own runtime.
+      averageRuntime:
+        json.episode_run_time?.[0] ?? json.last_episode_to_air?.runtime ?? null,
       originalLanguage: getLanguageDisplayName(json.original_language),
       originalCountry: getCountryDisplayName(json.origin_country?.[0]),
       contentRating:
