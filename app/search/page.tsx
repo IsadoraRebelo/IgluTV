@@ -1,12 +1,14 @@
-import { HomeSearchBar, SearchFilters, SearchResults } from '@/components';
+import { Suspense } from 'react';
+
+import { SearchResultsSection } from '@/components/SearchResults/SearchResultsSection';
 
 import {
-  loadMoreSearchResults,
-  type SearchCursor,
-  type SearchType,
-} from '@/services/search';
+  HomeSearchBar,
+  SearchFilters,
+  SearchResultsSkeleton,
+} from '@/components';
 
-const INITIAL_SEARCH_CURSOR: SearchCursor = { tmdbPage: 1, skip: 0 };
+import type { SearchType } from '@/services/search';
 
 const VALID_TYPES: SearchType[] = ['all', 'shows', 'anime', 'cast'];
 
@@ -24,15 +26,6 @@ export default async function SearchPage({
   const { q, type: typeParam } = await searchParams;
   const query = (q ?? '').trim();
   const type = parseType(typeParam);
-
-  const { shows, people, hasMore, nextCursor } = query
-    ? await loadMoreSearchResults(query, type, INITIAL_SEARCH_CURSOR)
-    : {
-      shows: [],
-      people: [],
-      hasMore: false,
-      nextCursor: INITIAL_SEARCH_CURSOR,
-    };
 
   return (
     <div className="flex flex-1 flex-col">
@@ -55,17 +48,14 @@ export default async function SearchPage({
               <SearchFilters query={query} active={type} variant="mobile" />
             </div>
 
-            <div className="mt-2 md:mt-6 grid grid-cols-1 gap-5 md:gap-10 lg:grid-cols-[1fr_260px]">
+            <div className="mt-2 grid grid-cols-1 gap-5 md:mt-6 md:gap-10 lg:grid-cols-[1fr_260px]">
               <div>
-                <SearchResults
+                <Suspense
                   key={`${query}|${type}`}
-                  query={query}
-                  type={type}
-                  initialShows={shows}
-                  initialPeople={people}
-                  initialHasMore={hasMore}
-                  initialCursor={nextCursor}
-                />
+                  fallback={<SearchResultsSkeleton />}
+                >
+                  <SearchResultsSection query={query} type={type} />
+                </Suspense>
               </div>
 
               <SearchFilters query={query} active={type} variant="desktop" />

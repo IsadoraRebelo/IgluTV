@@ -30,6 +30,7 @@ export * from './RecentlyWatchedAccordion/RecentlyWatchedAccordion';
 export * from './SearchResults/SearchFilters';
 export * from './SearchResults/SearchResultRow';
 export * from './SearchResults/SearchResults';
+export * from './SearchResults/SearchResultsSkeleton';
 export * from './SeasonAccordion/SeasonAccordion';
 export * from './ShowActionsMenu/ShowActionsMenu';
 export * from './ShowOverview/ShowOverview';
