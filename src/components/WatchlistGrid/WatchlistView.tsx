@@ -40,6 +40,7 @@ const FACETS: FacetDef<WatchlistEntry>[] = [
       ).sort((a, b) => b - a),
     getValues: (entry) => (entry.decade === null ? [] : [entry.decade]),
     optionLabel: (value) => `${value}s`,
+    width: 110,
   },
   {
     key: 'genre',
@@ -50,6 +51,7 @@ const FACETS: FacetDef<WatchlistEntry>[] = [
       ),
     getValues: (entry) => entry.show.genres,
     optionLabel: (value) => String(value),
+    width: 200,
   },
   {
     key: 'service',
@@ -65,6 +67,7 @@ const FACETS: FacetDef<WatchlistEntry>[] = [
     getValues: (entry) =>
       entry.show.network === null ? [] : [entry.show.network],
     optionLabel: (value) => String(value),
+    width: 150,
   },
 ];
 

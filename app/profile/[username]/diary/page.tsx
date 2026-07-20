@@ -18,7 +18,7 @@ export default async function DiaryPage({
 
   return (
     <div className="flex flex-1 flex-col">
-      <main className="container-wide flex-1 pt-10 pb-20">
+      <main className="container-shell flex-1 pt-5 md:pt-10 pb-2">
         <ProfileSubNav
           username={profile.username}
           avatarUrl={profile.avatarUrl}

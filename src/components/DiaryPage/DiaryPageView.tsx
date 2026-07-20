@@ -73,6 +73,7 @@ const FACETS: FacetDef<DiaryEntry>[] = [
       Array.from(new Set(entries.map(diaryYearOf))).sort((a, b) => b - a),
     getValues: (entry) => [diaryYearOf(entry)],
     optionLabel: (value) => String(value),
+    width: 140,
   },
   {
     key: 'decade',
@@ -86,6 +87,7 @@ const FACETS: FacetDef<DiaryEntry>[] = [
       return decade === null ? [] : [decade];
     },
     optionLabel: (value) => `${value}s`,
+    width: 110,
   },
   {
     key: 'genre',
@@ -96,6 +98,7 @@ const FACETS: FacetDef<DiaryEntry>[] = [
       ),
     getValues: (entry) => entry.show.genres,
     optionLabel: (value) => String(value),
+    width: 200,
   },
 ];
 
@@ -142,7 +145,7 @@ export function DiaryPageView({ entries }: { entries: DiaryEntry[] }) {
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-5">
       <ListFilterBar
         title="Diary"
         facets={controls.facets}
@@ -150,9 +153,8 @@ export function DiaryPageView({ entries }: { entries: DiaryEntry[] }) {
         sortDirection={controls.sortDirection}
         sortLabels={controls.sortLabels}
         onSortChange={controls.onSortChange}
-        controlsRowClassName="flex flex-wrap items-center gap-4"
-        desktopFacetsClassName="hidden flex-wrap items-center gap-5 sm:flex"
-        sortDropdownWrapperClassName="hidden sm:block"
+        controlsRowClassName="flex flex-wrap items-center gap-2"
+        desktopFacetsClassName="hidden flex-wrap items-center gap-3 sm:flex"
       />
 
       {controls.hasNoMatches ? (

@@ -118,7 +118,9 @@ type ListFilterBarSectionProps<TSortKey extends string> = {
   onDensityChange?: (density: Density) => void;
   controlsRowClassName?: string;
   desktopFacetsClassName?: string;
-  sortDropdownWrapperClassName?: string;
+  // Open-state width (px) for the sort dropdown, sized to the page's
+  // longest "Sort by X" label.
+  sortWidth?: number;
 };
 
 type ListFilterBarCompactProps<TSortKey extends string> = {
@@ -128,6 +130,7 @@ type ListFilterBarCompactProps<TSortKey extends string> = {
   sortDirection: SortDirection;
   sortLabels: Record<TSortKey, string>;
   onSortChange: (key: TSortKey) => void;
+  sortWidth?: number;
 };
 
 export function ListFilterBar<TSortKey extends string>(
@@ -135,7 +138,8 @@ export function ListFilterBar<TSortKey extends string>(
     ListFilterBarSectionProps<TSortKey> | ListFilterBarCompactProps<TSortKey>
 ) {
   if (props.layout === 'compact') {
-    const { facets, sortKey, sortDirection, sortLabels, onSortChange } = props;
+    const { facets, sortKey, sortDirection, sortLabels, onSortChange, sortWidth } =
+      props;
     return (
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-2">
         <div className="flex flex-wrap items-center gap-2">
@@ -147,6 +151,7 @@ export function ListFilterBar<TSortKey extends string>(
               optionLabel={facet.optionLabel}
               selected={facet.selected}
               onToggle={facet.onToggle}
+              width={facet.width}
             />
           ))}
         </div>
@@ -156,6 +161,7 @@ export function ListFilterBar<TSortKey extends string>(
           sortDirection={sortDirection}
           labels={sortLabels}
           onSortChange={onSortChange}
+          width={sortWidth}
         />
       </div>
     );
@@ -168,11 +174,11 @@ export function ListFilterBar<TSortKey extends string>(
     sortDirection,
     sortLabels,
     onSortChange,
+    sortWidth,
     density,
     onDensityChange,
     controlsRowClassName = 'flex flex-wrap items-center gap-2',
     desktopFacetsClassName = 'hidden flex-wrap items-center gap-2 sm:flex',
-    sortDropdownWrapperClassName = 'hidden sm:block ml-2',
   } = props;
 
   return (
@@ -191,6 +197,7 @@ export function ListFilterBar<TSortKey extends string>(
               optionLabel={facet.optionLabel}
               selected={facet.selected}
               onToggle={facet.onToggle}
+              width={facet.width}
             />
           ))}
         </div>
@@ -205,12 +212,13 @@ export function ListFilterBar<TSortKey extends string>(
           />
         </div>
 
-        <div className={sortDropdownWrapperClassName}>
+        <div className="hidden sm:block ml-2">
           <SortDropdown
             sortKey={sortKey}
             sortDirection={sortDirection}
             labels={sortLabels}
             onSortChange={onSortChange}
+            width={sortWidth}
           />
         </div>
 

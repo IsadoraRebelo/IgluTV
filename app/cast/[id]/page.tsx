@@ -55,8 +55,8 @@ export default async function CastPage({
 
   return (
     <div className="flex flex-1 flex-col">
-      <main className="container-narrow flex-1 pt-10 pb-20">
-        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1fr_260px]">
+      <main className="container-shell flex-1 pt-5 md:pt-10 pb-2">
+        <div className="grid grid-cols-1 gap-7 md:gap-10 lg:grid-cols-[1fr_260px]">
           <aside className="order-1 flex flex-col gap-4 lg:order-2">
             <div className="bg-surface relative aspect-[3/4] w-full max-w-[230px] overflow-hidden rounded-sm">
               {person.profileUrl ? (
@@ -96,7 +96,7 @@ export default async function CastPage({
               <p className="text-text-secondary text-xs font-semibold tracking-wide uppercase">
                 TV Shows Starring
               </p>
-              <h1 className="text-xl font-semibold text-white sm:text-3xl">
+              <h1 className="text-xl font-semibold text-white sm:text-2xl">
                 {person.name}
               </h1>
             </div>

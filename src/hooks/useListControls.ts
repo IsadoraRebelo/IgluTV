@@ -150,6 +150,7 @@ export function useListControls<
     label: facet.label,
     options: facetOptions.get(facet.key) ?? [],
     optionLabel: facet.optionLabel,
+    width: facet.width,
     selected: selectedByFacet.get(facet.key) ?? new Set<FacetValue>(),
     onToggle: (value: FacetValue) => {
       setSelectedByFacet((prev) => {
