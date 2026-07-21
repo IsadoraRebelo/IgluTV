@@ -142,6 +142,35 @@ export function getPriorUnwatchedAiredEpisodes(
   return prior;
 }
 
+// All aired-and-unwatched episodes across every regular season, with no cutoff —
+// unlike getPriorUnwatchedAiredEpisodes, this also catches episodes that aired
+// *after* the current "watch next" pick (e.g. you're a couple episodes behind on
+// a currently-airing season), not just ones skipped earlier.
+export function getAiredUnwatchedEpisodes(
+  seasons: Season[],
+  watchedDates: Map<string, (string | null)[]>
+): EpisodeRef[] {
+  const airedUnwatched: EpisodeRef[] = [];
+
+  for (const season of seasons) {
+    if (season.seasonNumber <= 0) continue;
+
+    for (const episode of season.episodes) {
+      if (!hasEpisodeAired(episode.airDate)) continue;
+
+      const key = episodeKey(season.seasonNumber, episode.episodeNumber);
+      if (getWatchCount(watchedDates, key) === 0) {
+        airedUnwatched.push({
+          seasonNumber: season.seasonNumber,
+          episodeNumber: episode.episodeNumber,
+        });
+      }
+    }
+  }
+
+  return airedUnwatched;
+}
+
 export function getWatchNextEpisode(
   seasons: Season[],
   watchedDates: Map<string, (string | null)[]>

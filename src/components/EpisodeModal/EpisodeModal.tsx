@@ -4,6 +4,7 @@ import { CalendarDaysIcon } from '@heroicons/react/24/solid';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { ChevronDown, X } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useState } from 'react';
 
 import { WatchedToggleButton } from '@/components';
@@ -307,8 +308,9 @@ export function EpisodeModal({
                     </h3>
                     <div className="flex gap-2 overflow-x-auto pb-1">
                       {cast.map((member) => (
-                        <div
+                        <Link
                           key={`${member.actorName}-${member.character}`}
+                          href={`/cast/${member.actorId}`}
                           className="bg-surface relative aspect-[2/3] w-24 shrink-0 overflow-hidden rounded-md"
                         >
                           {member.imageUrl ? (
@@ -329,7 +331,7 @@ export function EpisodeModal({
                               {member.character}
                             </div>
                           </div>
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   </div>

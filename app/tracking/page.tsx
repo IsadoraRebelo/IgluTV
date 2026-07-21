@@ -13,9 +13,9 @@ import {
 } from '@/components';
 import {
   buildWatchedDatesMap,
+  getAiredUnwatchedEpisodes,
   getEpisodeSectionState,
   getFirstEpisode,
-  getPriorUnwatchedAiredEpisodes,
   hasEpisodeAired,
   isOlderThanDays,
 } from '@/components/ShowTracker/utils';
@@ -82,25 +82,23 @@ async function buildWatchListEntry(
   }
 
   const episode = section.episode;
-  const backlogRefs =
+  const airedUnwatchedRefs =
     section.kind === 'next'
-      ? getPriorUnwatchedAiredEpisodes(
-        meta.seasons,
-        watchedDates,
-        episode.seasonNumber,
-        episode.episodeNumber
-      )
+      ? getAiredUnwatchedEpisodes(meta.seasons, watchedDates)
       : [];
-  const backlogCount = backlogRefs.length;
-  const unwatchedRuntimeMinutes =
-    backlogRefs.reduce((sum, ref) => {
-      const backlogEpisode = findEpisode(
-        meta.seasons,
-        ref.seasonNumber,
-        ref.episodeNumber
-      );
-      return sum + (backlogEpisode?.runtime ?? 0);
-    }, 0) + (episode.runtime ?? 0);
+  // airedUnwatchedRefs always includes `episode` itself (it's aired and
+  // unwatched by construction, guaranteed by the hasEpisodeAired check
+  // above), so subtract 1 to get the count of *other* waiting episodes —
+  // both ones skipped earlier and ones that aired since, past this pick.
+  const backlogCount = Math.max(0, airedUnwatchedRefs.length - 1);
+  const unwatchedRuntimeMinutes = airedUnwatchedRefs.reduce((sum, ref) => {
+    const airedEpisode = findEpisode(
+      meta.seasons,
+      ref.seasonNumber,
+      ref.episodeNumber
+    );
+    return sum + (airedEpisode?.runtime ?? 0);
+  }, 0);
 
   let sortKey: string | null = null;
   for (const dates of watchedDates.values()) {
@@ -311,10 +309,11 @@ export default async function TrackingPage() {
 
   if (!viewer) redirect('/');
 
-  const trackedShows = await getMyShows('watching');
-  const wishlistShows = await getMyShows('watch_later');
-  const recentWatchedRows =
-    await getRecentWatchedEpisodes(RECENT_WATCHED_LIMIT);
+  const [trackedShows, wishlistShows, recentWatchedRows] = await Promise.all([
+    getMyShows('watching'),
+    getMyShows('watch_later'),
+    getRecentWatchedEpisodes(RECENT_WATCHED_LIMIT),
+  ]);
 
   const allShowIds = Array.from(
     new Set([
@@ -328,14 +327,17 @@ export default async function TrackingPage() {
     allShowIds
   );
 
-  const results = await Promise.all(
-    trackedShows.map((tracked) =>
-      buildWatchListEntry(
-        tracked,
-        watchedEpisodesByShow.get(tracked.tmdbShowId) ?? []
+  const [results, recentWatchedEntries] = await Promise.all([
+    Promise.all(
+      trackedShows.map((tracked) =>
+        buildWatchListEntry(
+          tracked,
+          watchedEpisodesByShow.get(tracked.tmdbShowId) ?? []
+        )
       )
-    )
-  );
+    ),
+    buildRecentWatchEntries(recentWatchedRows, watchedEpisodesByShow),
+  ]);
 
   const entries = results
     .filter((entry): entry is WatchListEntry => entry !== null)
@@ -345,11 +347,6 @@ export default async function TrackingPage() {
       if (b.sortKey === null) return -1;
       return b.sortKey.localeCompare(a.sortKey);
     });
-
-  const recentWatchedEntries = await buildRecentWatchEntries(
-    recentWatchedRows,
-    watchedEpisodesByShow
-  );
 
   const staleShowIds = new Set(
     entries

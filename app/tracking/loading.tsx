@@ -1,5 +1,5 @@
-import { LoadingState } from '@/components';
+import { TrackingPageSkeleton } from '@/components';
 
 export default function Loading() {
-  return <LoadingState />;
+  return <TrackingPageSkeleton />;
 }

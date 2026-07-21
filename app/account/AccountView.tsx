@@ -20,8 +20,8 @@ export function AccountView({ email }: { email: string }) {
   }, [searchParams]);
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-10 px-4 py-12">
-      <h1 className="text-foreground text-2xl font-semibold tracking-tight">
+    <div className="mx-auto flex w-full mt-5 max-w-md flex-col gap-5 md:gap-10 px-4 pb-5 md:mt-10">
+      <h1 className="text-foreground text-xl font-semibold tracking-tight">
         Account
       </h1>
 
