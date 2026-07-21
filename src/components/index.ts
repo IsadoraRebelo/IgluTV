@@ -25,7 +25,6 @@ export * from './Profile/ProfileOverviewSectionSkeleton';
 export * from './Profile/ShowsSectionSkeleton';
 export * from './Profile/WatchlistSectionSkeleton';
 export * from './ProfileSettings/ProfileSettingsButton';
-export * from './ProfileSubNav/ProfileSubNav';
 export * from './RecentlyWatchedAccordion/RecentlyWatchedAccordion';
 export * from './SearchResults/SearchFilters';
 export * from './SearchResults/SearchResultRow';

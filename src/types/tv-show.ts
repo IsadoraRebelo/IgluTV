@@ -8,6 +8,7 @@ export type CastMember = {
 // Show detail fields, all sourced from TMDB.
 export type ShowDetails = {
   name: string;
+  originalName: string;
   overview: string;
   year: string | null;
   bannerUrl: string | null;
@@ -155,6 +156,7 @@ export type TMDBWatchProvidersRaw = {
 
 export type TMDBSeriesDetailsRaw = {
   name: string;
+  original_name: string;
   overview: string;
   first_air_date: string;
   last_air_date: string | null;

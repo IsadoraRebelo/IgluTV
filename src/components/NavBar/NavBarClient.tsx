@@ -3,17 +3,19 @@
 import { Search } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Suspense, useState } from 'react';
+import { Suspense, useRef, useState } from 'react';
 
 import { cn } from '@/utils';
 
-import { NavBarShowsLink } from './NavBarShowsLink';
-import { NavBarUserMenu } from './NavBarUserMenu';
+import { NavBarAvatar } from './NavBarAvatar';
+import { NavBarPillLinks } from './NavBarPillLinks';
 
 export function NavBarClient() {
   const pathname = usePathname();
   const router = useRouter();
   const [query, setQuery] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const isOverlay =
     pathname === '/' ||
     pathname.startsWith('/show/') ||
@@ -32,42 +34,36 @@ export function NavBarClient() {
         'hidden min-h-16 items-center pt-[env(safe-area-inset-top)] lg:flex',
         isOverlay
           ? 'absolute inset-x-0 top-0 z-50 bg-transparent'
-          : 'bg-background text-foreground'
+          : 'border-b border-foreground/10 bg-background text-foreground'
       )}
     >
-      <div className="container-shell flex items-center justify-between gap-6">
+      <div className="container-shell relative flex items-center justify-between gap-6 py-6">
         <Link
           href="/"
-          className="text-accent font-heading text-xl font-extrabold tracking-tight sm:text-2xl"
+          className="text-accent font-heading text-xl font-extrabold tracking-tight sm:text-3xl"
         >
           Iglu <span className="text-foreground font-normal">tv</span>
         </Link>
 
-        <nav className="hidden items-center gap-6 text-sm font-semibold lg:flex">
+        <nav
+          className={cn(
+            'absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full border p-1',
+            isOverlay
+              ? 'border-white/10 bg-white/5'
+              : 'border-foreground/10 bg-foreground/5'
+          )}
+        >
           <Suspense fallback={null}>
-            <NavBarShowsLink isOverlay={isOverlay} />
+            <NavBarPillLinks isOverlay={isOverlay} />
           </Suspense>
-          <Link
-            href="/tracking"
-            className={cn(
-              'transition-colors',
-              isOverlay
-                ? 'text-white/80 hover:text-white'
-                : 'text-foreground/80 hover:text-foreground'
-            )}
-          >
-            My Tracker
-          </Link>
         </nav>
 
         <div className="ml-auto flex items-center gap-4">
-          <form
-            onSubmit={handleSearchSubmit}
-            className="relative hidden sm:block"
-          >
+          <form onSubmit={handleSearchSubmit} className="relative">
             <button
-              type="submit"
+              type="button"
               aria-label="Search"
+              onClick={() => searchInputRef.current?.focus()}
               className={cn(
                 'absolute top-1/2 left-3 -translate-y-1/2 border-0 bg-transparent p-0',
                 isOverlay
@@ -78,12 +74,26 @@ export function NavBarClient() {
               <Search className="h-4 w-4" />
             </button>
             <input
+              ref={searchInputRef}
               type="text"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
+              onFocus={() => setSearchOpen(true)}
+              onBlur={() => {
+                if (!query.trim()) setSearchOpen(false);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  setQuery('');
+                  setSearchOpen(false);
+                  searchInputRef.current?.blur();
+                }
+              }}
               placeholder="Search"
+              aria-label="Search"
               className={cn(
-                'h-9 w-48 rounded-full pr-3 pl-9 text-sm',
+                'h-9 rounded-full pr-3 pl-9 text-sm transition-[width] duration-200 ease-out',
+                searchOpen ? 'w-48' : 'w-9 cursor-pointer',
                 isOverlay
                   ? 'bg-white/10 text-white placeholder:text-white/50'
                   : 'bg-foreground/10 text-foreground placeholder:text-foreground/50'
@@ -93,10 +103,10 @@ export function NavBarClient() {
 
           <Suspense
             fallback={
-              <div className="h-4 w-16 animate-pulse rounded-full bg-white/10" />
+              <div className="h-8 w-8 animate-pulse rounded-full bg-white/10" />
             }
           >
-            <NavBarUserMenu isOverlay={isOverlay} />
+            <NavBarAvatar />
           </Suspense>
         </div>
       </div>

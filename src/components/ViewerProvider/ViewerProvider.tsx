@@ -24,9 +24,15 @@ export function ViewerProvider({
 // call this from a component wrapped in its own <Suspense> boundary (e.g.
 // NavBarUserMenu), never from the root layout itself, so the rest of the
 // app can still prerender as a static shell while this resolves.
-export function useViewer(): { username: string | null } {
+export function useViewer(): {
+  username: string | null;
+  avatarUrl: string | null;
+} {
   const viewerPromise = useContext(ViewerContext);
-  if (!viewerPromise) return { username: null };
+  if (!viewerPromise) return { username: null, avatarUrl: null };
   const viewer = use(viewerPromise);
-  return { username: viewer?.username ?? null };
+  return {
+    username: viewer?.username ?? null,
+    avatarUrl: viewer?.avatarUrl ?? null,
+  };
 }

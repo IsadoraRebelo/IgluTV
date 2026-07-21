@@ -10,6 +10,7 @@ export type Viewer = {
   email: string | undefined;
   username: string | null;
   country: string | null;
+  avatarUrl: string | null;
 };
 
 // Request-scoped: dedupes the auth check + profile lookup across every
@@ -26,7 +27,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('username, country')
+    .select('username, country, avatar_url')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -37,6 +38,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
     email: user.email,
     username: data?.username ?? null,
     country: data?.country ?? null,
+    avatarUrl: data?.avatar_url ?? null,
   };
 });
 

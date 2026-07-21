@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 
-import { ProfileSubNav, WatchlistSectionSkeleton } from '@/components';
+import { WatchlistSectionSkeleton } from '@/components';
 import { WatchlistSection } from '@/components/Profile/WatchlistSection';
 
 import { getProfileByUsername } from '@/services/profile';
@@ -19,11 +19,6 @@ export default async function WatchlistPage({
   return (
     <div className="flex flex-1 flex-col">
       <main className="container-shell flex-1 pt-5 md:pt-10 pb-2">
-        <ProfileSubNav
-          username={profile.username}
-          avatarUrl={profile.avatarUrl}
-          active="watchlist"
-        />
         <Suspense fallback={<WatchlistSectionSkeleton />}>
           <WatchlistSection userId={profile.id} />
         </Suspense>

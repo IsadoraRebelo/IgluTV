@@ -293,7 +293,7 @@ export async function ProfileOverviewSection({
                       <div className="flex flex-1 flex-col gap-2">
                         {group.days.map((dayGroup) => (
                           <div key={dayGroup.day} className="flex gap-2">
-                            <span className="text-accent-foreground shrink-0 text-sm">
+                            <span className="text-muted-foreground shrink-0 text-sm">
                               {dayGroup.day}
                             </span>
                             <div className="flex min-w-0 flex-col gap-1">

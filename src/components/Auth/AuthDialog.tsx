@@ -24,17 +24,28 @@ const VIEW_COPY: Record<AuthView, { title: string; description: string }> = {
 type AuthDialogProps = {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  initialView?: AuthView;
 };
 
 export const AuthDialog = ({
   open: controlledOpen,
   onOpenChange: setControlledOpen,
+  initialView = 'login',
 }: AuthDialogProps = {}) => {
   const isControlled = controlledOpen !== undefined;
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
-  const [view, setView] = useState<AuthView>('login');
+  const [view, setView] = useState<AuthView>(initialView);
 
   const open = isControlled ? controlledOpen : uncontrolledOpen;
+
+  // Controlled callers (e.g. separate "Log in" / "Sign up" pill triggers)
+  // change `initialView` while the dialog stays mounted — resync the view
+  // on every open transition rather than only reading it on first render.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) setView(initialView);
+  }
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (isControlled) {

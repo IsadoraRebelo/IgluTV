@@ -239,6 +239,14 @@ function HomeTab({
           Details
         </h2>
         <div className="flex flex-col divide-y divide-white/10 px-1 text-sm">
+          <DetailRow
+            label="Original name"
+            value={
+              details.originalName !== details.name
+                ? details.originalName
+                : null
+            }
+          />
           <DetailRow label="Seasons" value={meta?.numberOfSeasons} />
           <DetailRow label="Episodes" value={meta?.numberOfEpisodes} />
           <DetailRow

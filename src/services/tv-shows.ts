@@ -413,6 +413,7 @@ export async function getTmdbShowFullDetails(
 
     const details: ShowDetails = {
       name: json.name,
+      originalName: json.original_name,
       overview: json.overview,
       year: json.first_air_date ? json.first_air_date.slice(0, 4) : null,
       bannerUrl: json.backdrop_path
