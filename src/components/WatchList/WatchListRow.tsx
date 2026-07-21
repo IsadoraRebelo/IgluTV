@@ -144,9 +144,8 @@ function WatchListRowContent({
   const isWatched = getWatchCount(watchedDates, episodeKeyValue) > 0;
   const rewatchCount = getRewatchCount(watchedDates, episodeKeyValue);
 
-  const baseRowClassName = `flex cursor-pointer items-stretch overflow-hidden rounded-lg bg-white/[0.03] hover:bg-white/[0.06] ${
-    faded ? 'opacity-60 hover:opacity-100' : ''
-  }`;
+  const baseRowClassName = `flex cursor-pointer items-stretch overflow-hidden rounded-lg bg-white/[0.03] hover:bg-white/[0.06] ${faded ? 'opacity-60 hover:opacity-100' : ''
+    }`;
 
   return (
     <>
@@ -169,7 +168,7 @@ function WatchListRowContent({
               : baseRowClassName
         }
       >
-        <div className="bg-surface relative aspect-square w-25 shrink-0 overflow-hidden sm:w-30">
+        <div className="bg-surface relative aspect-square w-25 shrink-0 overflow-hidden sm:w-25">
           {episode.imageUrl ? (
             <Image
               src={episode.imageUrl}
@@ -192,18 +191,18 @@ function WatchListRowContent({
           ) : null}
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 p-4">
+        <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 px-4 py-2">
           <Link
             href={`/show/${showId}`}
             onClick={(event) => event.stopPropagation()}
-            className="inline-flex max-w-full items-center gap-1 self-start rounded-full border border-white/20 px-3 py-1 text-xs font-semibold tracking-wide text-white uppercase"
+            className="inline-flex max-w-full items-center gap-1 self-start rounded-full border border-white/20 px-2.5 py-1 text-[10px] font-bold tracking-wide text-white uppercase"
           >
             <span className="truncate">{showName}</span>
             <ChevronRight className="h-3 w-3 shrink-0" />
           </Link>
 
           <div>
-            <p className="text-accent-foreground pb-1 text-sm font-semibold">
+            <p className="font-heading text-base font-extrabold text-white lg:text-md">
               S{String(episode.seasonNumber).padStart(2, '0')} | E
               {String(episode.episodeNumber).padStart(2, '0')}
               {backlogCount > 0 ? (
@@ -212,7 +211,7 @@ function WatchListRowContent({
                 </span>
               ) : null}
             </p>
-            <p className="text-text-primary truncate text-sm">{episode.name}</p>
+            <p className="text-text-secondary truncate text-sm">{episode.name}</p>
           </div>
         </div>
 

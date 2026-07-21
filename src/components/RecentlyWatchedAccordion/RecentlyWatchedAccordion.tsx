@@ -13,6 +13,8 @@ import type {
 export type RecentWatchEntry = {
   showId: number;
   showName: string;
+  posterUrl: string | null;
+  network: string | null;
   episode: LatestEpisode;
   watchedOn: string;
   seasons: Season[];

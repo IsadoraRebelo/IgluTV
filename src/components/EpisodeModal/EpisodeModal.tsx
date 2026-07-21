@@ -126,10 +126,10 @@ export function EpisodeModal({
                 </DialogPrimitive.Close>
               </div>
 
-              <div className="flex flex-col gap-3 p-5 pt-4">
+              <div className="relative z-50 mt-[-1.5rem] flex flex-col gap-3 p-5 pt-0">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <DialogPrimitive.Title className="text-accent-foreground text-sm font-semibold">
+                    <DialogPrimitive.Title className="text-white text-sm font-semibold">
                       S{String(seasonNumber).padStart(2, '0')} | E
                       {String(episode.episodeNumber).padStart(2, '0')}
                     </DialogPrimitive.Title>
@@ -158,9 +158,8 @@ export function EpisodeModal({
                               {formatDateOrUnknown(episodeWatchDates[0])}
                             </div>
                             <ChevronDown
-                              className={`h-3 w-3 transition-transform ${
-                                historyOpen ? 'rotate-180' : ''
-                              }`}
+                              className={`h-3 w-3 transition-transform ${historyOpen ? 'rotate-180' : ''
+                                }`}
                             />
                           </button>
                         ) : editingIndex === 0 ? (
@@ -203,11 +202,10 @@ export function EpisodeModal({
                         )}
                         {episodeWatchDates.length > 1 ? (
                           <div
-                            className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-                              historyOpen
-                                ? 'grid-rows-[1fr]'
-                                : 'grid-rows-[0fr]'
-                            }`}
+                            className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${historyOpen
+                              ? 'grid-rows-[1fr]'
+                              : 'grid-rows-[0fr]'
+                              }`}
                           >
                             <ul className="mt-1 flex flex-col gap-0.5 overflow-hidden pl-1">
                               {episodeWatchDates.map((date, index) =>
@@ -307,7 +305,7 @@ export function EpisodeModal({
                     <h3 className="text-text-faint mb-2 text-xs font-semibold tracking-[0.15em] uppercase">
                       Cast
                     </h3>
-                    <div className="flex gap-3 overflow-x-auto pb-1">
+                    <div className="flex gap-2 overflow-x-auto pb-1">
                       {cast.map((member) => (
                         <div
                           key={`${member.actorName}-${member.character}`}

@@ -1,10 +1,14 @@
-import { BookmarkIcon, ClockIcon, FilmIcon } from '@heroicons/react/24/solid';
 import { redirect } from 'next/navigation';
 
-import type { RecentWatchEntry } from '@/components';
+import type { RecentWatchEntry, TrackingShow } from '@/components';
 import {
   AccordionSection,
+  buildUpcomingGroups,
   RecentlyWatchedAccordion,
+  TrackingSidebarStats,
+  TrackingStatsPills,
+  TrackingTabs,
+  TrackingUpcomingGroups,
   WatchListRow,
 } from '@/components';
 import {
@@ -41,6 +45,7 @@ type WatchListEntry = {
   showId: number;
   showName: string;
   posterUrl: string | null;
+  network: string | null;
   episode: LatestEpisode;
   backlogCount: number;
   unwatchedRuntimeMinutes: number;
@@ -80,11 +85,11 @@ async function buildWatchListEntry(
   const backlogRefs =
     section.kind === 'next'
       ? getPriorUnwatchedAiredEpisodes(
-          meta.seasons,
-          watchedDates,
-          episode.seasonNumber,
-          episode.episodeNumber
-        )
+        meta.seasons,
+        watchedDates,
+        episode.seasonNumber,
+        episode.episodeNumber
+      )
       : [];
   const backlogCount = backlogRefs.length;
   const unwatchedRuntimeMinutes =
@@ -109,6 +114,7 @@ async function buildWatchListEntry(
     showId: tracked.tmdbShowId,
     showName: details.name,
     posterUrl: details.posterUrl,
+    network: details.network,
     episode,
     backlogCount,
     unwatchedRuntimeMinutes,
@@ -125,6 +131,8 @@ async function buildWatchListEntry(
 
 type ShowBundle = {
   showName: string;
+  posterUrl: string | null;
+  network: string | null;
   seasons: Season[];
   watchedEpisodes: EpisodeWatch[];
   skipCatchUpPrompt: boolean;
@@ -147,6 +155,8 @@ async function buildShowBundle(
     const { details, meta } = tmdbFull;
     return {
       showName: details.name,
+      posterUrl: details.posterUrl,
+      network: details.network,
       seasons: meta.seasons,
       watchedEpisodes,
       skipCatchUpPrompt: tracking?.skipCatchUpPrompt ?? false,
@@ -212,6 +222,7 @@ async function buildWishlistEntry(
     showId: tracked.tmdbShowId,
     showName: details.name,
     posterUrl: details.posterUrl,
+    network: details.network,
     episode,
     backlogCount: 0,
     unwatchedRuntimeMinutes: 0,
@@ -260,6 +271,8 @@ async function buildRecentWatchEntries(
     entries.push({
       showId: row.tmdbShowId,
       showName: bundle.showName,
+      posterUrl: bundle.posterUrl,
+      network: bundle.network,
       episode,
       watchedOn: row.watchedOn,
       seasons: bundle.seasons,
@@ -372,6 +385,9 @@ export default async function TrackingPage() {
   }
 
   const watchlistCount = wishlistShows.length;
+  const watchlistHref = viewer.username
+    ? `/profile/${viewer.username}/watchlist`
+    : null;
 
   const totalEpisodesLeft = activeEntries.reduce(
     (sum, entry) => sum + entry.backlogCount + 1,
@@ -381,50 +397,97 @@ export default async function TrackingPage() {
     (sum, entry) => sum + entry.unwatchedRuntimeMinutes,
     0
   );
+  const runtimeLabel = formatRuntime(totalRuntimeMinutes);
+
+  const trackingShowsById = new Map<number, TrackingShow>();
+  for (const entry of entries) {
+    trackingShowsById.set(entry.showId, {
+      showId: entry.showId,
+      showName: entry.showName,
+      posterUrl: entry.posterUrl,
+      network: entry.network,
+      seasons: entry.seasons,
+      watchedEpisodes: entry.watchedEpisodes,
+      skipCatchUpPrompt: entry.skipCatchUpPrompt,
+      initialStatus: entry.initialStatus,
+      tmdbStatus: entry.tmdbStatus,
+      cast: entry.cast,
+    });
+  }
+  for (const entry of recentWatchedEntries) {
+    if (trackingShowsById.has(entry.showId)) continue;
+    trackingShowsById.set(entry.showId, {
+      showId: entry.showId,
+      showName: entry.showName,
+      posterUrl: entry.posterUrl,
+      network: entry.network,
+      seasons: entry.seasons,
+      watchedEpisodes: entry.watchedEpisodes,
+      skipCatchUpPrompt: entry.skipCatchUpPrompt,
+      initialStatus: entry.initialStatus,
+      tmdbStatus: entry.tmdbStatus,
+      cast: entry.cast,
+    });
+  }
+  const upcomingGroups = buildUpcomingGroups(
+    Array.from(trackingShowsById.values())
+  );
+
+  const sectionsContent = (
+    <div>
+      <RecentlyWatchedAccordion entries={recentWatchedEntries} />
+      <AccordionSection title="Watch Next" defaultExpanded>
+        {activeEntries.map(renderWatchListEntry)}
+      </AccordionSection>
+      {staleEntries.length > 0 ? (
+        <AccordionSection title="Haven't Watched For A While" defaultExpanded>
+          {staleEntries.map(renderWatchListEntry)}
+        </AccordionSection>
+      ) : wishlistEntries.length > 0 ? (
+        <AccordionSection title="Start Next" defaultExpanded>
+          {wishlistEntries.map(renderWatchListEntry)}
+        </AccordionSection>
+      ) : null}
+    </div>
+  );
+
+  const sidebarStats = (
+    <div className="hidden lg:block">
+      <TrackingSidebarStats
+        episodesLeft={totalEpisodesLeft}
+        runtimeLabel={runtimeLabel}
+        watchlistCount={watchlistCount}
+        watchlistHref={watchlistHref}
+      />
+    </div>
+  );
 
   return (
     <div className="flex flex-1 flex-col">
-      <main className="container-narrow flex-1 pb-20">
-        <div className="mt-5 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_260px]">
-          <div>
-            <RecentlyWatchedAccordion entries={recentWatchedEntries} />
-            <AccordionSection title="Watch Next" defaultExpanded>
-              {activeEntries.map(renderWatchListEntry)}
-            </AccordionSection>
-            {staleEntries.length > 0 ? (
-              <AccordionSection
-                title="Haven't Watched For A While"
-                defaultExpanded
-              >
-                {staleEntries.map(renderWatchListEntry)}
-              </AccordionSection>
-            ) : wishlistEntries.length > 0 ? (
-              <AccordionSection title="Start Next" defaultExpanded>
-                {wishlistEntries.map(renderWatchListEntry)}
-              </AccordionSection>
-            ) : null}
-          </div>
-
-          <aside className="hidden h-fit flex-col gap-1 rounded-lg bg-white/[0.03] p-2 lg:flex">
-            <div className="text-foreground flex items-center gap-2 rounded-md px-3 py-2.5 text-sm">
-              <FilmIcon className="h-4 w-4 shrink-0" />
-              <span>
-                {totalEpisodesLeft} episode{totalEpisodesLeft === 1 ? '' : 's'}{' '}
-                to watch
-              </span>
-            </div>
-            <div className="text-foreground flex items-center gap-2 rounded-md px-3 py-2.5 text-sm">
-              <ClockIcon className="h-4 w-4 shrink-0" />
-              <span>{formatRuntime(totalRuntimeMinutes)} to catch up</span>
-            </div>
-            <div className="text-foreground flex items-center gap-2 rounded-md px-3 py-2.5 text-sm">
-              <BookmarkIcon className="h-4 w-4 shrink-0" />
-              <span>
-                {watchlistCount} show{watchlistCount === 1 ? '' : 's'} on
-                watchlist
-              </span>
-            </div>
-          </aside>
+      <main className="container-narrow flex-1 pb-5">
+        <div className="mt-5">
+          <TrackingTabs
+            stats={
+              <TrackingStatsPills
+                episodesLeft={totalEpisodesLeft}
+                runtimeLabel={runtimeLabel}
+                watchlistCount={watchlistCount}
+                watchlistHref={watchlistHref}
+              />
+            }
+            toWatch={
+              <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-[1fr_260px]">
+                {sectionsContent}
+                {sidebarStats}
+              </div>
+            }
+            upcoming={
+              <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-[1fr_260px]">
+                <TrackingUpcomingGroups groups={upcomingGroups} />
+                {sidebarStats}
+              </div>
+            }
+          />
         </div>
       </main>
     </div>
