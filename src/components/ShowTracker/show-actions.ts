@@ -22,6 +22,9 @@ type SharedState = {
 
 export function getVisibleActions(actions: ShowAction[], state: SharedState) {
   return actions.filter((action) => {
+    if (action.id === 'change-poster' || action.id === 'change-banner') {
+      return state.showStatus !== null;
+    }
     if (action.status === undefined) return true;
     if (action.status === 'watch_later') {
       return state.showStatus === null || state.showStatus === 'watch_later';

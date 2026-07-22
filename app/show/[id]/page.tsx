@@ -7,6 +7,7 @@ import { ShowTrackingSectionSkeleton } from '@/components';
 import { ShowTrackingSection } from '@/components/ShowTracker/ShowTrackingSection';
 
 import { getTmdbShowFullDetails } from '@/services/tv-shows';
+import { getViewerId } from '@/services/viewer';
 
 import type { ShowDetails, ShowMeta } from '@/types';
 
@@ -43,7 +44,8 @@ export default async function ShowPage({
     notFound();
   }
 
-  const tmdbFull = await getTmdbShowFullDetails(numericId);
+  const viewerId = await getViewerId();
+  const tmdbFull = await getTmdbShowFullDetails(numericId, viewerId);
   if (!tmdbFull) {
     notFound();
   }

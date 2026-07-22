@@ -34,6 +34,8 @@ import {
   isAnime,
 } from '@/utils';
 
+import { getCustomShowImages } from './custom-show-images';
+
 export async function getTrendingTvShowIds(): Promise<number[]> {
   'use cache';
   cacheLife('hours');
@@ -292,7 +294,9 @@ export async function getTmdbAnimeArcNames(
 // a poster tile, without the season/episode-group fan-out that
 // getTmdbShowFullDetails does. Full details remain a separate, heavier
 // tier for the show page and tracking views that need per-episode data.
-export async function getShowSummary(id: number): Promise<ShowSummary | null> {
+async function fetchShowSummaryFromTmdb(
+  id: number
+): Promise<ShowSummary | null> {
   'use cache';
   cacheLife('hours');
   cacheTag('tmdb-show-summary');
@@ -381,7 +385,37 @@ export async function getShowSummary(id: number): Promise<ShowSummary | null> {
   }
 }
 
-export async function getTmdbShowFullDetails(
+function withCustomImages(
+  summary: ShowSummary,
+  override:
+    | { customPosterUrl: string | null; customBannerUrl: string | null }
+    | undefined
+): ShowSummary {
+  if (!override) return summary;
+  return {
+    ...summary,
+    posterUrl: override.customPosterUrl ?? summary.posterUrl,
+    bannerUrl: override.customBannerUrl ?? summary.bannerUrl,
+  };
+}
+
+// viewerId is optional and, when provided, overlays that viewer's custom
+// poster/banner (from show_tracking) onto the globally-cached TMDB result.
+// This overlay MUST happen here, outside fetchShowSummaryFromTmdb's cached
+// scope — baking it into the cached function would leak one viewer's
+// custom image to every other viewer who triggers the same cache entry.
+export async function getShowSummary(
+  id: number,
+  viewerId?: string | null
+): Promise<ShowSummary | null> {
+  const summary = await fetchShowSummaryFromTmdb(id);
+  if (!summary || !viewerId) return summary;
+
+  const overrides = await getCustomShowImages(viewerId, [id]);
+  return withCustomImages(summary, overrides.get(id));
+}
+
+async function fetchShowFullDetailsFromTmdb(
   id: number
 ): Promise<{ details: ShowDetails; meta: ShowMeta } | null> {
   'use cache';
@@ -541,16 +575,59 @@ export async function getTmdbShowFullDetails(
   }
 }
 
+// viewerId is optional and, when provided, overlays that viewer's custom
+// poster/banner onto both the show's own details AND every "similar show"
+// entry in meta.similar — one bulk show_tracking query covers all of them.
+// Same non-cached-scope rule as getShowSummary above.
+export async function getTmdbShowFullDetails(
+  id: number,
+  viewerId?: string | null
+): Promise<{ details: ShowDetails; meta: ShowMeta } | null> {
+  const result = await fetchShowFullDetailsFromTmdb(id);
+  if (!result || !viewerId) return result;
+
+  const similarIds = result.meta.similar.map((show) => show.id);
+  const overrides = await getCustomShowImages(viewerId, [id, ...similarIds]);
+
+  const ownOverride = overrides.get(id);
+  const details: ShowDetails = ownOverride
+    ? {
+        ...result.details,
+        posterUrl: ownOverride.customPosterUrl ?? result.details.posterUrl,
+        bannerUrl: ownOverride.customBannerUrl ?? result.details.bannerUrl,
+      }
+    : result.details;
+
+  const similar = result.meta.similar.map((show) => {
+    const override = overrides.get(show.id);
+    if (!override?.customPosterUrl) return show;
+    return { ...show, posterUrl: override.customPosterUrl };
+  });
+
+  return { details, meta: { ...result.meta, similar } };
+}
+
 export async function resolveShowSummaries(
-  showIds: number[]
+  showIds: number[],
+  viewerId?: string | null
 ): Promise<Map<number, ShowSummary>> {
   const uniqueIds = Array.from(new Set(showIds));
-  const results = await Promise.all(uniqueIds.map((id) => getShowSummary(id)));
+  const [results, overrides] = await Promise.all([
+    Promise.all(uniqueIds.map((id) => fetchShowSummaryFromTmdb(id))),
+    viewerId
+      ? getCustomShowImages(viewerId, uniqueIds)
+      : Promise.resolve(
+          new Map<
+            number,
+            { customPosterUrl: string | null; customBannerUrl: string | null }
+          >()
+        ),
+  ]);
 
   const map = new Map<number, ShowSummary>();
   uniqueIds.forEach((id, i) => {
     const summary = results[i];
-    if (summary) map.set(id, summary);
+    if (summary) map.set(id, withCustomImages(summary, overrides.get(id)));
   });
   return map;
 }
@@ -565,7 +642,8 @@ export function pickShows(
 }
 
 export async function getTmdbShowImages(
-  showId: number
+  showId: number,
+  kind: 'poster' | 'banner'
 ): Promise<ShowBackdropImage[]> {
   'use cache';
   cacheLife('hours');
@@ -588,11 +666,17 @@ export async function getTmdbShowImages(
     }
 
     const json: TMDBShowImagesRaw = await res.json();
+    const rawImages =
+      kind === 'poster' ? (json.posters ?? []) : (json.backdrops ?? []);
+    const [thumbnailBaseUrl, fullBaseUrl] =
+      kind === 'poster'
+        ? [TMDB_IMAGE_BASE_URL, TMDB_POSTER_LARGE_BASE_URL]
+        : [TMDB_BACKDROP_BASE_URL, TMDB_BACKDROP_LARGE_BASE_URL];
 
-    return (json.backdrops ?? []).map((image) => ({
+    return rawImages.map((image) => ({
       filePath: image.file_path,
-      thumbnailUrl: `${TMDB_BACKDROP_BASE_URL}${image.file_path}`,
-      fullUrl: `${TMDB_BACKDROP_LARGE_BASE_URL}${image.file_path}`,
+      thumbnailUrl: `${thumbnailBaseUrl}${image.file_path}`,
+      fullUrl: `${fullBaseUrl}${image.file_path}`,
     }));
   } catch (err) {
     console.warn('[tv-shows] images fetch failed', err);

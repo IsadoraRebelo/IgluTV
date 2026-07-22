@@ -1,8 +1,10 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 
-import type { ShowStatus } from '@/types';
+import type { ShowImageKind, ShowStatus } from '@/types';
 
 import { cn } from '@/utils/cn';
 
@@ -12,11 +14,16 @@ import {
   getStatusActionLabel,
   getVisibleActions,
 } from './show-actions';
+import { ShowImagePickerDialog } from './ShowImagePickerDialog';
 import { useShowTrackingContext } from './ShowTrackingContext';
 
 export function ShowActionsSidebar({
+  showId,
+  showName,
   actions,
 }: {
+  showId: number;
+  showName: string;
   actions: {
     id?: string;
     status?: ShowStatus;
@@ -42,7 +49,13 @@ export function ShowActionsSidebar({
     isTogglingFavourite,
     isLoggedIn,
     openAuthDialog,
+    customPosterUrl,
+    customBannerUrl,
+    onApplyCustomImage,
   } = useShowTrackingContext();
+
+  const router = useRouter();
+  const [pickerKind, setPickerKind] = useState<ShowImageKind | null>(null);
 
   const visibleActions = getVisibleActions(actions, {
     showStatus,
@@ -51,6 +64,12 @@ export function ShowActionsSidebar({
     isShowFullyWatched,
     watchedDatesCount: watchedDates.size,
   });
+
+  function handleApplied(kind: ShowImageKind, url: string | null) {
+    onApplyCustomImage(kind, url);
+    setPickerKind(null);
+    router.refresh();
+  }
 
   if (!isLoggedIn) {
     return (
@@ -112,6 +131,23 @@ export function ShowActionsSidebar({
           );
         }
 
+        if (action.id === 'change-poster' || action.id === 'change-banner') {
+          const kind: ShowImageKind =
+            action.id === 'change-poster' ? 'poster' : 'banner';
+
+          return (
+            <button
+              key={action.id}
+              type="button"
+              onClick={() => setPickerKind(kind)}
+              className="text-md text-text-primary flex items-center gap-3 rounded-md px-3 py-2.5 text-left hover:bg-white/5"
+            >
+              {action.icon}
+              {action.label}
+            </button>
+          );
+        }
+
         if (action.status) {
           const isActive = showStatus === action.status;
           const label = getStatusActionLabel(action, showStatus);
@@ -143,6 +179,22 @@ export function ShowActionsSidebar({
           </div>
         );
       })}
+
+      {pickerKind ? (
+        <ShowImagePickerDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setPickerKind(null);
+          }}
+          showId={showId}
+          showName={showName}
+          kind={pickerKind}
+          currentUrl={
+            pickerKind === 'poster' ? customPosterUrl : customBannerUrl
+          }
+          onApplied={(url) => handleApplied(pickerKind, url)}
+        />
+      ) : null}
     </>
   );
 }

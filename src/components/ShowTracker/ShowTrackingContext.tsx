@@ -5,7 +5,13 @@ import { toast } from 'sonner';
 
 import { AuthDialog } from '@/components';
 
-import type { EpisodeWatch, Season, SeasonEpisode, ShowStatus } from '@/types';
+import type {
+  EpisodeWatch,
+  Season,
+  SeasonEpisode,
+  ShowImageKind,
+  ShowStatus,
+} from '@/types';
 
 import {
   markEpisodeWatchedAction,
@@ -61,6 +67,8 @@ export function ShowTrackingProvider({
   skipCatchUpPrompt,
   initialStatus,
   initialIsFavourite,
+  initialCustomPosterUrl,
+  initialCustomBannerUrl,
   tmdbStatus,
   isLoggedIn,
   children,
@@ -71,6 +79,8 @@ export function ShowTrackingProvider({
   skipCatchUpPrompt: boolean;
   initialStatus: ShowStatus | null;
   initialIsFavourite: boolean;
+  initialCustomPosterUrl: string | null;
+  initialCustomBannerUrl: string | null;
   tmdbStatus: string | null;
   isLoggedIn: boolean;
   children: ReactNode;
@@ -90,6 +100,12 @@ export function ShowTrackingProvider({
     initialStatus
   );
   const [isFavourite, setIsFavourite] = useState(initialIsFavourite);
+  const [customPosterUrl, setCustomPosterUrl] = useState(
+    initialCustomPosterUrl
+  );
+  const [customBannerUrl, setCustomBannerUrl] = useState(
+    initialCustomBannerUrl
+  );
 
   const regularMarkableSeasons = getRegularMarkableSeasons(seasons);
   const isShowFullyWatched = getIsShowFullyWatched(
@@ -1015,6 +1031,11 @@ export function ShowTrackingProvider({
     }
   }
 
+  function handleApplyCustomImage(kind: ShowImageKind, url: string | null) {
+    if (kind === 'poster') setCustomPosterUrl(url);
+    else setCustomBannerUrl(url);
+  }
+
   const value: ShowTrackingContextValue = {
     watchedDates,
     pendingKeys,
@@ -1038,6 +1059,9 @@ export function ShowTrackingProvider({
     isTogglingFavourite: pendingKeys.has(FAVOURITE_KEY),
     isLoggedIn,
     openAuthDialog: () => setAuthDialogOpen(true),
+    customPosterUrl,
+    customBannerUrl,
+    onApplyCustomImage: handleApplyCustomImage,
   };
 
   return (

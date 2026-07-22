@@ -5,6 +5,7 @@ import { DiarySectionSkeleton } from '@/components';
 import { DiarySection } from '@/components/Profile/DiarySection';
 
 import { getProfileByUsername } from '@/services/profile';
+import { getViewerId } from '@/services/viewer';
 
 export default async function DiaryPage({
   params,
@@ -16,11 +17,13 @@ export default async function DiaryPage({
   const profile = await getProfileByUsername(username);
   if (!profile) notFound();
 
+  const viewerId = await getViewerId();
+
   return (
     <div className="flex flex-1 flex-col">
-      <main className="container-shell flex-1 pt-5 md:pt-10 pb-2">
+      <main className="container-shell flex-1 pt-5 pb-2 md:pt-10">
         <Suspense fallback={<DiarySectionSkeleton />}>
-          <DiarySection userId={profile.id} />
+          <DiarySection userId={profile.id} viewerId={viewerId} />
         </Suspense>
       </main>
     </div>

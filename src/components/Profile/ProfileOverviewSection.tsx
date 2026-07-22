@@ -36,9 +36,11 @@ const WATCHLIST_PREVIEW_LIMIT = 5;
 export async function ProfileOverviewSection({
   profile,
   recentRows,
+  viewerId,
 }: {
   profile: { id: string; username: string };
   recentRows: Awaited<ReturnType<typeof getRecentWatchedShowsForUser>>;
+  viewerId: string | null;
 }) {
   const [
     stats,
@@ -75,7 +77,7 @@ export async function ProfileOverviewSection({
   );
 
   const [summaries, watchedCounts] = await Promise.all([
-    resolveShowSummaries(allShowIds),
+    resolveShowSummaries(allShowIds, viewerId),
     getWatchedEpisodeCountsForUser(profile.id, progressShowIds),
   ]);
 

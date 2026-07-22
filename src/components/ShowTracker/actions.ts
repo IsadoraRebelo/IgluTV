@@ -1,5 +1,6 @@
 'use server';
 
+import { setCustomShowImage } from '@/services/custom-show-images';
 import { ServiceError } from '@/services/errors';
 import {
   markEpisodeWatched,
@@ -15,8 +16,9 @@ import {
   unmarkSeasonWatched,
   updateEpisodeWatchDate,
 } from '@/services/tracking';
+import { getTmdbShowImages } from '@/services/tv-shows';
 
-import type { ShowStatus } from '@/types';
+import type { ShowBackdropImage, ShowImageKind, ShowStatus } from '@/types';
 
 export type TrackingActionResult =
   { ok: true } | { ok: false; code: string | null; message: string };
@@ -55,9 +57,7 @@ export async function markSeasonWatchedAction(
   episodeNumbers: number[],
   watchedOn: string | null
 ): Promise<TrackingActionResult> {
-  return toResult(
-    markSeasonWatched(showId, season, episodeNumbers, watchedOn)
-  );
+  return toResult(markSeasonWatched(showId, season, episodeNumbers, watchedOn));
 }
 
 export async function unmarkSeasonWatchedAction(
@@ -128,4 +128,19 @@ export async function updateEpisodeWatchDateAction(
   return toResult(
     updateEpisodeWatchDate(showId, season, episode, previousDate, nextDate)
   );
+}
+
+export async function setCustomShowImageAction(
+  showId: number,
+  kind: ShowImageKind,
+  url: string | null
+): Promise<TrackingActionResult> {
+  return toResult(setCustomShowImage(showId, kind, url));
+}
+
+export async function getShowImageOptionsAction(
+  showId: number,
+  kind: ShowImageKind
+): Promise<ShowBackdropImage[]> {
+  return getTmdbShowImages(showId, kind);
 }

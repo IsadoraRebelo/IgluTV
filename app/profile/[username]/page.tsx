@@ -55,7 +55,7 @@ export default async function ProfilePage({
   let bannerFallbackUrl: string | null = null;
   if (!profile.bannerUrl) {
     for (const row of recentRows) {
-      const summary = await getShowSummary(row.tmdbShowId);
+      const summary = await getShowSummary(row.tmdbShowId, viewerId);
       if (summary?.bannerUrl) {
         bannerFallbackUrl = summary.bannerUrl;
         break;
@@ -114,7 +114,11 @@ export default async function ProfilePage({
       </div>
 
       <Suspense fallback={<ProfileOverviewSectionSkeleton />}>
-        <ProfileOverviewSection profile={profile} recentRows={recentRows} />
+        <ProfileOverviewSection
+          profile={profile}
+          recentRows={recentRows}
+          viewerId={viewerId}
+        />
       </Suspense>
     </div>
   );

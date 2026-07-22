@@ -41,7 +41,7 @@ export async function getShowTrackingForUser(
   const { data, error } = await supabase
     .from('show_tracking')
     .select(
-      'tmdb_show_id, status, is_favourite, skip_catch_up_prompt, created_at'
+      'tmdb_show_id, status, is_favourite, skip_catch_up_prompt, created_at, custom_poster_url, custom_banner_url'
     )
     .eq('user_id', userId)
     .eq('tmdb_show_id', showId)
@@ -56,6 +56,8 @@ export async function getShowTrackingForUser(
     isFavourite: data.is_favourite,
     skipCatchUpPrompt: data.skip_catch_up_prompt,
     createdAt: data.created_at,
+    customPosterUrl: data.custom_poster_url,
+    customBannerUrl: data.custom_banner_url,
   };
 }
 
@@ -305,7 +307,11 @@ export async function getFinishedShowsForUser(
   const watchCounts = new Map<string, number>();
   for (const row of data ?? []) {
     if (row.watched_on === null) continue;
-    const key = episodeKey(row.tmdb_show_id, row.season_number, row.episode_number);
+    const key = episodeKey(
+      row.tmdb_show_id,
+      row.season_number,
+      row.episode_number
+    );
     watchCounts.set(key, (watchCounts.get(key) ?? 0) + 1);
   }
 
@@ -317,7 +323,11 @@ export async function getFinishedShowsForUser(
     if (seenShows.has(row.tmdb_show_id)) continue;
     seenShows.add(row.tmdb_show_id);
 
-    const key = episodeKey(row.tmdb_show_id, row.season_number, row.episode_number);
+    const key = episodeKey(
+      row.tmdb_show_id,
+      row.season_number,
+      row.episode_number
+    );
     deduped.push({
       id: row.id,
       tmdbShowId: row.tmdb_show_id,
@@ -433,7 +443,7 @@ export async function getShowsForUser(
   let query = supabase
     .from('show_tracking')
     .select(
-      'tmdb_show_id, status, is_favourite, skip_catch_up_prompt, created_at'
+      'tmdb_show_id, status, is_favourite, skip_catch_up_prompt, created_at, custom_poster_url, custom_banner_url'
     )
     .eq('user_id', userId);
 
@@ -448,6 +458,8 @@ export async function getShowsForUser(
     isFavourite: row.is_favourite,
     skipCatchUpPrompt: row.skip_catch_up_prompt,
     createdAt: row.created_at,
+    customPosterUrl: row.custom_poster_url,
+    customBannerUrl: row.custom_banner_url,
   }));
 }
 
@@ -466,7 +478,7 @@ export async function getFavouriteShowsForUser(
   const { data, error } = await supabase
     .from('show_tracking')
     .select(
-      'tmdb_show_id, status, is_favourite, skip_catch_up_prompt, created_at'
+      'tmdb_show_id, status, is_favourite, skip_catch_up_prompt, created_at, custom_poster_url, custom_banner_url'
     )
     .eq('user_id', userId)
     .eq('is_favourite', true);
@@ -479,6 +491,8 @@ export async function getFavouriteShowsForUser(
     isFavourite: row.is_favourite,
     skipCatchUpPrompt: row.skip_catch_up_prompt,
     createdAt: row.created_at,
+    customPosterUrl: row.custom_poster_url,
+    customBannerUrl: row.custom_banner_url,
   }));
 }
 

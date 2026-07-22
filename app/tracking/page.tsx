@@ -61,11 +61,12 @@ type WatchListEntry = {
 
 async function buildWatchListEntry(
   tracked: ShowTracking,
-  watchedEpisodes: EpisodeWatch[]
+  watchedEpisodes: EpisodeWatch[],
+  viewerId: string
 ): Promise<WatchListEntry | null> {
   let tmdbFull: Awaited<ReturnType<typeof getTmdbShowFullDetails>>;
   try {
-    tmdbFull = await getTmdbShowFullDetails(tracked.tmdbShowId);
+    tmdbFull = await getTmdbShowFullDetails(tracked.tmdbShowId, viewerId);
   } catch (err) {
     console.warn('[tracking] entry fetch failed', err);
     return null;
@@ -141,11 +142,12 @@ type ShowBundle = {
 
 async function buildShowBundle(
   showId: number,
-  watchedEpisodes: EpisodeWatch[]
+  watchedEpisodes: EpisodeWatch[],
+  viewerId: string
 ): Promise<ShowBundle | null> {
   try {
     const [tmdbFull, tracking] = await Promise.all([
-      getTmdbShowFullDetails(showId),
+      getTmdbShowFullDetails(showId, viewerId),
       getShowTracking(showId),
     ]);
     if (!tmdbFull) return null;
@@ -201,11 +203,12 @@ function formatRuntime(minutes: number): string {
 
 async function buildWishlistEntry(
   tracked: ShowTracking,
-  watchedEpisodes: EpisodeWatch[]
+  watchedEpisodes: EpisodeWatch[],
+  viewerId: string
 ): Promise<WatchListEntry | null> {
   let tmdbFull: Awaited<ReturnType<typeof getTmdbShowFullDetails>>;
   try {
-    tmdbFull = await getTmdbShowFullDetails(tracked.tmdbShowId);
+    tmdbFull = await getTmdbShowFullDetails(tracked.tmdbShowId, viewerId);
   } catch (err) {
     console.warn('[tracking] wishlist entry fetch failed', err);
     return null;
@@ -242,12 +245,13 @@ async function buildRecentWatchEntries(
     episodeNumber: number;
     watchedOn: string;
   }[],
-  watchedEpisodesByShow: Map<number, EpisodeWatch[]>
+  watchedEpisodesByShow: Map<number, EpisodeWatch[]>,
+  viewerId: string
 ): Promise<RecentWatchEntry[]> {
   const showIds = Array.from(new Set(rows.map((row) => row.tmdbShowId)));
   const bundles = await Promise.all(
     showIds.map((showId) =>
-      buildShowBundle(showId, watchedEpisodesByShow.get(showId) ?? [])
+      buildShowBundle(showId, watchedEpisodesByShow.get(showId) ?? [], viewerId)
     )
   );
   const bundleByShowId = new Map(
@@ -332,11 +336,16 @@ export default async function TrackingPage() {
       trackedShows.map((tracked) =>
         buildWatchListEntry(
           tracked,
-          watchedEpisodesByShow.get(tracked.tmdbShowId) ?? []
+          watchedEpisodesByShow.get(tracked.tmdbShowId) ?? [],
+          viewer.id
         )
       )
     ),
-    buildRecentWatchEntries(recentWatchedRows, watchedEpisodesByShow),
+    buildRecentWatchEntries(
+      recentWatchedRows,
+      watchedEpisodesByShow,
+      viewer.id
+    ),
   ]);
 
   const entries = results
@@ -372,7 +381,8 @@ export default async function TrackingPage() {
       wishlistShows.map((tracked) =>
         buildWishlistEntry(
           tracked,
-          watchedEpisodesByShow.get(tracked.tmdbShowId) ?? []
+          watchedEpisodesByShow.get(tracked.tmdbShowId) ?? [],
+          viewer.id
         )
       )
     );

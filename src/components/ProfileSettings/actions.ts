@@ -76,5 +76,5 @@ export async function getMyShowsForBannerPickerAction(): Promise<
 export async function getShowBackdropsAction(
   showId: number
 ): Promise<ShowBackdropImage[]> {
-  return getTmdbShowImages(showId);
+  return getTmdbShowImages(showId, 'banner');
 }
