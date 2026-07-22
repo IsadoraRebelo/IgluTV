@@ -56,6 +56,8 @@ export function TrackingUpcomingRow({
       skipCatchUpPrompt={skipCatchUpPrompt}
       initialStatus={initialStatus}
       initialIsFavourite={false}
+      initialCustomPosterUrl={null}
+      initialCustomBannerUrl={null}
       tmdbStatus={tmdbStatus}
       isLoggedIn
     >
@@ -69,9 +71,9 @@ export function TrackingUpcomingRow({
             setOpen(true);
           }
         }}
-        className="min-h-24 lg:min-h-26 flex w-full cursor-pointer items-stretch overflow-hidden rounded-md bg-white/[0.045] text-left"
+        className="flex min-h-24 w-full cursor-pointer items-stretch overflow-hidden rounded-md bg-white/[0.045] text-left lg:min-h-26"
       >
-        <div className="bg-surface relative w-23 lg:w-30 flex-none overflow-hidden">
+        <div className="bg-surface relative w-23 flex-none overflow-hidden lg:w-30">
           {posterUrl ? (
             <Image
               src={posterUrl}
@@ -92,7 +94,7 @@ export function TrackingUpcomingRow({
             <span className="truncate">{showName}</span>
             <ChevronRight className="h-3 w-3 shrink-0" />
           </Link>
-          <div className="font-heading text-base font-extrabold text-white lg:text-md">
+          <div className="font-heading lg:text-md text-base font-extrabold text-white">
             S{String(seasonNumber).padStart(2, '0')} · E
             {String(episode.episodeNumber).padStart(2, '0')}
           </div>

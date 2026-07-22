@@ -6,8 +6,8 @@ import {
   PlayIcon,
   RocketLaunchIcon,
   TrashIcon,
+  PhotoIcon,
 } from '@heroicons/react/24/solid';
-import { Image as ImageIcon, ImagePlus } from 'lucide-react';
 import Image from 'next/image';
 import type { ReactNode } from 'react';
 
@@ -40,68 +40,70 @@ const SHOW_ACTIONS: {
   label: string;
   activeColor?: string;
 }[] = [
-  {
-    id: 'mark-watched',
-    icon: (
-      <EyeIcon className="text-foreground md:text-text-secondary h-4 w-4 md:h-5 md:w-5" />
-    ),
-    reviveIcon: (
-      <PlayIcon className="text-foreground md:text-text-secondary h-4 w-4 md:h-5 md:w-5" />
-    ),
-    finishedIcon: (
-      <RocketLaunchIcon className="h-4 w-4 text-yellow-500 md:h-5 md:w-5" />
-    ),
-    label: 'Watched',
-    activeColor: '[&_svg]:!text-accent',
-  },
-  {
-    id: 'favourite',
-    icon: (
-      <HeartIcon className="text-foreground md:text-text-secondary h-4 w-4 md:h-5 md:w-5" />
-    ),
-    label: 'Favourite',
-    activeColor: '[&_svg]:!text-red-500',
-  },
-  {
-    id: '1',
-    status: 'watch_later',
-    icon: (
-      <ClockIcon className="text-foreground md:text-text-secondary h-4 w-4 md:h-5 md:w-5" />
-    ),
-    label: 'Add to watchlist',
-    activeColor: '[&_svg]:!text-accent-foreground',
-  },
-  {
-    id: '2',
-    status: 'paused',
-    icon: (
-      <PauseIcon className="text-foreground md:text-text-secondary h-4 w-4 md:h-5 md:w-5" />
-    ),
-    label: 'Pause',
-    activeColor: '[&_svg]:!text-paused',
-  },
-  {
-    id: '3',
-    status: 'dropped',
-    icon: (
-      <TrashIcon className="text-foreground md:text-text-secondary h-4 w-4 md:h-5 md:w-5" />
-    ),
-    label: 'Drop',
-    activeColor: '[&_svg]:!text-dropped',
-  },
-  {
-    icon: (
-      <ImageIcon className="text-foreground md:text-text-secondary h-4 w-4 md:h-5 md:w-5" />
-    ),
-    label: 'Change poster',
-  },
-  {
-    icon: (
-      <ImagePlus className="text-foreground md:text-text-secondary h-4 w-4 md:h-5 md:w-5" />
-    ),
-    label: 'Change banner',
-  },
-];
+    {
+      id: 'mark-watched',
+      icon: (
+        <EyeIcon className="text-foreground md:text-text-secondary h-4 w-4 md:h-5 md:w-5" />
+      ),
+      reviveIcon: (
+        <PlayIcon className="text-foreground md:text-text-secondary h-4 w-4 md:h-5 md:w-5" />
+      ),
+      finishedIcon: (
+        <RocketLaunchIcon className="h-4 w-4 text-yellow-500 md:h-5 md:w-5" />
+      ),
+      label: 'Watched',
+      activeColor: '[&_svg]:!text-accent',
+    },
+    {
+      id: 'favourite',
+      icon: (
+        <HeartIcon className="text-foreground md:text-text-secondary h-4 w-4 md:h-5 md:w-5" />
+      ),
+      label: 'Favourite',
+      activeColor: '[&_svg]:!text-red-500',
+    },
+    {
+      id: '1',
+      status: 'watch_later',
+      icon: (
+        <ClockIcon className="text-foreground md:text-text-secondary h-4 w-4 md:h-5 md:w-5" />
+      ),
+      label: 'Add to watchlist',
+      activeColor: '[&_svg]:!text-accent-foreground',
+    },
+    {
+      id: '2',
+      status: 'paused',
+      icon: (
+        <PauseIcon className="text-foreground md:text-text-secondary h-4 w-4 md:h-5 md:w-5" />
+      ),
+      label: 'Pause',
+      activeColor: '[&_svg]:!text-paused',
+    },
+    {
+      id: '3',
+      status: 'dropped',
+      icon: (
+        <TrashIcon className="text-foreground md:text-text-secondary h-4 w-4 md:h-5 md:w-5" />
+      ),
+      label: 'Drop',
+      activeColor: '[&_svg]:!text-dropped',
+    },
+    {
+      id: 'change-poster',
+      icon: (
+        <PhotoIcon className="text-foreground md:text-text-secondary h-4 w-4 md:h-5 md:w-5" />
+      ),
+      label: 'Change poster',
+    },
+    {
+      id: 'change-banner',
+      icon: (
+        <PhotoIcon className="text-foreground md:text-text-secondary h-4 w-4 md:h-5 md:w-5" />
+      ),
+      label: 'Change banner',
+    },
+  ];
 
 function formatDate(dateStr: string | null | undefined): string | null {
   if (!dateStr) return null;
@@ -150,11 +152,17 @@ export async function ShowTrackingSection({
       skipCatchUpPrompt={tracking?.skipCatchUpPrompt ?? false}
       initialStatus={tracking?.status ?? null}
       initialIsFavourite={tracking?.isFavourite ?? false}
+      initialCustomPosterUrl={tracking?.customPosterUrl ?? null}
+      initialCustomBannerUrl={tracking?.customBannerUrl ?? null}
       tmdbStatus={details.status}
       isLoggedIn={isLoggedIn}
     >
       <div className="absolute top-5 right-4 z-10 lg:hidden">
-        <ShowActionsMenu actions={SHOW_ACTIONS} />
+        <ShowActionsMenu
+          actions={SHOW_ACTIONS}
+          showId={showId}
+          showName={details.name}
+        />
       </div>
 
       <div className="container-shell relative z-10 -mt-24">
@@ -210,7 +218,11 @@ export async function ShowTrackingSection({
           </div>
 
           <aside className="hidden h-fit flex-col gap-1 rounded-lg bg-white/[0.03] p-2 lg:flex">
-            <ShowActionsSidebar actions={SHOW_ACTIONS} />
+            <ShowActionsSidebar
+              actions={SHOW_ACTIONS}
+              showId={showId}
+              showName={details.name}
+            />
           </aside>
         </div>
       </main>

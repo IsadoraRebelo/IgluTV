@@ -4,12 +4,16 @@ export type ShowStatus =
 export type DisplayStatus =
   'ongoing' | 'caught-up' | 'paused' | 'dropped' | 'finished';
 
+export type ShowImageKind = 'poster' | 'banner';
+
 export type ShowTracking = {
   tmdbShowId: number;
   status: ShowStatus;
   isFavourite: boolean;
   skipCatchUpPrompt: boolean;
   createdAt: string;
+  customPosterUrl: string | null;
+  customBannerUrl: string | null;
 };
 
 export type EpisodeWatch = {

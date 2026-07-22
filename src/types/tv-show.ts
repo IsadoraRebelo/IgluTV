@@ -133,6 +133,7 @@ export type TMDBImageRaw = {
 };
 
 export type TMDBShowImagesRaw = {
+  posters?: TMDBImageRaw[];
   backdrops?: TMDBImageRaw[];
 };
 

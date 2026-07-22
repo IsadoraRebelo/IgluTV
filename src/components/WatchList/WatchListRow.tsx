@@ -63,6 +63,8 @@ export function WatchListRow(props: {
       skipCatchUpPrompt={skipCatchUpPrompt}
       initialStatus={initialStatus}
       initialIsFavourite={false}
+      initialCustomPosterUrl={null}
+      initialCustomBannerUrl={null}
       tmdbStatus={tmdbStatus}
       isLoggedIn
     >
@@ -144,8 +146,9 @@ function WatchListRowContent({
   const isWatched = getWatchCount(watchedDates, episodeKeyValue) > 0;
   const rewatchCount = getRewatchCount(watchedDates, episodeKeyValue);
 
-  const baseRowClassName = `flex cursor-pointer items-stretch overflow-hidden rounded-lg bg-white/[0.03] hover:bg-white/[0.06] ${faded ? 'opacity-60 hover:opacity-100' : ''
-    }`;
+  const baseRowClassName = `flex cursor-pointer items-stretch overflow-hidden rounded-lg bg-white/[0.03] hover:bg-white/[0.06] ${
+    faded ? 'opacity-60 hover:opacity-100' : ''
+  }`;
 
   return (
     <>
@@ -202,7 +205,7 @@ function WatchListRowContent({
           </Link>
 
           <div>
-            <p className="font-heading text-base font-extrabold text-white lg:text-md">
+            <p className="font-heading lg:text-md text-base font-extrabold text-white">
               S{String(episode.seasonNumber).padStart(2, '0')} | E
               {String(episode.episodeNumber).padStart(2, '0')}
               {backlogCount > 0 ? (
@@ -211,7 +214,9 @@ function WatchListRowContent({
                 </span>
               ) : null}
             </p>
-            <p className="text-text-secondary truncate text-sm">{episode.name}</p>
+            <p className="text-text-secondary truncate text-sm">
+              {episode.name}
+            </p>
           </div>
         </div>
 

@@ -2,7 +2,7 @@
 
 import { createContext, useContext } from 'react';
 
-import type { Season, ShowStatus } from '@/types';
+import type { Season, ShowImageKind, ShowStatus } from '@/types';
 
 export type ShowTrackingContextValue = {
   watchedDates: Map<string, (string | null)[]>;
@@ -35,6 +35,9 @@ export type ShowTrackingContextValue = {
   isTogglingFavourite: boolean;
   isLoggedIn: boolean;
   openAuthDialog: () => void;
+  customPosterUrl: string | null;
+  customBannerUrl: string | null;
+  onApplyCustomImage: (kind: ShowImageKind, url: string | null) => void;
 };
 
 export const ShowTrackingContext =

@@ -101,6 +101,8 @@ export type Database = {
       show_tracking: {
         Row: {
           created_at: string;
+          custom_banner_url: string | null;
+          custom_poster_url: string | null;
           is_favourite: boolean;
           skip_catch_up_prompt: boolean;
           status: number;
@@ -110,6 +112,8 @@ export type Database = {
         };
         Insert: {
           created_at?: string;
+          custom_banner_url?: string | null;
+          custom_poster_url?: string | null;
           is_favourite?: boolean;
           skip_catch_up_prompt?: boolean;
           status: number;
@@ -119,6 +123,8 @@ export type Database = {
         };
         Update: {
           created_at?: string;
+          custom_banner_url?: string | null;
+          custom_poster_url?: string | null;
           is_favourite?: boolean;
           skip_catch_up_prompt?: boolean;
           status?: number;
