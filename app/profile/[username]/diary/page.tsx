@@ -19,6 +19,8 @@ export default async function DiaryPage({
 
   const viewerId = await getViewerId();
 
+  if (!viewerId || viewerId !== profile.id) notFound();
+
   return (
     <div className="flex flex-1 flex-col">
       <main className="container-shell flex-1 pt-5 pb-2 md:pt-10">

@@ -42,6 +42,8 @@ export async function ProfileOverviewSection({
   recentRows: Awaited<ReturnType<typeof getRecentWatchedShowsForUser>>;
   viewerId: string | null;
 }) {
+  const isOwner = viewerId !== null && viewerId === profile.id;
+
   const [
     stats,
     favouriteShows,
@@ -210,12 +212,18 @@ export async function ProfileOverviewSection({
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {recentActivity.map((entry) => {
                   const { month, day } = formatDiaryDate(entry.watchedOn);
+                  const episodeLabel = `S${String(entry.seasonNumber).padStart(2, '0')}E${String(entry.episodeNumber).padStart(2, '0')}`;
+                  // Visitors see what was watched recently, not when — the
+                  // dated record is owner-only, same rule as the diary tab.
+                  const caption = isOwner
+                    ? `${episodeLabel} · ${month} ${day}`
+                    : episodeLabel;
                   return (
                     <PosterCard
                       key={`${entry.show.id}-${entry.seasonNumber}-${entry.episodeNumber}`}
                       show={entry.show}
                       className="w-32 shrink-0"
-                      caption={`S${String(entry.seasonNumber).padStart(2, '0')}E${String(entry.episodeNumber).padStart(2, '0')} · ${month} ${day}`}
+                      caption={caption}
                       progress={{
                         watchedCount: watchedCounts.get(entry.show.id) ?? 0,
                         showStatus: statusByShowId.get(entry.show.id) ?? null,
