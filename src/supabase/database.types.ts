@@ -131,6 +131,7 @@ export type Database = {
           genres: string[]
           markable_episode_count: number
           name: string
+          network: string | null
           poster_path: string | null
           tmdb_show_id: number
           updated_at: string
@@ -141,6 +142,7 @@ export type Database = {
           genres?: string[]
           markable_episode_count?: number
           name: string
+          network?: string | null
           poster_path?: string | null
           tmdb_show_id: number
           updated_at?: string
@@ -151,6 +153,7 @@ export type Database = {
           genres?: string[]
           markable_episode_count?: number
           name?: string
+          network?: string | null
           poster_path?: string | null
           tmdb_show_id?: number
           updated_at?: string
@@ -231,6 +234,20 @@ export type Database = {
         Args: { p_show_ids: number[] }
         Returns: {
           aired_total: number
+          tmdb_show_id: number
+        }[]
+      }
+      tracking_rows: {
+        Args: { p_user_id: string }
+        Returns: {
+          backlog_count: number
+          estimated_minutes: number
+          last_watched_on: string
+          name: string
+          network: string
+          next_episode: number
+          next_season: number
+          poster_path: string
           tmdb_show_id: number
         }[]
       }

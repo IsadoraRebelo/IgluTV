@@ -44,6 +44,7 @@ export function EpisodeModal({
   episode,
   seasonNumber,
   cast,
+  castLoading = false,
   open,
   onOpenChange,
   closeOnMark = false,
@@ -51,6 +52,10 @@ export function EpisodeModal({
   episode: SeasonEpisode | null;
   seasonNumber: number;
   cast: CastMember[];
+  // True while a lazy season/cast load is in flight (tracking page rows
+  // only — see ShowTrackingProvider.onLoadSeasons). Every other caller
+  // already has cast up front and leaves this false.
+  castLoading?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   closeOnMark?: boolean;
@@ -301,7 +306,14 @@ export function EpisodeModal({
                   {episode.overview || 'No description available.'}
                 </DialogPrimitive.Description>
 
-                {cast.length > 0 ? (
+                {castLoading ? (
+                  <div className="mt-2">
+                    <h3 className="text-text-faint mb-2 text-xs font-semibold tracking-[0.15em] uppercase">
+                      Cast
+                    </h3>
+                    <p className="text-text-faint text-xs">Loading cast…</p>
+                  </div>
+                ) : cast.length > 0 ? (
                   <div className="mt-2">
                     <h3 className="text-text-faint mb-2 text-xs font-semibold tracking-[0.15em] uppercase">
                       Cast

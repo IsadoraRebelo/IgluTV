@@ -13,6 +13,7 @@ import {
 } from '@/consts';
 
 import type {
+  LatestEpisode,
   SeasonEpisode,
   ShowBackdropImage,
   ShowDetails,
@@ -21,6 +22,7 @@ import type {
   ShowSummarySeason,
   TMDBEpisodeGroupDetail,
   TMDBEpisodeGroupListEntry,
+  TMDBEpisodeRaw,
   TMDBSeasonDetailRaw,
   TMDBSeriesDetailsRaw,
   TMDBShowImagesRaw,
@@ -233,6 +235,140 @@ export async function getTmdbSeasonEpisodes(
       : null,
     arcName: null,
   }));
+}
+
+// Cached fetch of a single episode. Deliberately not wrapped in try/catch,
+// same reasoning as getTmdbSeasonEpisodes above: this is 'use cache', so
+// returning a fallback value on a failed fetch would cache that fallback for
+// hours. Throwing instead means nothing gets cached, and the uncached
+// caller (getTmdbEpisode) is responsible for degrading to null.
+async function fetchTmdbEpisode(
+  showId: number,
+  seasonNumber: number,
+  episodeNumber: number
+): Promise<LatestEpisode | null> {
+  'use cache';
+  cacheLife('hours');
+  cacheTag('tmdb-episode');
+
+  const apiKey = process.env.TMDB_API_KEY;
+  if (!apiKey) {
+    console.warn('[tv-shows] TMDB_API_KEY not set');
+    return null;
+  }
+
+  const res = await fetch(
+    `${TMDB_API_BASE_URL}/tv/${showId}/season/${seasonNumber}/episode/${episodeNumber}?api_key=${apiKey}&language=en-US`
+  );
+
+  if (!res.ok) {
+    throw new Error(`[tv-shows] TMDB episode ${res.status}: ${res.statusText}`);
+  }
+
+  const json: TMDBEpisodeRaw = await res.json();
+
+  return {
+    name: json.name,
+    overview: json.overview,
+    seasonNumber: json.season_number,
+    episodeNumber: json.episode_number,
+    airDate: json.air_date,
+    runtime: json.runtime,
+    imageUrl: json.still_path
+      ? `${TMDB_BACKDROP_BASE_URL}${json.still_path}`
+      : null,
+  };
+}
+
+// One TMDB request for exactly one episode — used by the tracking page to
+// fetch only the single next-unwatched episode per show, instead of every
+// episode of every season via getTmdbShowFullDetails.
+export async function getTmdbEpisode(
+  showId: number,
+  seasonNumber: number,
+  episodeNumber: number
+): Promise<LatestEpisode | null> {
+  try {
+    return await fetchTmdbEpisode(showId, seasonNumber, episodeNumber);
+  } catch (err) {
+    console.warn('[tv-shows] episode fetch failed', err);
+    return null;
+  }
+}
+
+export type ShowMetaLight = {
+  name: string;
+  posterUrl: string | null;
+  network: string | null;
+  status: string | null;
+  nextEpisode: LatestEpisode | null;
+};
+
+// One TMDB request per show (/tv/{id} only, no season expansion) — the
+// tracking page's Upcoming and Recently Watched sections need a show's next
+// airing episode (TMDB returns it directly as next_episode_to_air on this
+// same response) plus a handful of display fields, not the full season tree
+// getTmdbShowFullDetails fetches. Must never call getTmdbSeasonEpisodes.
+async function fetchTmdbShowMeta(id: number): Promise<ShowMetaLight | null> {
+  'use cache';
+  cacheLife('hours');
+  cacheTag('tmdb-show-meta');
+
+  const apiKey = process.env.TMDB_API_KEY;
+  if (!apiKey) {
+    console.warn('[tv-shows] TMDB_API_KEY not set');
+    return null;
+  }
+
+  // Deliberately not wrapped in try/catch: this function is 'use cache', so
+  // returning a fallback value here (as earlier revisions did) caches that
+  // fallback for hours. Throwing instead means nothing gets cached, and the
+  // uncached caller (getTmdbShowMeta) is responsible for degrading to null.
+  const res = await fetch(
+    `${TMDB_API_BASE_URL}/tv/${id}?api_key=${apiKey}&language=en-US`
+  );
+
+  if (!res.ok) {
+    throw new Error(`[tv-shows] TMDB meta ${res.status}: ${res.statusText}`);
+  }
+
+  const json: TMDBSeriesDetailsRaw = await res.json();
+  const nextEpisode = json.next_episode_to_air;
+
+  return {
+    name: json.name,
+    posterUrl: json.poster_path
+      ? `${TMDB_POSTER_LARGE_BASE_URL}${json.poster_path}`
+      : null,
+    network: json.networks?.[0]?.name ?? null,
+    // Matches ShowDetails.status above: TMDB's "Returning Series" reads as
+    // jargon in the UI.
+    status:
+      json.status === 'Returning Series' ? 'Ongoing' : (json.status ?? null),
+    nextEpisode:
+      nextEpisode && nextEpisode.season_number > 0
+        ? {
+            name: nextEpisode.name,
+            overview: nextEpisode.overview,
+            seasonNumber: nextEpisode.season_number,
+            episodeNumber: nextEpisode.episode_number,
+            airDate: nextEpisode.air_date,
+            runtime: nextEpisode.runtime,
+            imageUrl: nextEpisode.still_path
+              ? `${TMDB_BACKDROP_BASE_URL}${nextEpisode.still_path}`
+              : null,
+          }
+        : null,
+  };
+}
+
+export async function getTmdbShowMeta(id: number): Promise<ShowMetaLight | null> {
+  try {
+    return await fetchTmdbShowMeta(id);
+  } catch (err) {
+    console.warn('[tv-shows] show meta fetch failed', err);
+    return null;
+  }
 }
 
 export async function getTmdbAnimeArcNames(

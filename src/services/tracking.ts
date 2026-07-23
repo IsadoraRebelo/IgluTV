@@ -1,10 +1,21 @@
 import 'server-only';
 
-import { isShowFinished } from '@/components/ShowTracker/utils';
+import {
+  buildWatchedDatesMap,
+  getWatchNextEpisode,
+  isShowFinished,
+} from '@/components/ShowTracker/utils';
+
+import { TMDB_POSTER_LARGE_BASE_URL } from '@/consts';
 
 import { createClient } from '@/supabase/server';
 
-import type { EpisodeWatch, ShowStatus, ShowTracking } from '@/types';
+import type {
+  EpisodeWatch,
+  LatestEpisode,
+  ShowStatus,
+  ShowTracking,
+} from '@/types';
 
 import { ServiceError } from './errors';
 import { getTmdbShowFullDetails } from './tv-shows';
@@ -343,6 +354,48 @@ export async function getFinishedSeasonsForUser(
   }));
 }
 
+export type TrackingRow = {
+  tmdbShowId: number;
+  name: string;
+  posterUrl: string | null;
+  network: string | null;
+  nextSeasonNumber: number;
+  nextEpisodeNumber: number;
+  backlogCount: number;
+  estimatedMinutes: number;
+  lastWatchedOn: string | null;
+};
+
+// One Postgres function decides everything structural (backlog, next
+// unwatched episode) for every tracked show at once, expanding aired-episode
+// slots from season_catalogue server-side — see the tracking_rows migration
+// for why that has to happen in SQL rather than by fetching per-episode rows
+// here. Returns one row per show *with* a backlog; a caught-up show is
+// absent entirely, not a zero-backlog row.
+export async function getTrackingRows(userId: string): Promise<TrackingRow[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc('tracking_rows', {
+    p_user_id: userId,
+  });
+
+  if (error) throw new ServiceError(error.message, error.code);
+
+  return (data ?? []).map((row) => ({
+    tmdbShowId: row.tmdb_show_id,
+    name: row.name,
+    posterUrl: row.poster_path
+      ? `${TMDB_POSTER_LARGE_BASE_URL}${row.poster_path}`
+      : null,
+    network: row.network,
+    nextSeasonNumber: row.next_season,
+    nextEpisodeNumber: row.next_episode,
+    backlogCount: row.backlog_count,
+    estimatedMinutes: row.estimated_minutes,
+    lastWatchedOn: row.last_watched_on,
+  }));
+}
+
 // Not paged: show_tracking has a (user_id, tmdb_show_id) primary key, so a
 // user can have at most one row per show — row count here is bounded by
 // distinct shows tracked, not by watch history. Post-import that's ~455
@@ -564,7 +617,7 @@ export async function markEpisodeWatched(
   season: number,
   episode: number,
   watchedOn?: string
-): Promise<void> {
+): Promise<LatestEpisode | null> {
   const supabase = await createClient();
   const userId = await requireUserId();
 
@@ -585,7 +638,7 @@ export async function markEpisodeWatched(
   const { error } = await supabase.from('episode_watches').insert(insertRow);
   if (error) throw new ServiceError(error.message, error.code);
 
-  await autoUpdateStatus(supabase, userId, showId);
+  return autoUpdateStatus(supabase, userId, showId);
 }
 
 export async function updateEpisodeWatchDate(
@@ -628,11 +681,17 @@ export async function updateEpisodeWatchDate(
   if (error) throw new ServiceError(error.message, error.code);
 }
 
+// Returns the show's next unwatched episode (or null if there isn't one, or
+// the TMDB fetch failed) so callers on the mark-watched path — where the
+// client no longer holds the show's full season tree — can update instantly
+// without a second round trip. getTmdbShowFullDetails below is already
+// fetched for the regularEpisodeCount/completion check that follows; reusing
+// its `meta.seasons` here costs nothing extra.
 async function autoUpdateStatus(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   showId: number
-): Promise<void> {
+): Promise<LatestEpisode | null> {
   const { data: tracking, error: trackingError } = await supabase
     .from('show_tracking')
     .select('status')
@@ -663,7 +722,14 @@ async function autoUpdateStatus(
   }
 
   const full = await getTmdbShowFullDetails(showId);
-  if (!full) return;
+  if (!full) return null;
+
+  // Fetched once and reused for both the completion check below and the
+  // next-episode lookup — replaces what used to be a second, near-identical
+  // paged read scoped to season_number > 0.
+  const watched = await getWatchedEpisodesForUser(userId, showId);
+  const watchedDates = buildWatchedDatesMap(watched);
+  const nextEpisode = getWatchNextEpisode(full.meta.seasons, watchedDates);
 
   const regularEpisodeCount = full.meta.seasons
     .filter((season) => season.seasonNumber > 0)
@@ -673,27 +739,12 @@ async function autoUpdateStatus(
       0
     );
 
-  if (regularEpisodeCount === 0) return;
+  if (regularEpisodeCount === 0) return nextEpisode;
 
   const distinctWatched = new Set<string>();
-  for (let from = 0; ; from += EPISODE_WATCH_PAGE_SIZE) {
-    const { data: watchedRows, error: watchedError } = await supabase
-      .from('episode_watches')
-      .select('season_number, episode_number')
-      .eq('user_id', userId)
-      .eq('tmdb_show_id', showId)
-      .gt('season_number', 0)
-      .range(from, from + EPISODE_WATCH_PAGE_SIZE - 1);
-
-    if (watchedError) {
-      throw new ServiceError(watchedError.message, watchedError.code);
-    }
-    if (!watchedRows || watchedRows.length === 0) break;
-
-    for (const row of watchedRows) {
-      distinctWatched.add(`${row.season_number}-${row.episode_number}`);
-    }
-    if (watchedRows.length < EPISODE_WATCH_PAGE_SIZE) break;
+  for (const entry of watched) {
+    if (entry.seasonNumber <= 0) continue;
+    distinctWatched.add(`${entry.seasonNumber}-${entry.episodeNumber}`);
   }
 
   if (
@@ -708,6 +759,8 @@ async function autoUpdateStatus(
 
     if (error) throw new ServiceError(error.message, error.code);
   }
+
+  return nextEpisode;
 }
 
 async function pruneIfUntracked(

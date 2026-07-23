@@ -6,7 +6,9 @@ import { toast } from 'sonner';
 import { AuthDialog } from '@/components';
 
 import type {
+  CastMember,
   EpisodeWatch,
+  LatestEpisode,
   Season,
   SeasonEpisode,
   ShowImageKind,
@@ -14,6 +16,7 @@ import type {
 } from '@/types';
 
 import {
+  loadShowSeasonsAction,
   markEpisodeWatchedAction,
   markSeasonWatchedAction,
   removeLastEpisodeRewatchAction,
@@ -62,19 +65,24 @@ function todayIso(): string {
 
 export function ShowTrackingProvider({
   showId,
-  seasons,
+  seasons: initialSeasons,
+  cast: initialCast = [],
   watchedEpisodes,
   skipCatchUpPrompt,
   initialStatus,
   initialIsFavourite,
   initialCustomPosterUrl,
   initialCustomBannerUrl,
-  tmdbStatus,
+  tmdbStatus: initialTmdbStatus,
   isLoggedIn,
   children,
 }: {
   showId: number;
-  seasons: Season[];
+  // null means "not loaded yet" — the tracking page seeds rows with only
+  // their next episode, so the full season tree (and cast) is fetched on
+  // demand when the episode modal opens, via onLoadSeasons.
+  seasons: Season[] | null;
+  cast?: CastMember[];
   watchedEpisodes: EpisodeWatch[];
   skipCatchUpPrompt: boolean;
   initialStatus: ShowStatus | null;
@@ -106,8 +114,29 @@ export function ShowTrackingProvider({
   const [customBannerUrl, setCustomBannerUrl] = useState(
     initialCustomBannerUrl
   );
+  const [seasons, setSeasons] = useState<Season[] | null>(initialSeasons);
+  const [cast, setCast] = useState<CastMember[]>(initialCast);
+  const [seasonsLoading, setSeasonsLoading] = useState(false);
+  const [tmdbStatus, setTmdbStatusState] = useState(initialTmdbStatus);
 
-  const regularMarkableSeasons = getRegularMarkableSeasons(seasons);
+  async function handleLoadSeasons(): Promise<Season[] | null> {
+    if (seasons !== null || seasonsLoading) return seasons;
+    setSeasonsLoading(true);
+    try {
+      const result = await loadShowSeasonsAction(showId);
+      if (result) {
+        setSeasons(result.seasons);
+        setCast(result.cast);
+        setTmdbStatusState(result.tmdbStatus);
+        return result.seasons;
+      }
+      return null;
+    } finally {
+      setSeasonsLoading(false);
+    }
+  }
+
+  const regularMarkableSeasons = getRegularMarkableSeasons(seasons ?? []);
   const isShowFullyWatched = getIsShowFullyWatched(
     regularMarkableSeasons,
     watchedDates
@@ -256,9 +285,9 @@ export function ShowTrackingProvider({
   async function handleToggleEpisode(
     seasonNumber: number,
     episodeNumber: number
-  ) {
+  ): Promise<LatestEpisode | null | undefined> {
     const key = episodeKey(seasonNumber, episodeNumber);
-    if (pendingKeys.has(key)) return;
+    if (pendingKeys.has(key)) return undefined;
 
     const previousDates = getWatchedDates(watchedDates, key);
     const wasWatched = previousDates.length > 0;
@@ -270,6 +299,8 @@ export function ShowTrackingProvider({
       else next.set(key, [todayIso()]);
       return next;
     });
+
+    let nextEpisodeResult: LatestEpisode | null | undefined;
 
     try {
       const result = wasWatched
@@ -286,9 +317,25 @@ export function ShowTrackingProvider({
 
         toast.error(result.message);
       } else if (!wasWatched) {
+        nextEpisodeResult = result.nextEpisode;
+
+        // The catch-up lookup needs the full season tree. Tracking rows
+        // seed the provider with seasons=null (see ShowTrackingProvider)
+        // and only fetch it lazily when the episode modal opens, so a mark
+        // from the row itself (modal never opened) would otherwise see an
+        // empty tree and silently never offer to catch up. Load it here,
+        // once, reusing the same loader the modal uses — a no-op if it's
+        // already loaded or in flight, and skipped entirely when the
+        // catch-up prompt is disabled for this show since the offer would
+        // be suppressed anyway.
+        let seasonsForOffer = seasons;
+        if (seasonsForOffer === null && !catchUpDisabledRef.current) {
+          seasonsForOffer = await handleLoadSeasons();
+        }
+
         offerToMarkPriorEpisodes(
           getPriorUnwatchedAiredEpisodes(
-            seasons,
+            seasonsForOffer ?? [],
             watchedDatesRef.current,
             seasonNumber,
             episodeNumber
@@ -302,6 +349,8 @@ export function ShowTrackingProvider({
         return next;
       });
     }
+
+    return nextEpisodeResult;
   }
 
   async function handleRewatchEpisode(
@@ -582,7 +631,7 @@ export function ShowTrackingProvider({
       } else {
         offerToMarkPriorEpisodes(
           getPriorUnwatchedAiredEpisodes(
-            seasons,
+            seasons ?? [],
             watchedDatesRef.current,
             season.seasonNumber,
             null
@@ -1039,6 +1088,10 @@ export function ShowTrackingProvider({
   const value: ShowTrackingContextValue = {
     watchedDates,
     pendingKeys,
+    seasons,
+    cast,
+    seasonsLoading,
+    onLoadSeasons: handleLoadSeasons,
     onToggleEpisode: handleToggleEpisode,
     onRewatchEpisode: handleRewatchEpisode,
     onRemoveLastEpisodeRewatch: handleRemoveLastEpisodeRewatch,

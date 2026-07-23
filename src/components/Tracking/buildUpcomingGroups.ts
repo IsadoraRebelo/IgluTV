@@ -3,6 +3,7 @@ import { getDaysUntilAir } from '@/components/ShowTracker/utils';
 import type {
   CastMember,
   EpisodeWatch,
+  LatestEpisode,
   Season,
   SeasonEpisode,
   ShowStatus,
@@ -13,7 +14,8 @@ export type TrackingShow = {
   showName: string;
   posterUrl: string | null;
   network: string | null;
-  seasons: Season[];
+  nextEpisode: LatestEpisode | null;
+  seasons: Season[] | null;
   watchedEpisodes: EpisodeWatch[];
   skipCatchUpPrompt: boolean;
   initialStatus: ShowStatus | null;
@@ -30,7 +32,7 @@ export type UpcomingEpisode = {
   episode: SeasonEpisode;
   daysUntilAir: number;
   daysLabel: 'DAY' | 'DAYS';
-  seasons: Season[];
+  seasons: Season[] | null;
   watchedEpisodes: EpisodeWatch[];
   skipCatchUpPrompt: boolean;
   initialStatus: ShowStatus | null;
@@ -59,32 +61,37 @@ export function buildUpcomingGroups(shows: TrackingShow[]): UpcomingGroup[] {
   const episodes: (UpcomingEpisode & { sortKey: string })[] = [];
 
   for (const show of shows) {
-    for (const season of show.seasons) {
-      if (season.seasonNumber <= 0) continue;
+    const episode = show.nextEpisode;
+    if (!episode) continue;
 
-      for (const episode of season.episodes) {
-        const daysUntilAir = getDaysUntilAir(episode.airDate);
-        if (daysUntilAir === null) continue;
+    const daysUntilAir = getDaysUntilAir(episode.airDate);
+    if (daysUntilAir === null) continue;
 
-        episodes.push({
-          showId: show.showId,
-          showName: show.showName,
-          posterUrl: show.posterUrl,
-          network: show.network,
-          seasonNumber: season.seasonNumber,
-          episode,
-          daysUntilAir,
-          daysLabel: daysUntilAir === 1 ? 'DAY' : 'DAYS',
-          seasons: show.seasons,
-          watchedEpisodes: show.watchedEpisodes,
-          skipCatchUpPrompt: show.skipCatchUpPrompt,
-          initialStatus: show.initialStatus,
-          tmdbStatus: show.tmdbStatus,
-          cast: show.cast,
-          sortKey: episode.airDate ?? '',
-        });
-      }
-    }
+    episodes.push({
+      showId: show.showId,
+      showName: show.showName,
+      posterUrl: show.posterUrl,
+      network: show.network,
+      seasonNumber: episode.seasonNumber,
+      episode: {
+        episodeNumber: episode.episodeNumber,
+        name: episode.name,
+        overview: episode.overview,
+        runtime: episode.runtime,
+        airDate: episode.airDate,
+        imageUrl: episode.imageUrl,
+        arcName: null,
+      },
+      daysUntilAir,
+      daysLabel: daysUntilAir === 1 ? 'DAY' : 'DAYS',
+      seasons: show.seasons,
+      watchedEpisodes: show.watchedEpisodes,
+      skipCatchUpPrompt: show.skipCatchUpPrompt,
+      initialStatus: show.initialStatus,
+      tmdbStatus: show.tmdbStatus,
+      cast: show.cast,
+      sortKey: episode.airDate ?? '',
+    });
   }
 
   episodes.sort((a, b) => a.sortKey.localeCompare(b.sortKey));

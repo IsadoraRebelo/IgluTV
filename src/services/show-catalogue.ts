@@ -22,6 +22,7 @@ export type CatalogueRow = {
   year: string | null;
   genres: string[];
   poster_path: string | null;
+  network: string | null;
   markable_episode_count: number;
   average_runtime: number | null;
 };
@@ -42,6 +43,7 @@ export type CatalogueSource = {
     episode_number: number;
     runtime?: number | null;
   } | null;
+  networks?: { name: string }[];
 };
 
 // Returns null for any response not complete enough to trust. This cache has
@@ -62,6 +64,7 @@ export function catalogueRowFromTmdb(
     year: json.first_air_date ? json.first_air_date.slice(0, 4) : null,
     genres: (json.genres ?? []).map((genre) => genre.name),
     poster_path: json.poster_path ?? null,
+    network: json.networks?.[0]?.name ?? null,
     markable_episode_count: deriveMarkableEpisodeCount({
       seasons: (json.seasons ?? []).map((season) => ({
         seasonNumber: season.season_number,
@@ -103,6 +106,7 @@ export function catalogueRowFromSummary(
     poster_path: summary.posterUrl
       ? summary.posterUrl.replace(TMDB_POSTER_LARGE_BASE_URL, '')
       : null,
+    network: summary.network,
     markable_episode_count: summary.markableEpisodeCount,
     average_runtime: summary.averageRuntime,
   };
@@ -127,6 +131,7 @@ export function catalogueRowFromDetails(
     poster_path: details.posterUrl
       ? details.posterUrl.replace(TMDB_POSTER_LARGE_BASE_URL, '')
       : null,
+    network: details.network,
     markable_episode_count: deriveMarkableEpisodeCount({
       seasons: meta.seasons.map((season) => ({
         seasonNumber: season.seasonNumber,

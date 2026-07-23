@@ -17,7 +17,7 @@ export type RecentWatchEntry = {
   network: string | null;
   episode: LatestEpisode;
   watchedOn: string;
-  seasons: Season[];
+  seasons: Season[] | null;
   watchedEpisodes: EpisodeWatch[];
   skipCatchUpPrompt: boolean;
   initialStatus: ShowStatus | null;

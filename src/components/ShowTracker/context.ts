@@ -2,12 +2,36 @@
 
 import { createContext, useContext } from 'react';
 
-import type { Season, ShowImageKind, ShowStatus } from '@/types';
+import type {
+  CastMember,
+  LatestEpisode,
+  Season,
+  ShowImageKind,
+  ShowStatus,
+} from '@/types';
 
 export type ShowTrackingContextValue = {
   watchedDates: Map<string, (string | null)[]>;
   pendingKeys: Set<string>;
-  onToggleEpisode: (seasonNumber: number, episodeNumber: number) => void;
+  // seasons is null until loaded — see onLoadSeasons. Callers seeded with
+  // a full season tree up front (the show page) get a non-null value
+  // immediately and onLoadSeasons is then a no-op.
+  seasons: Season[] | null;
+  cast: CastMember[];
+  seasonsLoading: boolean;
+  // Returns the loaded seasons (or the existing ones if already loaded/
+  // in flight) so callers that need the tree right away — see
+  // handleToggleEpisode's catch-up lookup — can await it instead of only
+  // triggering a state update.
+  onLoadSeasons: () => Promise<Season[] | null>;
+  // Resolves to the server-computed next unwatched episode on a
+  // successful mark (null if the show is now fully caught up), or
+  // undefined for an unmark or a failed call — see WatchListRow, which
+  // uses this to swap in the next episode without a full page refresh.
+  onToggleEpisode: (
+    seasonNumber: number,
+    episodeNumber: number
+  ) => Promise<LatestEpisode | null | undefined>;
   onRewatchEpisode: (seasonNumber: number, episodeNumber: number) => void;
   onRemoveLastEpisodeRewatch: (
     seasonNumber: number,

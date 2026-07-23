@@ -37,6 +37,7 @@ describe('catalogueRowFromTmdb', () => {
       year: '2004',
       genres: ['Animation', 'Action & Adventure'],
       poster_path: '/abc123.jpg',
+      network: null,
       markable_episode_count: 379,
       average_runtime: 24,
     });
@@ -67,9 +68,22 @@ describe('catalogueRowFromTmdb', () => {
       year: null,
       genres: [],
       poster_path: null,
+      network: null,
       markable_episode_count: 0,
       average_runtime: null,
     });
+  });
+
+  it('takes the network from the first entry in networks', () => {
+    const row = catalogueRowFromTmdb(30984, {
+      ...FULL,
+      networks: [{ name: 'TV Tokyo' }, { name: 'Adult Swim' }],
+    });
+    expect(row?.network).toBe('TV Tokyo');
+  });
+
+  it('treats a response with no networks as no network', () => {
+    expect(catalogueRowFromTmdb(30984, FULL)?.network).toBe(null);
   });
 
   it('takes the year from the first air date', () => {
@@ -126,6 +140,7 @@ describe('catalogueRowFromDetails', () => {
         year: '2004',
         genres: ['Animation', 'Action & Adventure'],
         posterUrl: 'https://image.tmdb.org/t/p/w500/abc123.jpg',
+        network: null,
         averageRuntime: 24,
       } as ShowDetails,
       {
@@ -227,6 +242,7 @@ describe('catalogueShowFromRow', () => {
         year: '2004',
         genres: ['Animation'],
         poster_path: '/abc123.jpg',
+        network: 'TV Tokyo',
         markable_episode_count: 406,
         average_runtime: 24,
       })
@@ -248,6 +264,7 @@ describe('catalogueShowFromRow', () => {
         year: null,
         genres: [],
         poster_path: null,
+        network: null,
         markable_episode_count: 0,
         average_runtime: null,
       }).posterUrl
