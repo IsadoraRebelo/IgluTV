@@ -98,6 +98,36 @@ export type Database = {
         };
         Relationships: [];
       };
+      show_catalogue: {
+        Row: {
+          genres: string[];
+          markable_episode_count: number;
+          name: string;
+          poster_path: string | null;
+          tmdb_show_id: number;
+          updated_at: string;
+          year: string | null;
+        };
+        Insert: {
+          genres?: string[];
+          markable_episode_count?: number;
+          name: string;
+          poster_path?: string | null;
+          tmdb_show_id: number;
+          updated_at?: string;
+          year?: string | null;
+        };
+        Update: {
+          genres?: string[];
+          markable_episode_count?: number;
+          name?: string;
+          poster_path?: string | null;
+          tmdb_show_id?: number;
+          updated_at?: string;
+          year?: string | null;
+        };
+        Relationships: [];
+      };
       show_tracking: {
         Row: {
           created_at: string;
@@ -140,6 +170,7 @@ export type Database = {
     };
     Functions: {
       redeem_invite_code: { Args: { p_code: string }; Returns: boolean };
+      upsert_show_catalogue: { Args: { p_rows: Json }; Returns: undefined };
     };
     Enums: {
       [_ in never]: never;

@@ -1,4 +1,5 @@
 import { cacheLife, cacheTag } from 'next/cache';
+import { after } from 'next/server';
 import 'server-only';
 
 import {
@@ -35,6 +36,12 @@ import {
 } from '@/utils';
 
 import { getCustomShowImages } from './custom-show-images';
+import {
+  catalogueRowFromDetails,
+  catalogueRowFromSummary,
+  upsertCatalogueShows,
+} from './show-catalogue';
+import type { CatalogueRow } from './show-catalogue';
 
 export async function getTrendingTvShowIds(): Promise<number[]> {
   'use cache';
@@ -290,6 +297,40 @@ export async function getTmdbAnimeArcNames(
   }
 }
 
+// Approximate "episodes aired so far" from the show's own last-aired-episode
+// pointer instead of fetching every season's episode list: every regular
+// season before it counts in full, and the last-aired season counts up to
+// (and including) its own episode number.
+//
+// Takes a normalised shape because the summary tier, the full-details tier
+// and the catalogue mapper each hold this data differently. Two derivations
+// that disagreed would show as a progress bar that changes as you navigate.
+export function deriveMarkableEpisodeCount(input: {
+  seasons: { seasonNumber: number; episodeCount: number | null }[];
+  lastAired: { seasonNumber: number; episodeNumber: number } | null;
+}): number {
+  const seasons = input.seasons.filter((season) => season.seasonNumber > 0);
+  const lastAired = input.lastAired;
+  if (!lastAired) return 0;
+
+  if (lastAired.seasonNumber > 0) {
+    let count = 0;
+    for (const season of seasons) {
+      if (season.seasonNumber < lastAired.seasonNumber) {
+        count += season.episodeCount ?? 0;
+      } else if (season.seasonNumber === lastAired.seasonNumber) {
+        count += lastAired.episodeNumber;
+      }
+    }
+    return count;
+  }
+
+  // lastAired is a season-0 special — specials release between/after
+  // completed regular seasons, so treat every known regular season's full
+  // episode count as already aired.
+  return seasons.reduce((sum, season) => sum + (season.episodeCount ?? 0), 0);
+}
+
 // One TMDB request per show: everything PosterCard/carousels need to render
 // a poster tile, without the season/episode-group fan-out that
 // getTmdbShowFullDetails does. Full details remain a separate, heavier
@@ -331,33 +372,15 @@ async function fetchShowSummaryFromTmdb(
         episodeCount: season.episode_count,
       }));
 
-    // Approximate "episodes aired so far" from the show's own
-    // last-aired-episode pointer instead of fetching every season's episode
-    // list: every regular season before it counts in full, and the
-    // last-aired season counts up to (and including) its own episode
-    // number. Slightly less precise than the full tier's per-episode
-    // air-date check, but avoids the season fan-out entirely.
-    const lastAired = json.last_episode_to_air;
-    let markableEpisodeCount = 0;
-    if (lastAired) {
-      if (lastAired.season_number > 0) {
-        for (const season of seasons) {
-          if (season.seasonNumber < lastAired.season_number) {
-            markableEpisodeCount += season.episodeCount ?? 0;
-          } else if (season.seasonNumber === lastAired.season_number) {
-            markableEpisodeCount += lastAired.episode_number;
+    const markableEpisodeCount = deriveMarkableEpisodeCount({
+      seasons,
+      lastAired: json.last_episode_to_air
+        ? {
+            seasonNumber: json.last_episode_to_air.season_number,
+            episodeNumber: json.last_episode_to_air.episode_number,
           }
-        }
-      } else {
-        // last_episode_to_air is a season-0 special — specials release
-        // between/after completed regular seasons, so treat every known
-        // regular season's full episode count as already aired.
-        markableEpisodeCount = seasons.reduce(
-          (sum, season) => sum + (season.episodeCount ?? 0),
-          0
-        );
-      }
-    }
+        : null,
+    });
 
     return {
       id,
@@ -584,7 +607,16 @@ export async function getTmdbShowFullDetails(
   viewerId?: string | null
 ): Promise<{ details: ShowDetails; meta: ShowMeta } | null> {
   const result = await fetchShowFullDetailsFromTmdb(id);
-  if (!result || !viewerId) return result;
+  if (!result) return result;
+
+  const row = catalogueRowFromDetails(id, result.details, result.meta);
+  // Scheduled after the response instead of awaited: this is on the render
+  // path for the show page (and, via getTmdbShowFullDetails's callers, the
+  // home page and tracking page fan-out), and the write is an optimisation
+  // that must never add a round-trip to what the viewer waits for.
+  if (row) after(() => upsertCatalogueShows([row]));
+
+  if (!viewerId) return result;
 
   const similarIds = result.meta.similar.map((show) => show.id);
   const overrides = await getCustomShowImages(viewerId, [id, ...similarIds]);
@@ -623,6 +655,13 @@ export async function resolveShowSummaries(
           >()
         ),
   ]);
+
+  const rows = uniqueIds
+    .map((id, index) => catalogueRowFromSummary(results[index]))
+    .filter((row): row is CatalogueRow => row !== null);
+  // Scheduled after the response instead of awaited — see the comment in
+  // getTmdbShowFullDetails above.
+  if (rows.length > 0) after(() => upsertCatalogueShows(rows));
 
   const map = new Map<number, ShowSummary>();
   uniqueIds.forEach((id, i) => {

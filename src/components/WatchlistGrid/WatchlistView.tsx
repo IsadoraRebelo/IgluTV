@@ -1,18 +1,19 @@
 'use client';
 
+
 import { EmptyState } from '@/components/EmptyState/EmptyState';
 import { ListFilterBar } from '@/components/ListFilterBar/ListFilterBar';
 import { Pagination } from '@/components/Pagination/Pagination';
 import { PosterCard } from '@/components/PosterCard/PosterCard';
 import { PosterGrid } from '@/components/PosterGrid/PosterGrid';
 
-import type { ShowSummary } from '@/types';
+import type { CatalogueShow } from '@/types';
 import type { FacetDef, SortKeyDef } from '@/types/list-controls';
 
 import { useListControls } from '@/hooks/useListControls';
 
 export type WatchlistEntry = {
-  show: ShowSummary;
+  show: CatalogueShow;
   decade: number | null;
   createdAt: string;
 };
@@ -25,8 +26,7 @@ const PAGE_SIZE = 36;
 // the Shows page.
 const GRID_CLASSES =
   'grid-cols-[repeat(3,minmax(0,1fr))] md:grid-cols-[repeat(4,minmax(0,1fr))] lg:grid-cols-[repeat(6,minmax(0,1fr))] gap-3';
-const IMAGE_SIZES =
-  '(max-width: 768px) 31vw, (max-width: 1024px) 23vw, 16vw';
+const IMAGE_SIZES = '(max-width: 768px) 31vw, (max-width: 1024px) 23vw, 16vw';
 
 const FACETS: FacetDef<WatchlistEntry>[] = [
   {
@@ -52,22 +52,6 @@ const FACETS: FacetDef<WatchlistEntry>[] = [
     getValues: (entry) => entry.show.genres,
     optionLabel: (value) => String(value),
     width: 200,
-  },
-  {
-    key: 'service',
-    label: 'Service',
-    getOptions: (entries) =>
-      Array.from(
-        new Set(
-          entries
-            .map((e) => e.show.network)
-            .filter((n): n is string => n !== null)
-        )
-      ).sort((a, b) => a.localeCompare(b)),
-    getValues: (entry) =>
-      entry.show.network === null ? [] : [entry.show.network],
-    optionLabel: (value) => String(value),
-    width: 150,
   },
 ];
 

@@ -1,4 +1,8 @@
 import {
+  type CatalogueRow,
+  upsertCatalogueShows,
+} from '@/services/show-catalogue';
+import {
   deriveShowStatus,
   type PlannedWatch,
   type ShowImportGroup,
@@ -115,7 +119,8 @@ async function placeEpisodes(
 
 async function importShow(
   userId: string,
-  group: ShowImportGroup
+  group: ShowImportGroup,
+  catalogueRows: CatalogueRow[]
 ): Promise<ShowOutcome> {
   const resolved = await resolveShow(group.tvdbShowId, group.seriesName);
 
@@ -131,6 +136,7 @@ async function importShow(
   }
 
   const structure = await getSeasonStructure(resolved.tmdbShowId);
+  if (structure.catalogueRow) catalogueRows.push(structure.catalogueRow);
   const placed = await placeEpisodes(group, structure, resolved.tmdbShowId);
 
   const merged = await mergeEpisodeWatches(
@@ -211,10 +217,11 @@ export async function POST(request: Request) {
   }
 
   const outcomes: ShowOutcome[] = [];
+  const catalogueRows: CatalogueRow[] = [];
 
   for (const group of shows) {
     try {
-      outcomes.push(await importShow(viewer.id, group));
+      outcomes.push(await importShow(viewer.id, group, catalogueRows));
     } catch (err) {
       outcomes.push({
         ok: false,
@@ -226,6 +233,8 @@ export async function POST(request: Request) {
       });
     }
   }
+
+  await upsertCatalogueShows(catalogueRows);
 
   const response: ImportBatchResponse = { outcomes };
   return Response.json(response);

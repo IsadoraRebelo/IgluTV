@@ -1,10 +1,10 @@
 import { DiaryPageView } from '@/components';
 
+import { getCatalogueShows } from '@/services/show-catalogue';
 import {
   getFinishedSeasonsForUser,
   getFinishedShowsForUser,
 } from '@/services/tracking';
-import { resolveShowSummaries } from '@/services/tv-shows';
 
 import { buildDiaryEntries } from '@/utils';
 
@@ -26,7 +26,7 @@ export async function DiarySection({
       ...finishedSeasonRows.map((r) => r.tmdbShowId),
     ])
   );
-  const summaries = await resolveShowSummaries(showIds, viewerId);
+  const summaries = await getCatalogueShows(showIds, viewerId);
 
   const entries = buildDiaryEntries(
     finishedRows,

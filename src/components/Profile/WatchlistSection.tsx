@@ -1,12 +1,13 @@
 import { WatchlistView } from '@/components';
 import type { WatchlistEntry } from '@/components/WatchlistGrid/WatchlistView';
 
+
+import { getCatalogueShows } from '@/services/show-catalogue';
 import { getShowsForUser } from '@/services/tracking';
-import { resolveShowSummaries } from '@/services/tv-shows';
 
 export async function WatchlistSection({ userId }: { userId: string }) {
   const watchlistTracking = await getShowsForUser(userId, 'watch_later');
-  const summaries = await resolveShowSummaries(
+  const summaries = await getCatalogueShows(
     watchlistTracking.map((s) => s.tmdbShowId)
   );
 

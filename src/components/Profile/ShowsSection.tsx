@@ -2,11 +2,12 @@ import { WatchedShowsView } from '@/components';
 import { getDisplayStatus } from '@/components/ShowTracker/utils';
 import type { WatchedShowEntry } from '@/components/WatchedShows/WatchedShowsView';
 
+
+import { getCatalogueShows } from '@/services/show-catalogue';
 import {
   getShowsForUser,
   getWatchedEpisodeCountsForUser,
 } from '@/services/tracking';
-import { resolveShowSummaries } from '@/services/tv-shows';
 
 export async function ShowsSection({ userId }: { userId: string }) {
   const trackedShows = await getShowsForUser(userId);
@@ -17,7 +18,7 @@ export async function ShowsSection({ userId }: { userId: string }) {
 
   const [watchedCounts, summaries] = await Promise.all([
     getWatchedEpisodeCountsForUser(userId, trackedNotWatchlistIds),
-    resolveShowSummaries(trackedNotWatchlistIds),
+    getCatalogueShows(trackedNotWatchlistIds),
   ]);
 
   const watchedTracking = trackedNotWatchlist.filter(
