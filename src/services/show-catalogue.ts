@@ -1,3 +1,4 @@
+import { after } from 'next/server';
 import 'server-only';
 
 import { TMDB_POSTER_LARGE_BASE_URL } from '@/consts';
@@ -22,6 +23,7 @@ export type CatalogueRow = {
   genres: string[];
   poster_path: string | null;
   markable_episode_count: number;
+  average_runtime: number | null;
 };
 
 // Structural, not `TMDBSeriesDetailsRaw`, because that type marks `name` and
@@ -33,10 +35,12 @@ export type CatalogueSource = {
   first_air_date?: string;
   poster_path?: string | null;
   genres?: { id: number; name: string }[];
+  episode_run_time?: number[];
   seasons?: { season_number: number; episode_count: number | null }[];
   last_episode_to_air?: {
     season_number: number;
     episode_number: number;
+    runtime?: number | null;
   } | null;
 };
 
@@ -70,6 +74,12 @@ export function catalogueRowFromTmdb(
           }
         : null,
     }),
+    // episode_run_time is frequently empty on TMDB nowadays; fall back to
+    // the last aired episode's own runtime — matching
+    // fetchShowSummaryFromTmdb's own fallback so the stored value agrees
+    // with what the app computes today.
+    average_runtime:
+      json.episode_run_time?.[0] ?? json.last_episode_to_air?.runtime ?? null,
   };
 }
 
@@ -94,6 +104,7 @@ export function catalogueRowFromSummary(
       ? summary.posterUrl.replace(TMDB_POSTER_LARGE_BASE_URL, '')
       : null,
     markable_episode_count: summary.markableEpisodeCount,
+    average_runtime: summary.averageRuntime,
   };
 }
 
@@ -128,6 +139,7 @@ export function catalogueRowFromDetails(
           }
         : null,
     }),
+    average_runtime: details.averageRuntime,
   };
 }
 
@@ -218,6 +230,73 @@ export function selectMissingIds(
   return missing;
 }
 
+// A show_catalogue row alone is not enough: markableEpisodeCount is derived
+// exclusively from season_catalogue now, so a show with a catalogue row but
+// no season rows (e.g. imported before season_catalogue existed, or a write
+// that landed one table and not the other) is just as much a cache miss as a
+// show absent from show_catalogue entirely. Union, not intersection: either
+// gap alone is enough to warrant a refetch, and resolveShowSummaries writes
+// both tables in one call regardless of which gap sent it there.
+export function selectShowsNeedingRefetch(
+  requested: number[],
+  cachedIds: Set<number>,
+  idsWithSeasonTotals: Set<number>
+): number[] {
+  const needsRefetch: number[] = [];
+  const seen = new Set<number>();
+  for (const id of requested) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    if (!cachedIds.has(id) || !idsWithSeasonTotals.has(id)) {
+      needsRefetch.push(id);
+    }
+  }
+  return needsRefetch;
+}
+
+// A season still airing can only be wrong for as long as it takes TMDB to
+// catch up with reality — 12h comfortably covers a weekly release cadence
+// without re-fetching a show on every single render.
+const STALE_SEASON_MS = 12 * 60 * 60 * 1000;
+
+// Scheduled via after() from getCatalogueShows, so it never delays the
+// render that discovered the staleness. Bounded twice: to the ids that
+// render actually asked for, and — within those — to shows with a season
+// still airing whose row hasn't been touched in STALE_SEASON_MS. Every
+// failure is caught here; a missed refresh must degrade to "still a bit
+// stale", never to a broken page.
+async function refreshStaleSeasons(showIds: number[]): Promise<void> {
+  try {
+    const supabase = await createClient();
+    const staleBefore = new Date(Date.now() - STALE_SEASON_MS).toISOString();
+    const { data, error } = await supabase
+      .from('season_catalogue')
+      .select('tmdb_show_id')
+      .in('tmdb_show_id', showIds)
+      .eq('finished_airing', false)
+      .lt('updated_at', staleBefore);
+
+    if (error) {
+      console.warn(
+        '[show-catalogue] stale-season read failed',
+        error.message
+      );
+      return;
+    }
+
+    const staleIds = Array.from(
+      new Set((data ?? []).map((row) => row.tmdb_show_id))
+    );
+    if (staleIds.length === 0) return;
+
+    // No viewerId: this is a background cache refresh, not a viewer-facing
+    // fetch, so there is no per-viewer image override to apply.
+    await resolveShowSummaries(staleIds);
+  } catch (err) {
+    console.warn('[show-catalogue] refresh threw', err);
+  }
+}
+
 // One query for everything the catalogue knows, then TMDB for the rest.
 //
 // The fallback is the migration path, not an edge case: the catalogue starts
@@ -236,9 +315,7 @@ export async function getCatalogueShows(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('show_catalogue')
-    .select(
-      'tmdb_show_id, name, year, genres, poster_path, markable_episode_count'
-    )
+    .select('tmdb_show_id, name, year, genres, poster_path')
     .in('tmdb_show_id', uniqueIds);
 
   // show_catalogue is a cache. A read failure must never break a page that
@@ -248,17 +325,90 @@ export async function getCatalogueShows(
     console.warn('[show-catalogue] read failed', error.message);
   } else {
     for (const row of data ?? []) {
-      result.set(row.tmdb_show_id, catalogueShowFromRow(row));
+      result.set(row.tmdb_show_id, {
+        id: row.tmdb_show_id,
+        name: row.name,
+        year: row.year,
+        genres: row.genres,
+        posterUrl: row.poster_path
+          ? `${TMDB_POSTER_LARGE_BASE_URL}${row.poster_path}`
+          : null,
+        // Placeholder, replaced unconditionally by the season_totals fold
+        // below — every id in `result`, catalogue-sourced or fallback-
+        // sourced, gets its real value from there before this returns.
+        markableEpisodeCount: 0,
+      });
     }
   }
 
-  const missing = selectMissingIds(uniqueIds, new Set(result.keys()));
-  if (missing.length > 0) {
-    const summaries = await resolveShowSummaries(missing, viewerId);
+  // markableEpisodeCount comes from season_catalogue exclusively now, not
+  // show_catalogue.markable_episode_count — that column is written once and
+  // never refreshed, so a cached row could silently disagree with TMDB
+  // forever. sum(aired_count) here is exact, and — because it's read fresh
+  // on every call — self-correcting once season_catalogue itself is kept
+  // current by upsertSeasonCatalogue and the refresh below.
+  //
+  // This must be an RPC, not a plain `.select()` on season_catalogue: that
+  // table holds one row per season, so a page's worth of shows (each with
+  // several seasons) can comfortably exceed PostgREST's 1000-row cap.
+  // season_totals groups server-side into one row per show, so the result
+  // is bounded by uniqueIds.length regardless of how many seasons exist.
+  //
+  // Queried before the fallback below (not after) because the fallback set
+  // itself depends on which ids this returns: a show with a show_catalogue
+  // row but no season_totals entry is as much a cache miss as a show with
+  // no catalogue row at all — see selectShowsNeedingRefetch.
+  const { data: totals, error: totalsError } = await supabase.rpc(
+    'season_totals',
+    { p_show_ids: uniqueIds }
+  );
+  if (totalsError) {
+    console.warn(
+      '[show-catalogue] season totals read failed',
+      totalsError.message
+    );
+  }
+  // On a totals-read failure, degrade the same way the catalogue-read
+  // failure above does: treat every id as lacking season totals so the
+  // fallback below covers everything, rather than trusting a partial or
+  // absent result and freezing every show's count at 0.
+  const idsWithSeasonTotals = new Set(
+    totalsError ? [] : (totals ?? []).map((row) => row.tmdb_show_id)
+  );
+
+  const needsRefetch = selectShowsNeedingRefetch(
+    uniqueIds,
+    new Set(result.keys()),
+    idsWithSeasonTotals
+  );
+  if (needsRefetch.length > 0) {
+    const summaries = await resolveShowSummaries(needsRefetch, viewerId);
     for (const [id, summary] of summaries) {
       result.set(id, catalogueShowFromSummary(summary));
     }
   }
+
+  if (!totalsError) {
+    const airedTotalById = new Map(
+      (totals ?? []).map((row) => [row.tmdb_show_id, row.aired_total])
+    );
+    for (const [id, show] of result) {
+      // A show with no season_catalogue rows (nothing imported yet, or a
+      // show that never got a details/summary fetch) has no entry here and
+      // falls back to 0 — the same "unknown" state a show missing from
+      // show_catalogue entirely is in until its first fetch.
+      result.set(id, {
+        ...show,
+        markableEpisodeCount: airedTotalById.get(id) ?? 0,
+      });
+    }
+  }
+
+  // Bounded refresh-on-read: closes the staleness gap markable_episode_count
+  // used to have by letting an airing show's season data self-correct
+  // instead of being frozen at whatever it was on first write. Scheduled
+  // after the response so it never adds latency to this render.
+  after(() => refreshStaleSeasons(uniqueIds));
 
   // Catalogue rows carry TMDB's poster. A viewer's own override is overlaid
   // here, never written into the shared table. Rows that came through the

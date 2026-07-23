@@ -1,6 +1,7 @@
 import 'server-only';
 
 import { TMDB_TV_GENRE_IDS_BY_NAME } from '@/consts';
+import { mapWithConcurrency } from '@/utils';
 
 import { getShowsForUser } from './tracking';
 import { getDiscoverTvIdsByGenre, getTmdbShowFullDetails } from './tv-shows';
@@ -27,8 +28,8 @@ export async function getRecommendedShowIdsForUser(
 
   const excludedIds = new Set(allTracked.map((tracked) => tracked.tmdbShowId));
 
-  const rawSeedDetails = await Promise.all(
-    seeds.map((tracked) => getTmdbShowFullDetails(tracked.tmdbShowId))
+  const rawSeedDetails = await mapWithConcurrency(seeds, 10, (tracked) =>
+    getTmdbShowFullDetails(tracked.tmdbShowId)
   );
   const seedDetails = rawSeedDetails.filter(
     (full): full is NonNullable<(typeof rawSeedDetails)[number]> =>

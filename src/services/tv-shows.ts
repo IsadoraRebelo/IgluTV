@@ -33,9 +33,12 @@ import {
   getCountryDisplayName,
   getLanguageDisplayName,
   isAnime,
+  mapWithConcurrency,
 } from '@/utils';
 
 import { getCustomShowImages } from './custom-show-images';
+import { seasonRowsFromTmdb, upsertSeasonCatalogue } from './season-catalogue';
+import type { SeasonRow } from './season-catalogue';
 import {
   catalogueRowFromDetails,
   catalogueRowFromSummary,
@@ -180,9 +183,15 @@ export async function getDiscoverTvIdsByGenre(
   }
 }
 
+// cacheRetrySalt is undefined on every normal call, so it changes nothing
+// about the normal cache key/behaviour. getTmdbShowFullDetails passes a
+// fixed salt ('retry') on its one retry attempt only — see the comment on
+// that function for why a same-arguments re-call doesn't actually re-fetch
+// under Cache Components' request-scoped memoization of 'use cache' calls.
 export async function getTmdbSeasonEpisodes(
   showId: number,
-  seasonNumber: number
+  seasonNumber: number,
+  cacheRetrySalt?: string
 ): Promise<SeasonEpisode[]> {
   'use cache';
   cacheLife('hours');
@@ -194,36 +203,36 @@ export async function getTmdbSeasonEpisodes(
     return [];
   }
 
-  try {
-    const res = await fetch(
-      `${TMDB_API_BASE_URL}/tv/${showId}/season/${seasonNumber}?api_key=${apiKey}&language=en-US`
-    );
+  // Deliberately not wrapped in try/catch: this function is 'use cache', so
+  // returning a fallback value here (as earlier revisions did) caches that
+  // fallback for hours. Throwing instead means nothing gets cached, and the
+  // uncached caller (getTmdbShowFullDetails) is responsible for degrading.
+  const res = await fetch(
+    `${TMDB_API_BASE_URL}/tv/${showId}/season/${seasonNumber}?api_key=${apiKey}&language=en-US${
+      cacheRetrySalt ? `&_retry=${encodeURIComponent(cacheRetrySalt)}` : ''
+    }`
+  );
 
-    if (!res.ok) {
-      console.warn(`[tv-shows] TMDB season ${res.status}: ${res.statusText}`);
-      return [];
-    }
-
-    const json: TMDBSeasonDetailRaw = await res.json();
-
-    return (json.episodes ?? []).map((episode) => ({
-      episodeNumber: episode.episode_number,
-      name:
-        episode.name === `Episode ${episode.episode_number}`
-          ? 'TBA'
-          : episode.name,
-      overview: episode.overview,
-      runtime: episode.runtime,
-      airDate: episode.air_date,
-      imageUrl: episode.still_path
-        ? `${TMDB_BACKDROP_BASE_URL}${episode.still_path}`
-        : null,
-      arcName: null,
-    }));
-  } catch (err) {
-    console.warn('[tv-shows] season fetch failed', err);
-    return [];
+  if (!res.ok) {
+    throw new Error(`[tv-shows] TMDB season ${res.status}: ${res.statusText}`);
   }
+
+  const json: TMDBSeasonDetailRaw = await res.json();
+
+  return (json.episodes ?? []).map((episode) => ({
+    episodeNumber: episode.episode_number,
+    name:
+      episode.name === `Episode ${episode.episode_number}`
+        ? 'TBA'
+        : episode.name,
+    overview: episode.overview,
+    runtime: episode.runtime,
+    airDate: episode.air_date,
+    imageUrl: episode.still_path
+      ? `${TMDB_BACKDROP_BASE_URL}${episode.still_path}`
+      : null,
+    arcName: null,
+  }));
 }
 
 export async function getTmdbAnimeArcNames(
@@ -337,7 +346,7 @@ export function deriveMarkableEpisodeCount(input: {
 // tier for the show page and tracking views that need per-episode data.
 async function fetchShowSummaryFromTmdb(
   id: number
-): Promise<ShowSummary | null> {
+): Promise<{ summary: ShowSummary; seasonRows: SeasonRow[] } | null> {
   'use cache';
   cacheLife('hours');
   cacheTag('tmdb-show-summary');
@@ -348,41 +357,49 @@ async function fetchShowSummaryFromTmdb(
     return null;
   }
 
-  try {
-    const res = await fetch(
-      `${TMDB_API_BASE_URL}/tv/${id}?api_key=${apiKey}&language=en-US`
-    );
+  // Deliberately not wrapped in try/catch: this function is 'use cache', so
+  // returning a fallback value here (as earlier revisions did) caches that
+  // fallback for hours. Throwing instead means nothing gets cached, and the
+  // uncached callers (getShowSummary, resolveShowSummaries) are responsible
+  // for degrading.
+  const res = await fetch(
+    `${TMDB_API_BASE_URL}/tv/${id}?api_key=${apiKey}&language=en-US`
+  );
 
-    if (!res.ok) {
-      console.warn(`[tv-shows] TMDB summary ${res.status}: ${res.statusText}`);
-      return null;
-    }
+  if (!res.ok) {
+    throw new Error(`[tv-shows] TMDB summary ${res.status}: ${res.statusText}`);
+  }
 
-    const json: TMDBSeriesDetailsRaw = await res.json();
+  const json: TMDBSeriesDetailsRaw = await res.json();
 
-    const showIsAnime = isAnime(
-      (json.genres ?? []).map((genre) => genre.id),
-      json.origin_country ?? []
-    );
+  const showIsAnime = isAnime(
+    (json.genres ?? []).map((genre) => genre.id),
+    json.origin_country ?? []
+  );
 
-    const seasons: ShowSummarySeason[] = (json.seasons ?? [])
-      .filter((season) => season.season_number > 0)
-      .map((season) => ({
-        seasonNumber: season.season_number,
-        episodeCount: season.episode_count,
-      }));
+  const seasons: ShowSummarySeason[] = (json.seasons ?? [])
+    .filter((season) => season.season_number > 0)
+    .map((season) => ({
+      seasonNumber: season.season_number,
+      episodeCount: season.episode_count,
+    }));
 
-    const markableEpisodeCount = deriveMarkableEpisodeCount({
-      seasons,
-      lastAired: json.last_episode_to_air
-        ? {
-            seasonNumber: json.last_episode_to_air.season_number,
-            episodeNumber: json.last_episode_to_air.episode_number,
-          }
-        : null,
-    });
+  const markableEpisodeCount = deriveMarkableEpisodeCount({
+    seasons,
+    lastAired: json.last_episode_to_air
+      ? {
+          seasonNumber: json.last_episode_to_air.season_number,
+          episodeNumber: json.last_episode_to_air.episode_number,
+        }
+      : null,
+  });
 
-    return {
+  // Derived from the raw JSON, not from `seasons`/meta above: those strip
+  // season 0 and lose next-episode context that seasonRowsFromTmdb needs.
+  const seasonRows = seasonRowsFromTmdb(id, json);
+
+  return {
+    summary: {
       id,
       name: json.name,
       posterUrl: json.poster_path
@@ -401,11 +418,9 @@ async function fetchShowSummaryFromTmdb(
       averageRuntime:
         json.episode_run_time?.[0] ?? json.last_episode_to_air?.runtime ?? null,
       seasons,
-    };
-  } catch (err) {
-    console.warn('[tv-shows] summary fetch failed', err);
-    return null;
-  }
+    },
+    seasonRows,
+  };
 }
 
 function withCustomImages(
@@ -431,16 +446,32 @@ export async function getShowSummary(
   id: number,
   viewerId?: string | null
 ): Promise<ShowSummary | null> {
-  const summary = await fetchShowSummaryFromTmdb(id);
-  if (!summary || !viewerId) return summary;
+  let result: Awaited<ReturnType<typeof fetchShowSummaryFromTmdb>>;
+  try {
+    result = await fetchShowSummaryFromTmdb(id);
+  } catch (err) {
+    console.warn('[tv-shows] summary fetch failed', err);
+    return null;
+  }
+  if (!result) return null;
+  const { summary } = result;
+  if (!viewerId) return summary;
 
   const overrides = await getCustomShowImages(viewerId, [id]);
   return withCustomImages(summary, overrides.get(id));
 }
 
+// cacheRetrySalt is undefined on every normal call — see the comment on
+// getTmdbShowFullDetails for why its one retry attempt passes a fixed salt
+// instead of just calling this function again with the same `id`.
 async function fetchShowFullDetailsFromTmdb(
-  id: number
-): Promise<{ details: ShowDetails; meta: ShowMeta } | null> {
+  id: number,
+  cacheRetrySalt?: string
+): Promise<{
+  details: ShowDetails;
+  meta: ShowMeta;
+  seasonRows: SeasonRow[];
+} | null> {
   'use cache';
   cacheLife('hours');
   cacheTag('tmdb-show-full-details');
@@ -451,6 +482,7 @@ async function fetchShowFullDetailsFromTmdb(
     return null;
   }
 
+  let json: TMDBSeriesDetailsRaw;
   try {
     const res = await fetch(
       `${TMDB_API_BASE_URL}/tv/${id}?api_key=${apiKey}&language=en-US&append_to_response=credits,content_ratings,recommendations`
@@ -461,141 +493,155 @@ async function fetchShowFullDetailsFromTmdb(
       return null;
     }
 
-    const json: TMDBSeriesDetailsRaw = await res.json();
-
-    const showIsAnime = isAnime(
-      (json.genres ?? []).map((genre) => genre.id),
-      json.origin_country ?? []
-    );
-
-    const details: ShowDetails = {
-      name: json.name,
-      originalName: json.original_name,
-      overview: json.overview,
-      year: json.first_air_date ? json.first_air_date.slice(0, 4) : null,
-      bannerUrl: json.backdrop_path
-        ? `${TMDB_BACKDROP_LARGE_BASE_URL}${json.backdrop_path}`
-        : null,
-      posterUrl: json.poster_path
-        ? `${TMDB_POSTER_LARGE_BASE_URL}${json.poster_path}`
-        : null,
-      genres: (json.genres ?? []).map((genre) => genre.name),
-      network: json.networks?.[0]?.name ?? null,
-      isAnime: showIsAnime,
-      cast: (json.credits?.cast ?? []).map((member) => ({
-        actorId: member.id,
-        actorName: member.name,
-        character: member.character,
-        imageUrl: member.profile_path
-          ? `${TMDB_POSTER_LARGE_BASE_URL}${member.profile_path}`
-          : null,
-      })),
-      // TMDB's "Returning Series" reads as jargon in the UI — display it as
-      // "Ongoing" instead.
-      status:
-        json.status === 'Returning Series' ? 'Ongoing' : (json.status ?? null),
-      // episode_run_time is frequently empty on TMDB nowadays; fall back to
-      // the last aired episode's own runtime.
-      averageRuntime:
-        json.episode_run_time?.[0] ?? json.last_episode_to_air?.runtime ?? null,
-      originalLanguage: getLanguageDisplayName(json.original_language),
-      originalCountry: getCountryDisplayName(json.origin_country?.[0]),
-      contentRating:
-        json.content_ratings?.results?.find((r) => r.iso_3166_1 === 'US')
-          ?.rating ?? null,
-      premiereDate: json.first_air_date ?? null,
-      lastAiredDate: json.last_air_date ?? null,
-      nextEpisodeDate: json.next_episode_to_air?.air_date ?? null,
-    };
-
-    // Arc-name dividers (SeasonAccordion) are opt-in per show: only fetched
-    // for anime, and only actually used if TMDB has a community-maintained
-    // "aired order" episode group for it (getTmdbAnimeArcNames returns null
-    // otherwise, e.g. for Breaking Bad, which has no such group at all).
-    const arcNames = showIsAnime ? await getTmdbAnimeArcNames(id) : null;
-
-    const lastEpisode = json.last_episode_to_air;
-    const nextEpisode = json.next_episode_to_air;
-
-    const sortedSeasons = (json.seasons ?? [])
-      .slice()
-      // Regular seasons in order, "Specials" (season_number 0) last.
-      .sort((a, b) => {
-        const rank = (n: number) => (n === 0 ? Infinity : n);
-        return rank(a.season_number) - rank(b.season_number);
-      });
-
-    const seasons = await Promise.all(
-      sortedSeasons.map(async (season) => ({
-        name: season.name,
-        seasonNumber: season.season_number,
-        airDate: season.air_date,
-        episodeCount: season.episode_count,
-        posterUrl: season.poster_path
-          ? `${TMDB_IMAGE_BASE_URL}${season.poster_path}`
-          : null,
-        episodes: (await getTmdbSeasonEpisodes(id, season.season_number)).map(
-          (episode) => ({
-            ...episode,
-            arcName:
-              arcNames?.get(
-                `${season.season_number}-${episode.episodeNumber}`
-              ) ?? null,
-          })
-        ),
-      }))
-    );
-
-    const meta: ShowMeta = {
-      numberOfSeasons: json.number_of_seasons ?? null,
-      numberOfEpisodes: json.number_of_episodes ?? null,
-      seasons,
-      latestEpisode:
-        lastEpisode && lastEpisode.season_number > 0
-          ? {
-              name: lastEpisode.name,
-              overview: lastEpisode.overview,
-              seasonNumber: lastEpisode.season_number,
-              episodeNumber: lastEpisode.episode_number,
-              airDate: lastEpisode.air_date,
-              runtime: lastEpisode.runtime,
-              imageUrl: lastEpisode.still_path
-                ? `${TMDB_BACKDROP_BASE_URL}${lastEpisode.still_path}`
-                : null,
-            }
-          : null,
-      nextEpisode:
-        nextEpisode && nextEpisode.season_number > 0
-          ? {
-              name: nextEpisode.name,
-              overview: nextEpisode.overview,
-              seasonNumber: nextEpisode.season_number,
-              episodeNumber: nextEpisode.episode_number,
-              airDate: nextEpisode.air_date,
-              runtime: nextEpisode.runtime,
-              imageUrl: nextEpisode.still_path
-                ? `${TMDB_BACKDROP_BASE_URL}${nextEpisode.still_path}`
-                : null,
-            }
-          : null,
-      similar: (json.recommendations?.results ?? []).slice(0, 12).map((s) => ({
-        id: s.id,
-        name: s.name,
-        posterUrl: s.poster_path
-          ? `${TMDB_POSTER_LARGE_BASE_URL}${s.poster_path}`
-          : null,
-        matchPercentage:
-          typeof s.vote_average === 'number'
-            ? Math.round(s.vote_average * 10)
-            : null,
-      })),
-    };
-
-    return { details, meta };
+    json = await res.json();
   } catch (err) {
     console.warn('[tv-shows] details fetch failed', err);
     return null;
   }
+
+  // Deliberately outside the try/catch above: a throw from
+  // getTmdbSeasonEpisodes (via mapWithConcurrency below) must propagate out
+  // of this cached function uncaught, so nothing gets cached when TMDB
+  // refuses a season request. getTmdbShowFullDetails (uncached) is
+  // responsible for catching it and degrading to null.
+  const showIsAnime = isAnime(
+    (json.genres ?? []).map((genre) => genre.id),
+    json.origin_country ?? []
+  );
+
+  const details: ShowDetails = {
+    name: json.name,
+    originalName: json.original_name,
+    overview: json.overview,
+    year: json.first_air_date ? json.first_air_date.slice(0, 4) : null,
+    bannerUrl: json.backdrop_path
+      ? `${TMDB_BACKDROP_LARGE_BASE_URL}${json.backdrop_path}`
+      : null,
+    posterUrl: json.poster_path
+      ? `${TMDB_POSTER_LARGE_BASE_URL}${json.poster_path}`
+      : null,
+    genres: (json.genres ?? []).map((genre) => genre.name),
+    network: json.networks?.[0]?.name ?? null,
+    isAnime: showIsAnime,
+    cast: (json.credits?.cast ?? []).map((member) => ({
+      actorId: member.id,
+      actorName: member.name,
+      character: member.character,
+      imageUrl: member.profile_path
+        ? `${TMDB_POSTER_LARGE_BASE_URL}${member.profile_path}`
+        : null,
+    })),
+    // TMDB's "Returning Series" reads as jargon in the UI — display it as
+    // "Ongoing" instead.
+    status:
+      json.status === 'Returning Series' ? 'Ongoing' : (json.status ?? null),
+    // episode_run_time is frequently empty on TMDB nowadays; fall back to
+    // the last aired episode's own runtime.
+    averageRuntime:
+      json.episode_run_time?.[0] ?? json.last_episode_to_air?.runtime ?? null,
+    originalLanguage: getLanguageDisplayName(json.original_language),
+    originalCountry: getCountryDisplayName(json.origin_country?.[0]),
+    contentRating:
+      json.content_ratings?.results?.find((r) => r.iso_3166_1 === 'US')
+        ?.rating ?? null,
+    premiereDate: json.first_air_date ?? null,
+    lastAiredDate: json.last_air_date ?? null,
+    nextEpisodeDate: json.next_episode_to_air?.air_date ?? null,
+  };
+
+  // Arc-name dividers (SeasonAccordion) are opt-in per show: only fetched
+  // for anime, and only actually used if TMDB has a community-maintained
+  // "aired order" episode group for it (getTmdbAnimeArcNames returns null
+  // otherwise, e.g. for Breaking Bad, which has no such group at all).
+  const arcNames = showIsAnime ? await getTmdbAnimeArcNames(id) : null;
+
+  const lastEpisode = json.last_episode_to_air;
+  const nextEpisode = json.next_episode_to_air;
+
+  const sortedSeasons = (json.seasons ?? [])
+    .slice()
+    // Regular seasons in order, "Specials" (season_number 0) last.
+    .sort((a, b) => {
+      const rank = (n: number) => (n === 0 ? Infinity : n);
+      return rank(a.season_number) - rank(b.season_number);
+    });
+
+  // Capped at 6 (rather than the summary fan-out's 10) because this runs
+  // *inside* a per-show fan-out (tracking page, recommendations) — the two
+  // multiply, and 6 was chosen to keep that product well under TMDB's
+  // ~50/sec limit.
+  const seasons = await mapWithConcurrency(sortedSeasons, 6, async (season) => ({
+    name: season.name,
+    seasonNumber: season.season_number,
+    airDate: season.air_date,
+    episodeCount: season.episode_count,
+    posterUrl: season.poster_path
+      ? `${TMDB_IMAGE_BASE_URL}${season.poster_path}`
+      : null,
+    episodes: (
+      await getTmdbSeasonEpisodes(id, season.season_number, cacheRetrySalt)
+    ).map(
+      (episode) => ({
+        ...episode,
+        arcName:
+          arcNames?.get(`${season.season_number}-${episode.episodeNumber}`) ??
+          null,
+      })
+    ),
+  }));
+
+  const meta: ShowMeta = {
+    numberOfSeasons: json.number_of_seasons ?? null,
+    numberOfEpisodes: json.number_of_episodes ?? null,
+    seasons,
+    latestEpisode:
+      lastEpisode && lastEpisode.season_number > 0
+        ? {
+            name: lastEpisode.name,
+            overview: lastEpisode.overview,
+            seasonNumber: lastEpisode.season_number,
+            episodeNumber: lastEpisode.episode_number,
+            airDate: lastEpisode.air_date,
+            runtime: lastEpisode.runtime,
+            imageUrl: lastEpisode.still_path
+              ? `${TMDB_BACKDROP_BASE_URL}${lastEpisode.still_path}`
+              : null,
+          }
+        : null,
+    nextEpisode:
+      nextEpisode && nextEpisode.season_number > 0
+        ? {
+            name: nextEpisode.name,
+            overview: nextEpisode.overview,
+            seasonNumber: nextEpisode.season_number,
+            episodeNumber: nextEpisode.episode_number,
+            airDate: nextEpisode.air_date,
+            runtime: nextEpisode.runtime,
+            imageUrl: nextEpisode.still_path
+              ? `${TMDB_BACKDROP_BASE_URL}${nextEpisode.still_path}`
+              : null,
+          }
+        : null,
+    similar: (json.recommendations?.results ?? []).slice(0, 12).map((s) => ({
+      id: s.id,
+      name: s.name,
+      posterUrl: s.poster_path
+        ? `${TMDB_POSTER_LARGE_BASE_URL}${s.poster_path}`
+        : null,
+      matchPercentage:
+        typeof s.vote_average === 'number'
+          ? Math.round(s.vote_average * 10)
+          : null,
+    })),
+  };
+
+  // Derived from the raw JSON, not from `meta` above: meta.latestEpisode
+  // and meta.nextEpisode are nulled out whenever that episode's
+  // season_number is 0, which would make a show whose most recent aired
+  // episode is a special look like it never aired anything.
+  const seasonRows = seasonRowsFromTmdb(id, json);
+
+  return { details, meta, seasonRows };
 }
 
 // viewerId is optional and, when provided, overlays that viewer's custom
@@ -606,7 +652,38 @@ export async function getTmdbShowFullDetails(
   id: number,
   viewerId?: string | null
 ): Promise<{ details: ShowDetails; meta: ShowMeta } | null> {
-  const result = await fetchShowFullDetailsFromTmdb(id);
+  let result: Awaited<ReturnType<typeof fetchShowFullDetailsFromTmdb>>;
+  // fetchShowFullDetailsFromTmdb throws rather than returning a partial result,
+  // so nothing bad is cached — but that means one transient season failure
+  // would otherwise 404 an entire show page. Retry once: a blip costs a retry,
+  // a genuine absence still returns null.
+  //
+  // The retry passes a fixed cacheRetrySalt ('retry') rather than just
+  // calling fetchShowFullDetailsFromTmdb(id) again unchanged. Verified live:
+  // under Cache Components, a 'use cache' function call is memoized for the
+  // lifetime of the *request* (not just the persistent hours-long cache) —
+  // generateMetadata and the page body both call this with the same `id`,
+  // and repeating that same call after a throw replays the same rejected
+  // promise without hitting the network again, so an unsalted retry is a
+  // no-op. The salt only affects the retry path (every normal call still
+  // passes no salt, so its cache key/behaviour is unchanged); it flows down
+  // into the season-level cache key too, so the retry's season fetches are
+  // genuinely fresh rather than replaying the same failure.
+  try {
+    result = await fetchShowFullDetailsFromTmdb(id);
+  } catch (err) {
+    console.warn('[tv-shows] details fetch failed, retrying once', err);
+    // Brief fixed backoff (not exponential — this is a single retry, not a
+    // loop) so a 429 has a moment for TMDB's per-second window to roll over
+    // instead of immediately re-hitting the same limit.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    try {
+      result = await fetchShowFullDetailsFromTmdb(id, 'retry');
+    } catch (retryErr) {
+      console.warn('[tv-shows] details fetch failed on retry', retryErr);
+      return null;
+    }
+  }
   if (!result) return result;
 
   const row = catalogueRowFromDetails(id, result.details, result.meta);
@@ -615,6 +692,9 @@ export async function getTmdbShowFullDetails(
   // home page and tracking page fan-out), and the write is an optimisation
   // that must never add a round-trip to what the viewer waits for.
   if (row) after(() => upsertCatalogueShows([row]));
+  if (result.seasonRows.length > 0) {
+    after(() => upsertSeasonCatalogue(result.seasonRows));
+  }
 
   if (!viewerId) return result;
 
@@ -644,8 +724,19 @@ export async function resolveShowSummaries(
   viewerId?: string | null
 ): Promise<Map<number, ShowSummary>> {
   const uniqueIds = Array.from(new Set(showIds));
+  // Capped at 10: this fan-out is top-level (one call per show id, no
+  // nested per-show fan-out underneath it), unlike the season fan-out in
+  // fetchShowFullDetailsFromTmdb which caps at 6 because it multiplies with
+  // an outer per-show loop.
   const [results, overrides] = await Promise.all([
-    Promise.all(uniqueIds.map((id) => fetchShowSummaryFromTmdb(id))),
+    mapWithConcurrency(uniqueIds, 10, async (id) => {
+      try {
+        return await fetchShowSummaryFromTmdb(id);
+      } catch (err) {
+        console.warn('[tv-shows] summary fetch failed', err);
+        return null;
+      }
+    }),
     viewerId
       ? getCustomShowImages(viewerId, uniqueIds)
       : Promise.resolve(
@@ -657,15 +748,18 @@ export async function resolveShowSummaries(
   ]);
 
   const rows = uniqueIds
-    .map((id, index) => catalogueRowFromSummary(results[index]))
+    .map((id, index) => catalogueRowFromSummary(results[index]?.summary))
     .filter((row): row is CatalogueRow => row !== null);
   // Scheduled after the response instead of awaited — see the comment in
   // getTmdbShowFullDetails above.
   if (rows.length > 0) after(() => upsertCatalogueShows(rows));
 
+  const seasonRows = results.flatMap((result) => result?.seasonRows ?? []);
+  if (seasonRows.length > 0) after(() => upsertSeasonCatalogue(seasonRows));
+
   const map = new Map<number, ShowSummary>();
   uniqueIds.forEach((id, i) => {
-    const summary = results[i];
+    const summary = results[i]?.summary;
     if (summary) map.set(id, withCustomImages(summary, overrides.get(id)));
   });
   return map;

@@ -3,6 +3,7 @@ import 'server-only';
 import { TMDB_API_BASE_URL } from '@/consts';
 
 import { ServiceError } from './errors';
+import { type SeasonRow, seasonRowsFromTmdb } from './season-catalogue';
 import { type CatalogueRow, catalogueRowFromTmdb } from './show-catalogue';
 
 export type ResolvedShow = {
@@ -15,6 +16,7 @@ export type SeasonStructure = {
   episodeCounts: Map<number, number>;
   totalEpisodes: number;
   catalogueRow: CatalogueRow | null;
+  seasonRows: SeasonRow[];
 };
 
 type TmdbFindResponse = {
@@ -148,8 +150,9 @@ export async function getSeasonStructure(
   }
 
   const catalogueRow = catalogueRowFromTmdb(tmdbShowId, show);
+  const seasonRows = seasonRowsFromTmdb(tmdbShowId, show);
 
-  return { episodeCounts, totalEpisodes, catalogueRow };
+  return { episodeCounts, totalEpisodes, catalogueRow, seasonRows };
 }
 
 export async function resolveEpisodeNumber(

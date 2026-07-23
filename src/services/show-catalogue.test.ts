@@ -9,6 +9,7 @@ import {
   catalogueShowFromRow,
   catalogueShowFromSummary,
   selectMissingIds,
+  selectShowsNeedingRefetch,
 } from './show-catalogue';
 import { deriveMarkableEpisodeCount } from './tv-shows';
 
@@ -37,6 +38,7 @@ describe('catalogueRowFromTmdb', () => {
       genres: ['Animation', 'Action & Adventure'],
       poster_path: '/abc123.jpg',
       markable_episode_count: 379,
+      average_runtime: 24,
     });
   });
 
@@ -66,6 +68,7 @@ describe('catalogueRowFromTmdb', () => {
       genres: [],
       poster_path: null,
       markable_episode_count: 0,
+      average_runtime: null,
     });
   });
 
@@ -123,6 +126,7 @@ describe('catalogueRowFromDetails', () => {
         year: '2004',
         genres: ['Animation', 'Action & Adventure'],
         posterUrl: 'https://image.tmdb.org/t/p/w500/abc123.jpg',
+        averageRuntime: 24,
       } as ShowDetails,
       {
         seasons: [
@@ -224,6 +228,7 @@ describe('catalogueShowFromRow', () => {
         genres: ['Animation'],
         poster_path: '/abc123.jpg',
         markable_episode_count: 406,
+        average_runtime: 24,
       })
     ).toEqual({
       id: 30984,
@@ -244,6 +249,7 @@ describe('catalogueShowFromRow', () => {
         genres: [],
         poster_path: null,
         markable_episode_count: 0,
+        average_runtime: null,
       }).posterUrl
     ).toBe(null);
   });
@@ -309,5 +315,53 @@ describe('selectMissingIds', () => {
 
   it('deduplicates', () => {
     expect(selectMissingIds([1, 1, 2], new Set())).toEqual([1, 2]);
+  });
+});
+
+describe('selectShowsNeedingRefetch', () => {
+  it('refetches an id with no catalogue row at all', () => {
+    expect(
+      selectShowsNeedingRefetch([1, 2], new Set(), new Set([1, 2]))
+    ).toEqual([1, 2]);
+  });
+
+  it('refetches an id that has a catalogue row but no season totals — the exact bug this closes', () => {
+    expect(
+      selectShowsNeedingRefetch([1], new Set([1]), new Set())
+    ).toEqual([1]);
+  });
+
+  it('does not refetch an id present in both the catalogue and season totals', () => {
+    expect(
+      selectShowsNeedingRefetch([1], new Set([1]), new Set([1]))
+    ).toEqual([]);
+  });
+
+  it('takes the union: either gap alone is enough to trigger a refetch', () => {
+    // 1: has catalogue row, missing season totals.
+    // 2: missing catalogue row, has season totals (should not happen in
+    //    practice since resolveShowSummaries writes both, but the union
+    //    must still catch it defensively).
+    // 3: has neither.
+    // 4: has both — the only one that should be left out.
+    expect(
+      selectShowsNeedingRefetch(
+        [1, 2, 3, 4],
+        new Set([1, 4]),
+        new Set([2, 4])
+      )
+    ).toEqual([1, 2, 3]);
+  });
+
+  it('deduplicates requested ids', () => {
+    expect(
+      selectShowsNeedingRefetch([1, 1, 2], new Set(), new Set())
+    ).toEqual([1, 2]);
+  });
+
+  it('returns nothing when every id is fully cached', () => {
+    expect(
+      selectShowsNeedingRefetch([1, 2], new Set([1, 2]), new Set([1, 2]))
+    ).toEqual([]);
   });
 });

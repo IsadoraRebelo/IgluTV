@@ -37,6 +37,7 @@ import type {
   ShowStatus,
   ShowTracking,
 } from '@/types';
+import { mapWithConcurrency } from '@/utils';
 
 const RECENT_WATCHED_LIMIT = 10;
 const STALE_THRESHOLD_DAYS = 14;
@@ -249,10 +250,8 @@ async function buildRecentWatchEntries(
   viewerId: string
 ): Promise<RecentWatchEntry[]> {
   const showIds = Array.from(new Set(rows.map((row) => row.tmdbShowId)));
-  const bundles = await Promise.all(
-    showIds.map((showId) =>
-      buildShowBundle(showId, watchedEpisodesByShow.get(showId) ?? [], viewerId)
-    )
+  const bundles = await mapWithConcurrency(showIds, 10, (showId) =>
+    buildShowBundle(showId, watchedEpisodesByShow.get(showId) ?? [], viewerId)
   );
   const bundleByShowId = new Map(
     showIds.map((showId, i) => [showId, bundles[i]])
@@ -332,13 +331,11 @@ export default async function TrackingPage() {
   );
 
   const [results, recentWatchedEntries] = await Promise.all([
-    Promise.all(
-      trackedShows.map((tracked) =>
-        buildWatchListEntry(
-          tracked,
-          watchedEpisodesByShow.get(tracked.tmdbShowId) ?? [],
-          viewer.id
-        )
+    mapWithConcurrency(trackedShows, 10, (tracked) =>
+      buildWatchListEntry(
+        tracked,
+        watchedEpisodesByShow.get(tracked.tmdbShowId) ?? [],
+        viewer.id
       )
     ),
     buildRecentWatchEntries(
@@ -377,13 +374,11 @@ export default async function TrackingPage() {
 
   let wishlistEntries: WatchListEntry[] = [];
   if (staleEntries.length === 0) {
-    const wishlistResults = await Promise.all(
-      wishlistShows.map((tracked) =>
-        buildWishlistEntry(
-          tracked,
-          watchedEpisodesByShow.get(tracked.tmdbShowId) ?? [],
-          viewer.id
-        )
+    const wishlistResults = await mapWithConcurrency(wishlistShows, 10, (tracked) =>
+      buildWishlistEntry(
+        tracked,
+        watchedEpisodesByShow.get(tracked.tmdbShowId) ?? [],
+        viewer.id
       )
     );
     wishlistEntries = wishlistResults
