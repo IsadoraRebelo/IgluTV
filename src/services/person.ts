@@ -10,9 +10,15 @@ import type {
   TMDBPersonTvCreditsRaw,
 } from '@/types';
 
-export async function getTmdbPersonDetails(
-  id: number
-): Promise<PersonDetails | null> {
+// Deliberately not wrapped in try/catch: this function is 'use cache', so
+// returning a fallback value here (as an earlier revision did) caches that
+// fallback for hours — and /cast/[id]/page.tsx turns a null result into
+// notFound(), so a single transient TMDB failure 404'd the cast page for
+// hours with no way to recover short of a redeploy. Throwing instead means
+// nothing gets cached; the uncached wrapper below (getTmdbPersonDetails) is
+// responsible for degrading to null, same pattern as fetchTmdbShowMeta in
+// tv-shows.ts.
+async function fetchTmdbPersonDetails(id: number): Promise<PersonDetails | null> {
   'use cache';
   cacheLife('hours');
   cacheTag('tmdb-person-details');
@@ -23,25 +29,30 @@ export async function getTmdbPersonDetails(
     return null;
   }
 
+  const res = await fetch(
+    `${TMDB_API_BASE_URL}/person/${id}?api_key=${apiKey}&language=en-US`
+  );
+
+  if (!res.ok) {
+    throw new Error(`[person] TMDB details ${res.status}: ${res.statusText}`);
+  }
+
+  const json: TMDBPersonRaw = await res.json();
+
+  return {
+    name: json.name,
+    biography: json.biography ?? '',
+    profileUrl: json.profile_path
+      ? `${TMDB_IMAGE_BASE_URL}${json.profile_path}`
+      : null,
+  };
+}
+
+export async function getTmdbPersonDetails(
+  id: number
+): Promise<PersonDetails | null> {
   try {
-    const res = await fetch(
-      `${TMDB_API_BASE_URL}/person/${id}?api_key=${apiKey}&language=en-US`
-    );
-
-    if (!res.ok) {
-      console.warn(`[person] TMDB details ${res.status}: ${res.statusText}`);
-      return null;
-    }
-
-    const json: TMDBPersonRaw = await res.json();
-
-    return {
-      name: json.name,
-      biography: json.biography ?? '',
-      profileUrl: json.profile_path
-        ? `${TMDB_IMAGE_BASE_URL}${json.profile_path}`
-        : null,
-    };
+    return await fetchTmdbPersonDetails(id);
   } catch (err) {
     console.warn('[person] details fetch failed', err);
     return null;

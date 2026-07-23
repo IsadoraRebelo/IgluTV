@@ -22,6 +22,10 @@ export async function getCustomShowImages(
   >();
   if (showIds.length === 0) return map;
 
+  // Not paged: show_tracking has a (user_id, tmdb_show_id) primary key, so
+  // row count here is bounded by showIds.length (one row per requested
+  // show), not by watch history — always far under the 1,000-row PostgREST
+  // cap.
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('show_tracking')

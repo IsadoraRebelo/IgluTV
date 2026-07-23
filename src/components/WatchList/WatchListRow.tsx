@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
+import { toast } from 'sonner';
 
 import {
   EpisodeModal,
@@ -32,12 +33,12 @@ export function WatchListRow(props: {
   episode: LatestEpisode;
   backlogCount: number;
   badge: 'new' | 'premiere' | null;
-  seasons: Season[];
+  seasons?: Season[] | null;
+  cast?: CastMember[];
   watchedEpisodes: EpisodeWatch[];
   skipCatchUpPrompt: boolean;
   initialStatus: ShowStatus | null;
   tmdbStatus: string | null;
-  cast: CastMember[];
   faded?: boolean;
 }) {
   const {
@@ -46,12 +47,12 @@ export function WatchListRow(props: {
     episode,
     backlogCount,
     badge,
-    seasons,
+    seasons = null,
+    cast = [],
     watchedEpisodes,
     skipCatchUpPrompt,
     initialStatus,
     tmdbStatus,
-    cast,
     faded,
   } = props;
 
@@ -59,6 +60,7 @@ export function WatchListRow(props: {
     <ShowTrackingProvider
       showId={showId}
       seasons={seasons}
+      cast={cast}
       watchedEpisodes={watchedEpisodes}
       skipCatchUpPrompt={skipCatchUpPrompt}
       initialStatus={initialStatus}
@@ -74,7 +76,6 @@ export function WatchListRow(props: {
         episode={episode}
         backlogCount={backlogCount}
         badge={badge}
-        cast={cast}
         faded={faded}
       />
     </ShowTrackingProvider>
@@ -87,7 +88,6 @@ function WatchListRowContent({
   episode,
   backlogCount,
   badge,
-  cast,
   faded,
 }: {
   showId: number;
@@ -95,7 +95,6 @@ function WatchListRowContent({
   episode: LatestEpisode;
   backlogCount: number;
   badge: 'new' | 'premiere' | null;
-  cast: CastMember[];
   faded?: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -108,13 +107,56 @@ function WatchListRowContent({
     onRemoveLastEpisodeRewatch,
     pendingKeys,
     watchedDates,
+    cast,
+    seasonsLoading,
+    onLoadSeasons,
   } = useShowTrackingContext();
+
+  // Server-provided props seed the row, but marking an episode from here
+  // (rather than from the modal) swaps in the next unwatched episode
+  // locally — see handleMarkEpisode — instead of waiting on a full page
+  // refresh. Re-synced during render (not an effect) whenever the server
+  // sends fresh props, e.g. after the refresh path below runs for
+  // unmark/rewatch/caught-up — this is React's documented pattern for
+  // resetting state when a prop changes without an extra render pass.
+  const [prevEpisode, setPrevEpisode] = useState(episode);
+  const [displayEpisode, setDisplayEpisode] = useState(episode);
+  if (episode !== prevEpisode) {
+    setPrevEpisode(episode);
+    setDisplayEpisode(episode);
+  }
+
+  const [prevBadge, setPrevBadge] = useState(badge);
+  const [displayBadge, setDisplayBadge] = useState(badge);
+  if (badge !== prevBadge) {
+    setPrevBadge(badge);
+    setDisplayBadge(badge);
+  }
+
+  const [prevBacklogCount, setPrevBacklogCount] = useState(backlogCount);
+  const [displayBacklogCount, setDisplayBacklogCount] = useState(backlogCount);
+  if (backlogCount !== prevBacklogCount) {
+    setPrevBacklogCount(backlogCount);
+    setDisplayBacklogCount(backlogCount);
+  }
+
+  // Set right before a mark that resolves with a next episode to display
+  // locally, so the pendingKeys effect below skips the usual exit/refresh
+  // animation for that one completion. Marking always round-trips to the
+  // server first, so by the time handleMarkEpisode's continuation below
+  // runs (a microtask) the effect (a deferred passive effect) has not yet
+  // fired — see handleMarkEpisode for how this gets resolved either way.
+  const skipExitOnMarkRef = useRef(false);
 
   const prevPendingSizeRef = useRef(0);
   useEffect(() => {
     const prevSize = prevPendingSizeRef.current;
     if (prevSize > 0 && pendingKeys.size === 0) {
-      setPhase('exiting');
+      if (skipExitOnMarkRef.current) {
+        skipExitOnMarkRef.current = false;
+      } else {
+        setPhase('exiting');
+      }
     }
     prevPendingSizeRef.current = pendingKeys.size;
   }, [pendingKeys]);
@@ -138,28 +180,71 @@ function WatchListRowContent({
     }
   }
 
+  // Marking from the row (not the modal) swaps the displayed episode for
+  // whatever the server says is next, instead of going through the
+  // exit/refresh dance below — the mark action already round-trips, so this
+  // keeps the optimistic feel without adding a spinner. A null result means
+  // the show is now fully caught up, and a failed mark is already reverted
+  // by the context; both fall through to today's behaviour unchanged.
+  async function handleMarkEpisode() {
+    skipExitOnMarkRef.current = true;
+    try {
+      const nextEpisode = await onToggleEpisode(
+        displayEpisode.seasonNumber,
+        displayEpisode.episodeNumber
+      );
+
+      if (nextEpisode === undefined || nextEpisode === null) {
+        skipExitOnMarkRef.current = false;
+        return;
+      }
+
+      setDisplayEpisode(nextEpisode);
+      // The badge and backlog count described the episode we just marked,
+      // not the one taking its place — clear/decrement rather than show
+      // stale values until the next full refresh.
+      setDisplayBadge(null);
+      setDisplayBacklogCount((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      // onToggleEpisode (via handleLoadSeasons' catch-up lookup) shouldn't
+      // reject anymore, but this is called un-awaited from
+      // WatchedToggleButton's onMark, so a rejection here would otherwise
+      // become an unhandled one — and, more importantly, would leave
+      // skipExitOnMarkRef stuck at true, wedging this row: the pendingKeys
+      // effect would skip both the exit animation and router.refresh(),
+      // even though the mark itself may already have succeeded on the
+      // server.
+      skipExitOnMarkRef.current = false;
+      console.warn('[WatchListRow] failed to mark episode', err);
+      toast.error('Could not update episode. Please try again.');
+    }
+  }
+
   const episodeKeyValue = episodeKey(
-    episode.seasonNumber,
-    episode.episodeNumber
+    displayEpisode.seasonNumber,
+    displayEpisode.episodeNumber
   );
   const isPending = pendingKeys.has(episodeKeyValue);
   const isWatched = getWatchCount(watchedDates, episodeKeyValue) > 0;
   const rewatchCount = getRewatchCount(watchedDates, episodeKeyValue);
 
-  const baseRowClassName = `flex cursor-pointer items-stretch overflow-hidden rounded-lg bg-white/[0.03] hover:bg-white/[0.06] ${
-    faded ? 'opacity-60 hover:opacity-100' : ''
-  }`;
+  const baseRowClassName = `flex cursor-pointer items-stretch overflow-hidden rounded-lg bg-white/[0.03] hover:bg-white/[0.06] ${faded ? 'opacity-60 hover:opacity-100' : ''
+    }`;
 
   return (
     <>
       <div
         role="button"
         tabIndex={0}
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setOpen(true);
+          onLoadSeasons();
+        }}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
             setOpen(true);
+            onLoadSeasons();
           }
         }}
         onAnimationEnd={handleAnimationEnd}
@@ -172,24 +257,24 @@ function WatchListRowContent({
         }
       >
         <div className="bg-surface relative aspect-square w-25 shrink-0 overflow-hidden sm:w-25">
-          {episode.imageUrl ? (
+          {displayEpisode.imageUrl ? (
             <Image
-              src={episode.imageUrl}
-              alt={episode.name}
+              src={displayEpisode.imageUrl}
+              alt={displayEpisode.name}
               fill
               sizes="(min-width: 640px) 160px, 128px"
               className="object-cover"
             />
           ) : null}
-          {badge ? (
+          {displayBadge ? (
             <span
               className={
-                badge === 'premiere'
+                displayBadge === 'premiere'
                   ? 'text-background absolute bottom-1 left-1 w-fit rounded-md bg-white px-2 py-0.5 text-xs font-semibold tracking-wide uppercase'
                   : 'text-background absolute bottom-1 left-1 w-fit rounded-md bg-yellow-400 px-2 py-0.5 text-xs font-semibold tracking-wide uppercase'
               }
             >
-              {badge === 'premiere' ? 'Premiere' : 'New'}
+              {displayBadge === 'premiere' ? 'Premiere' : 'New'}
             </span>
           ) : null}
         </div>
@@ -206,16 +291,16 @@ function WatchListRowContent({
 
           <div>
             <p className="font-heading lg:text-md text-base font-extrabold text-white">
-              S{String(episode.seasonNumber).padStart(2, '0')} | E
-              {String(episode.episodeNumber).padStart(2, '0')}
-              {backlogCount > 0 ? (
+              S{String(displayEpisode.seasonNumber).padStart(2, '0')} | E
+              {String(displayEpisode.episodeNumber).padStart(2, '0')}
+              {displayBacklogCount > 0 ? (
                 <span className="text-text-secondary ml-1 text-xs font-normal">
-                  +{backlogCount}
+                  +{displayBacklogCount}
                 </span>
               ) : null}
             </p>
             <p className="text-text-secondary truncate text-sm">
-              {episode.name}
+              {displayEpisode.name}
             </p>
           </div>
         </div>
@@ -232,19 +317,23 @@ function WatchListRowContent({
             rewatchLabel="+1 Rewatched"
             removeLabel="Not watched"
             removeRewatchesLabel="Remove last rewatch"
-            onMark={() =>
-              onToggleEpisode(episode.seasonNumber, episode.episodeNumber)
-            }
+            onMark={handleMarkEpisode}
             onRewatch={() =>
-              onRewatchEpisode(episode.seasonNumber, episode.episodeNumber)
+              onRewatchEpisode(
+                displayEpisode.seasonNumber,
+                displayEpisode.episodeNumber
+              )
             }
             onRemove={() =>
-              onToggleEpisode(episode.seasonNumber, episode.episodeNumber)
+              onToggleEpisode(
+                displayEpisode.seasonNumber,
+                displayEpisode.episodeNumber
+              )
             }
             onRemoveRewatches={() =>
               onRemoveLastEpisodeRewatch(
-                episode.seasonNumber,
-                episode.episodeNumber
+                displayEpisode.seasonNumber,
+                displayEpisode.episodeNumber
               )
             }
           />
@@ -253,16 +342,17 @@ function WatchListRowContent({
 
       <EpisodeModal
         episode={{
-          episodeNumber: episode.episodeNumber,
-          name: episode.name,
-          overview: episode.overview,
-          runtime: episode.runtime,
-          airDate: episode.airDate,
-          imageUrl: episode.imageUrl,
+          episodeNumber: displayEpisode.episodeNumber,
+          name: displayEpisode.name,
+          overview: displayEpisode.overview,
+          runtime: displayEpisode.runtime,
+          airDate: displayEpisode.airDate,
+          imageUrl: displayEpisode.imageUrl,
           arcName: null,
         }}
-        seasonNumber={episode.seasonNumber}
+        seasonNumber={displayEpisode.seasonNumber}
         cast={cast}
+        castLoading={seasonsLoading}
         open={open}
         onOpenChange={setOpen}
         closeOnMark

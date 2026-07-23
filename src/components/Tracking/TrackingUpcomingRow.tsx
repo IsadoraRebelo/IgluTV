@@ -5,7 +5,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 
-import { EpisodeModal, ShowTrackingProvider } from '@/components';
+import {
+  EpisodeModal,
+  ShowTrackingProvider,
+  useShowTrackingContext,
+} from '@/components';
 
 import type {
   CastMember,
@@ -15,22 +19,7 @@ import type {
   ShowStatus,
 } from '@/types';
 
-export function TrackingUpcomingRow({
-  showId,
-  showName,
-  posterUrl,
-  network,
-  seasonNumber,
-  episode,
-  daysUntilAir,
-  daysLabel,
-  seasons,
-  watchedEpisodes,
-  skipCatchUpPrompt,
-  initialStatus,
-  tmdbStatus,
-  cast,
-}: {
+export function TrackingUpcomingRow(props: {
   showId: number;
   showName: string;
   posterUrl: string | null;
@@ -39,19 +28,38 @@ export function TrackingUpcomingRow({
   episode: SeasonEpisode;
   daysUntilAir: number;
   daysLabel: string;
-  seasons: Season[];
+  // Omitted (or null) — these rows only ever fetch a show's next episode,
+  // so seasons/cast load lazily when the episode modal opens. See
+  // WatchListRow for the same pattern.
+  seasons?: Season[] | null;
+  cast?: CastMember[];
   watchedEpisodes: EpisodeWatch[];
   skipCatchUpPrompt: boolean;
   initialStatus: ShowStatus | null;
   tmdbStatus: string | null;
-  cast: CastMember[];
 }) {
-  const [open, setOpen] = useState(false);
+  const {
+    showId,
+    showName,
+    posterUrl,
+    network,
+    seasonNumber,
+    episode,
+    daysUntilAir,
+    daysLabel,
+    seasons = null,
+    cast = [],
+    watchedEpisodes,
+    skipCatchUpPrompt,
+    initialStatus,
+    tmdbStatus,
+  } = props;
 
   return (
     <ShowTrackingProvider
       showId={showId}
       seasons={seasons}
+      cast={cast}
       watchedEpisodes={watchedEpisodes}
       skipCatchUpPrompt={skipCatchUpPrompt}
       initialStatus={initialStatus}
@@ -61,14 +69,56 @@ export function TrackingUpcomingRow({
       tmdbStatus={tmdbStatus}
       isLoggedIn
     >
+      <TrackingUpcomingRowContent
+        showId={showId}
+        showName={showName}
+        posterUrl={posterUrl}
+        network={network}
+        seasonNumber={seasonNumber}
+        episode={episode}
+        daysUntilAir={daysUntilAir}
+        daysLabel={daysLabel}
+      />
+    </ShowTrackingProvider>
+  );
+}
+
+function TrackingUpcomingRowContent({
+  showId,
+  showName,
+  posterUrl,
+  network,
+  seasonNumber,
+  episode,
+  daysUntilAir,
+  daysLabel,
+}: {
+  showId: number;
+  showName: string;
+  posterUrl: string | null;
+  network: string | null;
+  seasonNumber: number;
+  episode: SeasonEpisode;
+  daysUntilAir: number;
+  daysLabel: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const { cast, seasonsLoading, onLoadSeasons } = useShowTrackingContext();
+
+  return (
+    <>
       <div
         role="button"
         tabIndex={0}
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setOpen(true);
+          onLoadSeasons();
+        }}
         onKeyDown={(event) => {
           if (event.key === 'Enter' || event.key === ' ') {
             event.preventDefault();
             setOpen(true);
+            onLoadSeasons();
           }
         }}
         className="flex min-h-24 w-full cursor-pointer items-stretch overflow-hidden rounded-md bg-white/[0.045] text-left lg:min-h-26"
@@ -122,9 +172,10 @@ export function TrackingUpcomingRow({
         episode={episode}
         seasonNumber={seasonNumber}
         cast={cast}
+        castLoading={seasonsLoading}
         open={open}
         onOpenChange={setOpen}
       />
-    </ShowTrackingProvider>
+    </>
   );
 }

@@ -16,12 +16,20 @@ import {
   unmarkSeasonWatched,
   updateEpisodeWatchDate,
 } from '@/services/tracking';
-import { getTmdbShowImages } from '@/services/tv-shows';
+import { getTmdbShowFullDetails, getTmdbShowImages } from '@/services/tv-shows';
 
-import type { ShowBackdropImage, ShowImageKind, ShowStatus } from '@/types';
+import type {
+  CastMember,
+  LatestEpisode,
+  Season,
+  ShowBackdropImage,
+  ShowImageKind,
+  ShowStatus,
+} from '@/types';
 
 export type TrackingActionResult =
-  { ok: true } | { ok: false; code: string | null; message: string };
+  | { ok: true; nextEpisode?: LatestEpisode | null }
+  | { ok: false; code: string | null; message: string };
 
 async function toResult(work: Promise<void>): Promise<TrackingActionResult> {
   try {
@@ -40,7 +48,45 @@ export async function markEpisodeWatchedAction(
   season: number,
   episode: number
 ): Promise<TrackingActionResult> {
-  return toResult(markEpisodeWatched(showId, season, episode));
+  try {
+    const nextEpisode = await markEpisodeWatched(showId, season, episode);
+    return { ok: true, nextEpisode };
+  } catch (error) {
+    if (error instanceof ServiceError) {
+      return { ok: false, code: error.code ?? null, message: error.message };
+    }
+    return { ok: false, code: null, message: 'Something went wrong' };
+  }
+}
+
+// Powers the tracking page's lazy season load: the episode modal on a row
+// that only ever fetched a single next-episode (see getTrackingRows) has no
+// season data of its own, so it fetches one show's full details on open,
+// exactly like the show page does eagerly.
+//
+// getTmdbShowFullDetails already swallows its own fetch/parse errors and
+// degrades to null, but the server action round trip itself (the RSC
+// request/response, not the TMDB call inside it) can still reject — offline,
+// a 5xx, deploy skew. Caught here so ShowTrackingContext's caller always gets
+// a value back, never a rejected promise.
+export async function loadShowSeasonsAction(showId: number): Promise<{
+  seasons: Season[];
+  cast: CastMember[];
+  tmdbStatus: string | null;
+} | null> {
+  try {
+    const full = await getTmdbShowFullDetails(showId);
+    if (!full) return null;
+
+    return {
+      seasons: full.meta.seasons,
+      cast: full.details.cast,
+      tmdbStatus: full.details.status,
+    };
+  } catch (err) {
+    console.warn('[actions] loadShowSeasonsAction failed', err);
+    return null;
+  }
 }
 
 export async function unmarkEpisodeWatchedAction(

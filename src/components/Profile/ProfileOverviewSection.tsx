@@ -9,6 +9,7 @@ import Link from 'next/link';
 
 import { PosterCard, StatTile } from '@/components';
 
+import { getCatalogueShows } from '@/services/show-catalogue';
 import {
   getFavouriteShowsForUser,
   getFinishedSeasonsForUser,
@@ -20,7 +21,7 @@ import {
 } from '@/services/tracking';
 import { resolveShowSummaries } from '@/services/tv-shows';
 
-import type { ShowSummary } from '@/types';
+import type { CatalogueShow, ShowSummary } from '@/types';
 
 import {
   buildDiaryEntries,
@@ -32,6 +33,24 @@ import {
 } from '@/utils';
 
 const WATCHLIST_PREVIEW_LIMIT = 5;
+const DIARY_PREVIEW_LIMIT = 10;
+
+// Picks candidate rows from a chronologically-unsorted list such that the
+// true top `limit` entries by watchedOn are guaranteed to survive a later
+// merge with another such list — taking `limit` from one list is enough,
+// since the merged top `limit` can draw at most `limit` from either side.
+// Lets the finished-show and finished-season lists each get sliced to size
+// *before* resolving show data, instead of resolving all of them (which
+// scales with the whole library, ~455 shows after the import) and slicing
+// the rendered result down to 10 after the fact.
+function selectDiaryCandidates<T extends { watchedOn: string }>(
+  rows: T[],
+  limit: number
+): T[] {
+  return [...rows]
+    .sort((a, b) => (a.watchedOn < b.watchedOn ? 1 : a.watchedOn > b.watchedOn ? -1 : 0))
+    .slice(0, limit);
+}
 
 export async function ProfileOverviewSection({
   profile,
@@ -42,6 +61,8 @@ export async function ProfileOverviewSection({
   recentRows: Awaited<ReturnType<typeof getRecentWatchedShowsForUser>>;
   viewerId: string | null;
 }) {
+  const isOwner = viewerId !== null && viewerId === profile.id;
+
   const [
     stats,
     favouriteShows,
@@ -62,13 +83,42 @@ export async function ProfileOverviewSection({
     allTrackedShows.map((s) => [s.tmdbShowId, s.status])
   );
 
-  const allShowIds = [
-    ...favouriteShows.map((s) => s.tmdbShowId),
-    ...watchlistShows.map((s) => s.tmdbShowId),
-    ...recentRows.map((r) => r.tmdbShowId),
-    ...finishedRows.map((r) => r.tmdbShowId),
-    ...finishedSeasonRows.map((r) => r.tmdbShowId),
-  ];
+  // Only resolve the ids actually rendered. finishedRows/finishedSeasonRows
+  // scale with the whole library (~455 shows after the import) but this
+  // section only ever shows the 10 most recent diary lines, so slice to
+  // candidates (see selectDiaryCandidates) before resolving instead of
+  // resolving everything and slicing the result. watchlistShows is sliced
+  // the same way — only WATCHLIST_PREVIEW_LIMIT of it is ever displayed.
+  const watchlistPreview = watchlistShows.slice(0, WATCHLIST_PREVIEW_LIMIT);
+  const finishedRowsCandidates = selectDiaryCandidates(
+    finishedRows,
+    DIARY_PREVIEW_LIMIT
+  );
+  const finishedSeasonRowsCandidates = selectDiaryCandidates(
+    finishedSeasonRows,
+    DIARY_PREVIEW_LIMIT
+  );
+
+  // Favourites need ShowSummary.isAnime (to split into the "shows" and
+  // "anime" rows below) — a field CatalogueShow deliberately doesn't carry,
+  // so this list stays on the full resolveShowSummaries tier. It isn't the
+  // unbounded set the catalogue switch is fixing (favourites is bounded by
+  // how many shows a user has favourited, not by library size), so this
+  // isn't a regression of the same bug.
+  const favouriteShowIds = favouriteShows.map((s) => s.tmdbShowId);
+  // Everything else renders only CatalogueShow fields (id, name, posterUrl,
+  // markableEpisodeCount) — see PosterCard and utils/diary.ts — so these go
+  // through the catalogue-backed tier: a Postgres read with TMDB fallback
+  // and write-through healing, same as ShowsSection/WatchlistSection/
+  // DiarySection.
+  const catalogueShowIds = Array.from(
+    new Set([
+      ...watchlistPreview.map((s) => s.tmdbShowId),
+      ...recentRows.map((r) => r.tmdbShowId),
+      ...finishedRowsCandidates.map((r) => r.tmdbShowId),
+      ...finishedSeasonRowsCandidates.map((r) => r.tmdbShowId),
+    ])
+  );
   const progressShowIds = Array.from(
     new Set([
       ...favouriteShows.map((s) => s.tmdbShowId),
@@ -76,26 +126,27 @@ export async function ProfileOverviewSection({
     ])
   );
 
-  const [summaries, watchedCounts] = await Promise.all([
-    resolveShowSummaries(allShowIds, viewerId),
-    getWatchedEpisodeCountsForUser(profile.id, progressShowIds),
-  ]);
+  const [favouriteSummariesById, catalogueShows, watchedCounts] =
+    await Promise.all([
+      resolveShowSummaries(favouriteShowIds, viewerId),
+      getCatalogueShows(catalogueShowIds, viewerId),
+      getWatchedEpisodeCountsForUser(profile.id, progressShowIds),
+    ]);
 
   const favouriteSummaries = favouriteShows
-    .map((s) => summaries.get(s.tmdbShowId))
+    .map((s) => favouriteSummariesById.get(s.tmdbShowId))
     .filter((s): s is ShowSummary => s !== undefined);
 
   const favouriteShowSummaries = favouriteSummaries.filter((s) => !s.isAnime);
   const favouriteAnimeSummaries = favouriteSummaries.filter((s) => s.isAnime);
 
-  const watchlistSummaries = watchlistShows
-    .map((s) => summaries.get(s.tmdbShowId))
-    .filter((s): s is ShowSummary => s !== undefined)
-    .slice(0, WATCHLIST_PREVIEW_LIMIT);
+  const watchlistSummaries = watchlistPreview
+    .map((s) => catalogueShows.get(s.tmdbShowId))
+    .filter((s): s is CatalogueShow => s !== undefined);
 
   const recentActivity = recentRows
     .map((row) => {
-      const show = summaries.get(row.tmdbShowId);
+      const show = catalogueShows.get(row.tmdbShowId);
       if (!show) return null;
       return {
         show,
@@ -108,20 +159,28 @@ export async function ProfileOverviewSection({
       (
         entry
       ): entry is {
-        show: ShowSummary;
+        show: CatalogueShow;
         seasonNumber: number;
         episodeNumber: number;
         watchedOn: string;
       } => entry !== null
     );
 
+  // The badge count is the true total (not gated on any show resolving),
+  // matching what DiarySection's full diary page would show — computed
+  // straight from the row counts rather than finishedEntries.length, which
+  // would only reflect the sliced-and-resolved candidates.
+  const finishedTotalCount = finishedRows.length + finishedSeasonRows.length;
+
   const finishedEntries = buildDiaryEntries(
-    finishedRows,
-    finishedSeasonRows,
-    summaries
+    finishedRowsCandidates,
+    finishedSeasonRowsCandidates,
+    catalogueShows
   );
 
-  const diaryGroups = groupDiaryEntriesByMonth(finishedEntries.slice(0, 10));
+  const diaryGroups = groupDiaryEntriesByMonth(
+    finishedEntries.slice(0, DIARY_PREVIEW_LIMIT)
+  );
 
   return (
     <main className="container-shell flex-1 pb-5">
@@ -210,12 +269,18 @@ export async function ProfileOverviewSection({
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {recentActivity.map((entry) => {
                   const { month, day } = formatDiaryDate(entry.watchedOn);
+                  const episodeLabel = `S${String(entry.seasonNumber).padStart(2, '0')}E${String(entry.episodeNumber).padStart(2, '0')}`;
+                  // Visitors see what was watched recently, not when — the
+                  // dated record is owner-only, same rule as the diary tab.
+                  const caption = isOwner
+                    ? `${episodeLabel} · ${month} ${day}`
+                    : episodeLabel;
                   return (
                     <PosterCard
                       key={`${entry.show.id}-${entry.seasonNumber}-${entry.episodeNumber}`}
                       show={entry.show}
                       className="w-32 shrink-0"
-                      caption={`S${String(entry.seasonNumber).padStart(2, '0')}E${String(entry.episodeNumber).padStart(2, '0')} · ${month} ${day}`}
+                      caption={caption}
                       progress={{
                         watchedCount: watchedCounts.get(entry.show.id) ?? 0,
                         showStatus: statusByShowId.get(entry.show.id) ?? null,
@@ -267,7 +332,12 @@ export async function ProfileOverviewSection({
             </div>
           ) : null}
 
-          {finishedEntries.length > 0 ? (
+          {/* Owner-only, for the same reason the /diary route itself is: this
+              block is a dated record of when things were finished. Without
+              this gate the privacy feature contradicts itself — a visitor
+              would be sent to a not-found page at /diary while the page they
+              came from already showed them a dated excerpt of it. */}
+          {isOwner && finishedTotalCount > 0 ? (
             <div>
               <div className="border-muted-foreground mb-2 flex items-center justify-between border-b px-1 pb-2 text-white">
                 <Link
@@ -280,7 +350,7 @@ export async function ProfileOverviewSection({
                   href={`/profile/${profile.username}/diary`}
                   className="hover:text-accent text-xs font-semibold tracking-wide text-white uppercase"
                 >
-                  {finishedEntries.length}
+                  {finishedTotalCount}
                 </Link>
               </div>
               <div className="flex flex-col">

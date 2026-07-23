@@ -11,32 +11,32 @@ import {
   TrackingUpcomingGroups,
   WatchListRow,
 } from '@/components';
-import {
-  buildWatchedDatesMap,
-  getAiredUnwatchedEpisodes,
-  getEpisodeSectionState,
-  getFirstEpisode,
-  hasEpisodeAired,
-  isOlderThanDays,
-} from '@/components/ShowTracker/utils';
+import { isOlderThanDays } from '@/components/ShowTracker/utils';
 
+import { getCustomShowImages } from '@/services/custom-show-images';
 import {
   getMyShows,
   getRecentWatchedEpisodes,
   getShowTracking,
+  getTrackingRows,
   getWatchedEpisodesForShows,
 } from '@/services/tracking';
-import { getTmdbShowFullDetails } from '@/services/tv-shows';
+import type { TrackingRow } from '@/services/tracking';
+import {
+  getTmdbEpisode,
+  getTmdbSeasonEpisodes,
+  getTmdbShowMeta,
+} from '@/services/tv-shows';
 import { getViewer } from '@/services/viewer';
 
 import type {
-  CastMember,
   EpisodeWatch,
   LatestEpisode,
-  Season,
+  SeasonEpisode,
   ShowStatus,
   ShowTracking,
 } from '@/types';
+import { mapWithConcurrency } from '@/utils';
 
 const RECENT_WATCHED_LIMIT = 10;
 const STALE_THRESHOLD_DAYS = 14;
@@ -50,146 +50,111 @@ type WatchListEntry = {
   backlogCount: number;
   unwatchedRuntimeMinutes: number;
   sortKey: string | null;
-  seasons: Season[];
   watchedEpisodes: EpisodeWatch[];
   skipCatchUpPrompt: boolean;
   initialStatus: ShowStatus | null;
   tmdbStatus: string | null;
-  cast: CastMember[];
   badge: 'new' | 'premiere' | null;
 };
 
-async function buildWatchListEntry(
+// tracking_rows' backlog_count includes the row's own next episode, but the
+// row badge shows how many *more* are waiting beyond the one on screen.
+function backlogBadgeCount(row: TrackingRow): number {
+  return Math.max(0, row.backlogCount - 1);
+}
+
+type PosterOverrides = Awaited<ReturnType<typeof getCustomShowImages>>;
+
+// Overlays a viewer's custom poster (show_tracking.custom_poster_url) onto a
+// TMDB-sourced posterUrl, matching getCatalogueShows' own overlay exactly: a
+// truthy check, not just `??`, so an override row with a null *or* empty
+// string doesn't clobber the real poster.
+function overlayPosterUrl(
+  showId: number,
+  posterUrl: string | null,
+  overrides: PosterOverrides
+): string | null {
+  const override = overrides.get(showId);
+  return override?.customPosterUrl ? override.customPosterUrl : posterUrl;
+}
+
+function toWatchListEntry(
+  row: TrackingRow,
   tracked: ShowTracking,
+  episode: LatestEpisode | null,
   watchedEpisodes: EpisodeWatch[],
-  viewerId: string
-): Promise<WatchListEntry | null> {
-  let tmdbFull: Awaited<ReturnType<typeof getTmdbShowFullDetails>>;
-  try {
-    tmdbFull = await getTmdbShowFullDetails(tracked.tmdbShowId, viewerId);
-  } catch (err) {
-    console.warn('[tracking] entry fetch failed', err);
-    return null;
-  }
-  if (!tmdbFull) return null;
-
-  const { details, meta } = tmdbFull;
-  const watchedDates = buildWatchedDatesMap(watchedEpisodes);
-  const section = getEpisodeSectionState(meta, details, watchedDates);
-
-  if (section.kind === 'hidden' || section.kind === 'caught-up') return null;
-  if (section.kind === 'next' && !hasEpisodeAired(section.episode.airDate)) {
-    return null;
-  }
-
-  const episode = section.episode;
-  const airedUnwatchedRefs =
-    section.kind === 'next'
-      ? getAiredUnwatchedEpisodes(meta.seasons, watchedDates)
-      : [];
-  // airedUnwatchedRefs always includes `episode` itself (it's aired and
-  // unwatched by construction, guaranteed by the hasEpisodeAired check
-  // above), so subtract 1 to get the count of *other* waiting episodes —
-  // both ones skipped earlier and ones that aired since, past this pick.
-  const backlogCount = Math.max(0, airedUnwatchedRefs.length - 1);
-  const unwatchedRuntimeMinutes = airedUnwatchedRefs.reduce((sum, ref) => {
-    const airedEpisode = findEpisode(
-      meta.seasons,
-      ref.seasonNumber,
-      ref.episodeNumber
-    );
-    return sum + (airedEpisode?.runtime ?? 0);
-  }, 0);
-
-  let sortKey: string | null = null;
-  for (const dates of watchedDates.values()) {
-    for (const date of dates) {
-      if (date === null) continue;
-      if (sortKey === null || date > sortKey) sortKey = date;
-    }
-  }
+  posterOverrides: PosterOverrides
+): WatchListEntry | null {
+  if (!episode) return null;
 
   return {
-    showId: tracked.tmdbShowId,
-    showName: details.name,
-    posterUrl: details.posterUrl,
-    network: details.network,
+    showId: row.tmdbShowId,
+    showName: row.name,
+    posterUrl: overlayPosterUrl(row.tmdbShowId, row.posterUrl, posterOverrides),
+    network: row.network,
     episode,
-    backlogCount,
-    unwatchedRuntimeMinutes,
-    sortKey,
-    seasons: meta.seasons,
+    backlogCount: backlogBadgeCount(row),
+    unwatchedRuntimeMinutes: row.estimatedMinutes,
+    sortKey: row.lastWatchedOn,
     watchedEpisodes,
     skipCatchUpPrompt: tracked.skipCatchUpPrompt,
     initialStatus: tracked.status,
-    tmdbStatus: details.status,
-    cast: details.cast,
+    // Unknown until the episode modal lazily loads full show details
+    // (ShowTrackingProvider.onLoadSeasons) — not used to render the row
+    // itself, only inside the provider once seasons are loaded.
+    tmdbStatus: null,
     badge: null,
   };
 }
 
-type ShowBundle = {
-  showName: string;
-  posterUrl: string | null;
-  network: string | null;
-  seasons: Season[];
-  watchedEpisodes: EpisodeWatch[];
-  skipCatchUpPrompt: boolean;
-  initialStatus: ShowStatus | null;
-  tmdbStatus: string | null;
-  cast: CastMember[];
-};
-
-async function buildShowBundle(
-  showId: number,
+// Wishlist rows always show the first episode with no backlog badge,
+// regardless of how many episodes have actually aired since — matching the
+// old getFirstEpisode-based behaviour exactly.
+function toWishlistEntry(
+  row: TrackingRow,
+  tracked: ShowTracking,
+  episode: LatestEpisode | null,
   watchedEpisodes: EpisodeWatch[],
-  viewerId: string
-): Promise<ShowBundle | null> {
-  try {
-    const [tmdbFull, tracking] = await Promise.all([
-      getTmdbShowFullDetails(showId, viewerId),
-      getShowTracking(showId),
-    ]);
-    if (!tmdbFull) return null;
-
-    const { details, meta } = tmdbFull;
-    return {
-      showName: details.name,
-      posterUrl: details.posterUrl,
-      network: details.network,
-      seasons: meta.seasons,
-      watchedEpisodes,
-      skipCatchUpPrompt: tracking?.skipCatchUpPrompt ?? false,
-      initialStatus: tracking?.status ?? null,
-      tmdbStatus: details.status,
-      cast: details.cast,
-    };
-  } catch (err) {
-    console.warn('[tracking] recent watch show fetch failed', err);
-    return null;
-  }
-}
-
-function findEpisode(
-  seasons: Season[],
-  seasonNumber: number,
-  episodeNumber: number
-): LatestEpisode | null {
-  const season = seasons.find((s) => s.seasonNumber === seasonNumber);
-  const episode = season?.episodes.find(
-    (ep) => ep.episodeNumber === episodeNumber
-  );
-  if (!season || !episode) return null;
+  posterOverrides: PosterOverrides
+): WatchListEntry | null {
+  if (!episode) return null;
 
   return {
-    name: episode.name,
-    overview: episode.overview,
-    seasonNumber,
-    episodeNumber,
-    airDate: episode.airDate,
-    runtime: episode.runtime,
-    imageUrl: episode.imageUrl,
+    showId: row.tmdbShowId,
+    showName: row.name,
+    posterUrl: overlayPosterUrl(row.tmdbShowId, row.posterUrl, posterOverrides),
+    network: row.network,
+    episode,
+    backlogCount: 0,
+    unwatchedRuntimeMinutes: 0,
+    sortKey: null,
+    watchedEpisodes,
+    skipCatchUpPrompt: tracked.skipCatchUpPrompt,
+    initialStatus: tracked.status,
+    tmdbStatus: null,
+    badge: 'premiere',
   };
+}
+
+// Uncached caller of getTmdbSeasonEpisodes (which deliberately throws rather
+// than degrading, so nothing bad gets cached — see its own comment) — same
+// "degrade to null on failure" contract every other uncached TMDB wrapper in
+// this file follows. Also degrades a technically-successful but empty
+// response to null: a season that has a nextEpisode should never come back
+// with zero episodes, so treat that as unusable rather than as "this show
+// has no upcoming episodes" and let buildUpcomingGroups fall back to
+// nextEpisode alone either way.
+async function getUpcomingSeasonEpisodes(
+  showId: number,
+  seasonNumber: number
+): Promise<SeasonEpisode[] | null> {
+  try {
+    const episodes = await getTmdbSeasonEpisodes(showId, seasonNumber);
+    return episodes.length > 0 ? episodes : null;
+  } catch (err) {
+    console.warn('[tracking] upcoming season episodes fetch failed', err);
+    return null;
+  }
 }
 
 function formatRuntime(minutes: number): string {
@@ -201,43 +166,12 @@ function formatRuntime(minutes: number): string {
   return `${hours}h ${mins}m`;
 }
 
-async function buildWishlistEntry(
-  tracked: ShowTracking,
-  watchedEpisodes: EpisodeWatch[],
-  viewerId: string
-): Promise<WatchListEntry | null> {
-  let tmdbFull: Awaited<ReturnType<typeof getTmdbShowFullDetails>>;
-  try {
-    tmdbFull = await getTmdbShowFullDetails(tracked.tmdbShowId, viewerId);
-  } catch (err) {
-    console.warn('[tracking] wishlist entry fetch failed', err);
-    return null;
-  }
-  if (!tmdbFull) return null;
-
-  const { details, meta } = tmdbFull;
-  const episode = getFirstEpisode(meta.seasons);
-  if (!episode || !hasEpisodeAired(episode.airDate)) return null;
-
-  return {
-    showId: tracked.tmdbShowId,
-    showName: details.name,
-    posterUrl: details.posterUrl,
-    network: details.network,
-    episode,
-    backlogCount: 0,
-    unwatchedRuntimeMinutes: 0,
-    sortKey: null,
-    seasons: meta.seasons,
-    watchedEpisodes,
-    skipCatchUpPrompt: tracked.skipCatchUpPrompt,
-    initialStatus: tracked.status,
-    tmdbStatus: details.status,
-    cast: details.cast,
-    badge: 'premiere',
-  };
-}
-
+// Recently Watched needs two things per row, neither of which requires a
+// season tree: the specific past episode being shown (getTmdbEpisode, one
+// request) and the show's display fields (getTmdbShowMeta, one request —
+// recentWatchedRows itself carries no name/poster/network, unlike
+// TrackingRow). seasons/cast are left null/empty and load lazily when the
+// episode modal opens, same as every other row on this page.
 async function buildRecentWatchEntries(
   rows: {
     tmdbShowId: number;
@@ -246,45 +180,48 @@ async function buildRecentWatchEntries(
     watchedOn: string;
   }[],
   watchedEpisodesByShow: Map<number, EpisodeWatch[]>,
-  viewerId: string
+  posterOverrides: PosterOverrides
 ): Promise<RecentWatchEntry[]> {
   const showIds = Array.from(new Set(rows.map((row) => row.tmdbShowId)));
-  const bundles = await Promise.all(
-    showIds.map((showId) =>
-      buildShowBundle(showId, watchedEpisodesByShow.get(showId) ?? [], viewerId)
-    )
-  );
-  const bundleByShowId = new Map(
-    showIds.map((showId, i) => [showId, bundles[i]])
+
+  const [metas, trackings, episodes] = await Promise.all([
+    mapWithConcurrency(showIds, 10, (showId) => getTmdbShowMeta(showId)),
+    mapWithConcurrency(showIds, 10, (showId) => getShowTracking(showId)),
+    mapWithConcurrency(rows, 10, (row) =>
+      getTmdbEpisode(row.tmdbShowId, row.seasonNumber, row.episodeNumber)
+    ),
+  ]);
+  const metaByShowId = new Map(showIds.map((showId, i) => [showId, metas[i]]));
+  const trackingByShowId = new Map(
+    showIds.map((showId, i) => [showId, trackings[i]])
   );
 
   const entries: RecentWatchEntry[] = [];
-  for (const row of rows) {
-    const bundle = bundleByShowId.get(row.tmdbShowId);
-    if (!bundle) continue;
+  rows.forEach((row, i) => {
+    const episode = episodes[i];
+    const meta = metaByShowId.get(row.tmdbShowId);
+    if (!episode || !meta) return;
 
-    const episode = findEpisode(
-      bundle.seasons,
-      row.seasonNumber,
-      row.episodeNumber
-    );
-    if (!episode) continue;
+    const tracking = trackingByShowId.get(row.tmdbShowId);
 
     entries.push({
       showId: row.tmdbShowId,
-      showName: bundle.showName,
-      posterUrl: bundle.posterUrl,
-      network: bundle.network,
+      showName: meta.name,
+      posterUrl: overlayPosterUrl(row.tmdbShowId, meta.posterUrl, posterOverrides),
+      network: meta.network,
       episode,
       watchedOn: row.watchedOn,
-      seasons: bundle.seasons,
-      watchedEpisodes: bundle.watchedEpisodes,
-      skipCatchUpPrompt: bundle.skipCatchUpPrompt,
-      initialStatus: bundle.initialStatus,
-      tmdbStatus: bundle.tmdbStatus,
-      cast: bundle.cast,
+      seasons: null,
+      watchedEpisodes: watchedEpisodesByShow.get(row.tmdbShowId) ?? [],
+      skipCatchUpPrompt: tracking?.skipCatchUpPrompt ?? false,
+      initialStatus: tracking?.status ?? null,
+      // Unknown until the episode modal lazily loads full show details —
+      // matches toWatchListEntry's own tmdbStatus, and isn't used to render
+      // the row itself, only inside the provider once seasons are loaded.
+      tmdbStatus: null,
+      cast: [],
     });
-  }
+  });
 
   return entries.reverse();
 }
@@ -298,12 +235,10 @@ function renderWatchListEntry(entry: WatchListEntry) {
       episode={entry.episode}
       backlogCount={entry.backlogCount}
       badge={entry.badge}
-      seasons={entry.seasons}
       watchedEpisodes={entry.watchedEpisodes}
       skipCatchUpPrompt={entry.skipCatchUpPrompt}
       initialStatus={entry.initialStatus}
       tmdbStatus={entry.tmdbStatus}
-      cast={entry.cast}
     />
   );
 }
@@ -326,36 +261,75 @@ export default async function TrackingPage() {
       ...recentWatchedRows.map((row) => row.tmdbShowId),
     ])
   );
-  const watchedEpisodesByShow = await getWatchedEpisodesForShows(
-    viewer.id,
-    allShowIds
-  );
+  // getCustomShowImages is one bulk query, fetched once for every show id
+  // the page could possibly render, and overlaid wherever a posterUrl is
+  // produced below (toWatchListEntry, toWishlistEntry,
+  // buildRecentWatchEntries) — see overlayPosterUrl. Without this, the page
+  // would show TMDB's default poster even for a show the viewer has set a
+  // custom one for.
+  const [watchedEpisodesByShow, posterOverrides] = await Promise.all([
+    getWatchedEpisodesForShows(viewer.id, allShowIds),
+    getCustomShowImages(viewer.id, allShowIds),
+  ]);
 
-  const [results, recentWatchedEntries] = await Promise.all([
-    Promise.all(
-      trackedShows.map((tracked) =>
-        buildWatchListEntry(
-          tracked,
-          watchedEpisodesByShow.get(tracked.tmdbShowId) ?? [],
-          viewer.id
-        )
-      )
-    ),
+  const trackedById = new Map(trackedShows.map((t) => [t.tmdbShowId, t]));
+  const wishlistById = new Map(wishlistShows.map((t) => [t.tmdbShowId, t]));
+
+  // One RPC covers every tracked show (watching + watch_later) that has a
+  // backlog; a caught-up show is simply absent. One episode fetch per row,
+  // bounded to 10 in flight, instead of a full-season fetch per show.
+  const [trackingRows, recentWatchedEntries] = await Promise.all([
+    getTrackingRows(viewer.id),
     buildRecentWatchEntries(
       recentWatchedRows,
       watchedEpisodesByShow,
-      viewer.id
+      posterOverrides
     ),
   ]);
 
-  const entries = results
-    .filter((entry): entry is WatchListEntry => entry !== null)
-    .sort((a, b) => {
-      if (a.sortKey === null && b.sortKey === null) return 0;
-      if (a.sortKey === null) return 1;
-      if (b.sortKey === null) return -1;
-      return b.sortKey.localeCompare(a.sortKey);
-    });
+  const episodesByRow = await mapWithConcurrency(trackingRows, 10, (row) =>
+    getTmdbEpisode(row.tmdbShowId, row.nextSeasonNumber, row.nextEpisodeNumber)
+  );
+
+  const entries: WatchListEntry[] = [];
+  const wishlistCandidates: WatchListEntry[] = [];
+
+  trackingRows.forEach((row, i) => {
+    const episode = episodesByRow[i];
+    const watchedEpisodes = watchedEpisodesByShow.get(row.tmdbShowId) ?? [];
+
+    const tracked = trackedById.get(row.tmdbShowId);
+    if (tracked) {
+      const entry = toWatchListEntry(
+        row,
+        tracked,
+        episode,
+        watchedEpisodes,
+        posterOverrides
+      );
+      if (entry) entries.push(entry);
+      return;
+    }
+
+    const wishlistTracked = wishlistById.get(row.tmdbShowId);
+    if (wishlistTracked) {
+      const entry = toWishlistEntry(
+        row,
+        wishlistTracked,
+        episode,
+        watchedEpisodes,
+        posterOverrides
+      );
+      if (entry) wishlistCandidates.push(entry);
+    }
+  });
+
+  entries.sort((a, b) => {
+    if (a.sortKey === null && b.sortKey === null) return 0;
+    if (a.sortKey === null) return 1;
+    if (b.sortKey === null) return -1;
+    return b.sortKey.localeCompare(a.sortKey);
+  });
 
   const staleShowIds = new Set(
     entries
@@ -375,21 +349,12 @@ export default async function TrackingPage() {
     staleShowIds.has(entry.showId)
   );
 
-  let wishlistEntries: WatchListEntry[] = [];
-  if (staleEntries.length === 0) {
-    const wishlistResults = await Promise.all(
-      wishlistShows.map((tracked) =>
-        buildWishlistEntry(
-          tracked,
-          watchedEpisodesByShow.get(tracked.tmdbShowId) ?? [],
-          viewer.id
-        )
-      )
-    );
-    wishlistEntries = wishlistResults
-      .filter((entry): entry is WatchListEntry => entry !== null)
-      .sort((a, b) => a.showName.localeCompare(b.showName));
-  }
+  const wishlistEntries =
+    staleEntries.length === 0
+      ? wishlistCandidates
+          .slice()
+          .sort((a, b) => a.showName.localeCompare(b.showName))
+      : [];
 
   const watchlistCount = wishlistShows.length;
   const watchlistHref = viewer.username
@@ -406,13 +371,60 @@ export default async function TrackingPage() {
   );
   const runtimeLabel = formatRuntime(totalRuntimeMinutes);
 
+  // Upcoming is a much smaller, separate fetch: only the shows that made it
+  // into the watchlist above, plus Recently Watched's shows, each needing
+  // just its next-airing episode (getTmdbShowMeta, one request — no season
+  // expansion) rather than a full season tree — but still bounded by
+  // mapWithConcurrency, never a bare Promise.all fan-out.
+  const upcomingMetas = await mapWithConcurrency(entries, 10, (entry) =>
+    getTmdbShowMeta(entry.showId)
+  );
+
   const trackingShowsById = new Map<number, TrackingShow>();
-  for (const entry of entries) {
+  entries.forEach((entry, i) => {
+    const meta = upcomingMetas[i];
     trackingShowsById.set(entry.showId, {
       showId: entry.showId,
       showName: entry.showName,
       posterUrl: entry.posterUrl,
       network: entry.network,
+      nextEpisode: meta?.nextEpisode ?? null,
+      // Filled in below, bounded to shows that actually have a nextEpisode —
+      // see the fan-out after this map is fully built.
+      upcomingEpisodes: null,
+      // Unknown until the episode modal lazily loads full show details —
+      // matches toWatchListEntry's own seasons/tmdbStatus.
+      seasons: null,
+      watchedEpisodes: watchedEpisodesByShow.get(entry.showId) ?? [],
+      skipCatchUpPrompt: entry.skipCatchUpPrompt,
+      initialStatus: entry.initialStatus,
+      tmdbStatus: null,
+      cast: [],
+    });
+  });
+  // Recently Watched's own shows may include ones not already covered
+  // above (e.g. a show the viewer has fully caught up on, so it carries no
+  // backlog and never made it into `entries`) — still fetched via
+  // getTmdbShowMeta, bounded the same way. Next.js's request-scoped
+  // memoization of 'use cache' calls means any show id already fetched
+  // above costs no extra TMDB request here.
+  const missingRecentWatchedEntries = recentWatchedEntries.filter(
+    (entry) => !trackingShowsById.has(entry.showId)
+  );
+  const recentMetas = await mapWithConcurrency(
+    missingRecentWatchedEntries,
+    10,
+    (entry) => getTmdbShowMeta(entry.showId)
+  );
+  missingRecentWatchedEntries.forEach((entry, i) => {
+    const meta = recentMetas[i];
+    trackingShowsById.set(entry.showId, {
+      showId: entry.showId,
+      showName: entry.showName,
+      posterUrl: entry.posterUrl,
+      network: entry.network,
+      nextEpisode: meta?.nextEpisode ?? null,
+      upcomingEpisodes: null,
       seasons: entry.seasons,
       watchedEpisodes: entry.watchedEpisodes,
       skipCatchUpPrompt: entry.skipCatchUpPrompt,
@@ -420,22 +432,31 @@ export default async function TrackingPage() {
       tmdbStatus: entry.tmdbStatus,
       cast: entry.cast,
     });
-  }
-  for (const entry of recentWatchedEntries) {
-    if (trackingShowsById.has(entry.showId)) continue;
-    trackingShowsById.set(entry.showId, {
-      showId: entry.showId,
-      showName: entry.showName,
-      posterUrl: entry.posterUrl,
-      network: entry.network,
-      seasons: entry.seasons,
-      watchedEpisodes: entry.watchedEpisodes,
-      skipCatchUpPrompt: entry.skipCatchUpPrompt,
-      initialStatus: entry.initialStatus,
-      tmdbStatus: entry.tmdbStatus,
-      cast: entry.cast,
+  });
+
+  // A weekly show mid-season has more than one future-dated episode, but
+  // fetching every season of every tracked show (the old behaviour) is
+  // exactly the fan-out this rewrite removed. Instead, fetch just the
+  // currently-airing season, and only for shows that actually have a
+  // nextEpisode — in practice a small fraction of the page's shows, since
+  // most tracked shows aren't currently airing anything.
+  const showsWithNextEpisode = Array.from(trackingShowsById.values()).filter(
+    (show): show is TrackingShow & { nextEpisode: LatestEpisode } =>
+      show.nextEpisode !== null
+  );
+  const upcomingSeasonEpisodes = await mapWithConcurrency(
+    showsWithNextEpisode,
+    10,
+    (show) =>
+      getUpcomingSeasonEpisodes(show.showId, show.nextEpisode.seasonNumber)
+  );
+  showsWithNextEpisode.forEach((show, i) => {
+    trackingShowsById.set(show.showId, {
+      ...show,
+      upcomingEpisodes: upcomingSeasonEpisodes[i],
     });
-  }
+  });
+
   const upcomingGroups = buildUpcomingGroups(
     Array.from(trackingShowsById.values())
   );

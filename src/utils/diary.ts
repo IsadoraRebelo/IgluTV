@@ -1,10 +1,10 @@
-import type { ShowSummary } from '@/types';
+import type { CatalogueShow } from '@/types';
 
 export type DiaryEntry =
-  | { kind: 'show'; show: ShowSummary; watchedOn: string; rewatch: boolean }
+  | { kind: 'show'; show: CatalogueShow; watchedOn: string; rewatch: boolean }
   | {
       kind: 'season';
-      show: ShowSummary;
+      show: CatalogueShow;
       seasonNumber: number;
       watchedOn: string;
       rewatch: boolean;
@@ -47,14 +47,18 @@ export function diaryEntryKey(entry: DiaryEntry): string {
 }
 
 export function buildDiaryEntries(
-  finishedShowRows: { tmdbShowId: number; watchedOn: string; rewatch: boolean }[],
+  finishedShowRows: {
+    tmdbShowId: number;
+    watchedOn: string;
+    rewatch: boolean;
+  }[],
   finishedSeasonRows: {
     tmdbShowId: number;
     seasonNumber: number;
     watchedOn: string;
     rewatch: boolean;
   }[],
-  summaries: Map<number, ShowSummary>
+  summaries: Map<number, CatalogueShow>
 ): DiaryEntry[] {
   const showEntries = finishedShowRows
     .map((row): DiaryEntry | null => {

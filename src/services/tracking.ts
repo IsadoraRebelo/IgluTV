@@ -1,13 +1,24 @@
 import 'server-only';
 
-import { isShowFinished } from '@/components/ShowTracker/utils';
+import {
+  buildWatchedDatesMap,
+  getWatchNextEpisode,
+  isShowFinished,
+} from '@/components/ShowTracker/utils';
+
+import { TMDB_POSTER_LARGE_BASE_URL } from '@/consts';
 
 import { createClient } from '@/supabase/server';
 
-import type { EpisodeWatch, ShowStatus, ShowTracking } from '@/types';
+import type {
+  EpisodeWatch,
+  LatestEpisode,
+  ShowStatus,
+  ShowTracking,
+} from '@/types';
 
 import { ServiceError } from './errors';
-import { getTmdbShowFullDetails, resolveShowSummaries } from './tv-shows';
+import { getTmdbShowFullDetails } from './tv-shows';
 import { getViewerId, requireViewer } from './viewer';
 
 const STATUS_CODES: Record<ShowStatus, number> = {
@@ -78,6 +89,42 @@ type WatchedEpisodeRow = {
   created_at: string;
 };
 
+// PostgREST caps un-ranged responses at the project's "Max rows" setting
+// (1,000 here), silently truncating anything larger with no error — and,
+// verified directly against this project, the same cap applies to
+// set-returning RPC results, not just table reads (1,200 seeded rows
+// returned exactly 1,000 over REST). A single show can carry well over that
+// many episode_watches rows once rewatches and daily-airing formats are
+// counted (one real show alone has 1,206), and several of the RPCs below
+// return one row per show or per (show, season) for the whole library, so
+// any full read — table or RPC, one show or many — has to page through
+// explicitly rather than trust an un-ranged response.
+const PAGE_SIZE = 1000;
+
+// Shared paging loop for the set-returning RPCs below. `fetchPage` should
+// call the RPC with the given p_limit/p_offset and return that page's rows
+// (throwing ServiceError on a Postgres error, same as every other call in
+// this file). Loops until a page comes back shorter than `pageSize`, which
+// is the only reliable end-of-data signal for LIMIT/OFFSET paging — an
+// exactly-full last page would otherwise be indistinguishable from "there
+// might be more".
+export async function fetchAllPages<T>(
+  fetchPage: (limit: number, offset: number) => Promise<T[]>,
+  pageSize: number = PAGE_SIZE
+): Promise<T[]> {
+  const rows: T[] = [];
+
+  for (let offset = 0; ; offset += pageSize) {
+    const page = await fetchPage(pageSize, offset);
+    if (page.length === 0) break;
+
+    rows.push(...page);
+    if (page.length < pageSize) break;
+  }
+
+  return rows;
+}
+
 function mapAndSortWatchedEpisodeRows(
   rows: WatchedEpisodeRow[]
 ): EpisodeWatch[] {
@@ -108,16 +155,25 @@ export async function getWatchedEpisodesForUser(
   showId: number
 ): Promise<EpisodeWatch[]> {
   const supabase = await createClient();
+  const rows: WatchedEpisodeRow[] = [];
 
-  const { data, error } = await supabase
-    .from('episode_watches')
-    .select('id, season_number, episode_number, watched_on, created_at')
-    .eq('user_id', userId)
-    .eq('tmdb_show_id', showId);
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from('episode_watches')
+      .select('id, season_number, episode_number, watched_on, created_at')
+      .eq('user_id', userId)
+      .eq('tmdb_show_id', showId)
+      .order('id')
+      .range(from, from + PAGE_SIZE - 1);
 
-  if (error) throw new ServiceError(error.message, error.code);
+    if (error) throw new ServiceError(error.message, error.code);
+    if (!data || data.length === 0) break;
 
-  return mapAndSortWatchedEpisodeRows(data ?? []);
+    rows.push(...data);
+    if (data.length < PAGE_SIZE) break;
+  }
+
+  return mapAndSortWatchedEpisodeRows(rows);
 }
 
 export async function getWatchedEpisodes(
@@ -139,19 +195,28 @@ export async function getWatchedEpisodesForShows(
   if (showIds.length === 0) return map;
 
   const supabase = await createClient();
+  const allRows: (WatchedEpisodeRow & { tmdb_show_id: number })[] = [];
 
-  const { data, error } = await supabase
-    .from('episode_watches')
-    .select(
-      'id, tmdb_show_id, season_number, episode_number, watched_on, created_at'
-    )
-    .eq('user_id', userId)
-    .in('tmdb_show_id', showIds);
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from('episode_watches')
+      .select(
+        'id, tmdb_show_id, season_number, episode_number, watched_on, created_at'
+      )
+      .eq('user_id', userId)
+      .in('tmdb_show_id', showIds)
+      .order('id')
+      .range(from, from + PAGE_SIZE - 1);
 
-  if (error) throw new ServiceError(error.message, error.code);
+    if (error) throw new ServiceError(error.message, error.code);
+    if (!data || data.length === 0) break;
+
+    allRows.push(...data);
+    if (data.length < PAGE_SIZE) break;
+  }
 
   const rowsByShow = new Map<number, WatchedEpisodeRow[]>();
-  for (const row of data ?? []) {
+  for (const row of allRows) {
     const rows = rowsByShow.get(row.tmdb_show_id) ?? [];
     rows.push(row);
     rowsByShow.set(row.tmdb_show_id, rows);
@@ -172,6 +237,12 @@ type RecentWatchedEpisodeRow = {
   watchedOn: string;
 };
 
+// Bounded by `.limit(limit * 10)`, which is always well under PostgREST's
+// 1,000-row cap for this function's one caller (limit=10 → 100 rows). The
+// ×10 headroom absorbs same-episode rewatch duplicates before they're
+// deduped below. If a future caller ever passes a limit above ~100, this
+// stops being safely under the cap and would need the same paging/SQL-side
+// treatment as getWatchedEpisodesForUser.
 export async function getRecentWatchedEpisodesForUser(
   userId: string,
   limit: number
@@ -223,122 +294,76 @@ export async function getRecentWatchedEpisodes(
 // Like getRecentWatchedEpisodesForUser, but deduped by show instead of by
 // episode — each show appears once, with only its most recently watched
 // episode, for "recent activity" views that show one card per show.
+//
+// The dedupe (most recent dated watch per show) and the ordering (newest
+// watched_on first, ties broken by highest id) both happen inside the
+// `recent_watched_shows` SQL function rather than in TypeScript. A bulk
+// "mark watched" action can insert hundreds of same-day rows for one show,
+// so deduping requires scanning the user's full dated watch history — doing
+// that client-side meant fetching every dated row un-ranged, which silently
+// truncated at PostgREST's 1,000-row cap once that history grew past a
+// thousand rows. Doing the dedupe in SQL first means only `limit` rows ever
+// cross the wire.
 export async function getRecentWatchedShowsForUser(
   userId: string,
   limit: number
 ): Promise<RecentWatchedEpisodeRow[]> {
   const supabase = await createClient();
 
-  // No row cap here: a single bulk "mark watched" action can insert
-  // hundreds of rows for one show under the same date, which would starve
-  // out a fixed-size window before it ever reaches other, genuinely more
-  // recent shows. Dedup is by show, so fetching this user's full dated
-  // watch history (cheap — indexed by user_id, at most a few thousand rows
-  // even for heavy use) is what guarantees correctness.
-  const { data, error } = await supabase
-    .from('episode_watches')
-    .select('id, tmdb_show_id, season_number, episode_number, watched_on')
-    .eq('user_id', userId)
-    .not('watched_on', 'is', null)
-    .order('watched_on', { ascending: false })
-    .order('id', { ascending: false });
+  const { data, error } = await supabase.rpc('recent_watched_shows', {
+    p_user_id: userId,
+    p_limit: limit,
+  });
 
   if (error) throw new ServiceError(error.message, error.code);
 
-  const seenShows = new Set<number>();
-  const deduped: RecentWatchedEpisodeRow[] = [];
-
-  for (const row of data ?? []) {
-    if (row.watched_on === null) continue;
-    if (seenShows.has(row.tmdb_show_id)) continue;
-    seenShows.add(row.tmdb_show_id);
-
-    deduped.push({
-      id: row.id,
-      tmdbShowId: row.tmdb_show_id,
-      seasonNumber: row.season_number,
-      episodeNumber: row.episode_number,
-      watchedOn: row.watched_on,
-    });
-    if (deduped.length >= limit) break;
-  }
-
-  return deduped;
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    tmdbShowId: row.tmdb_show_id,
+    seasonNumber: row.season_number,
+    episodeNumber: row.episode_number,
+    watchedOn: row.watched_on,
+  }));
 }
 
-type FinishedShowRow = RecentWatchedEpisodeRow & { rewatch: boolean };
+type FinishedShowRow = {
+  tmdbShowId: number;
+  watchedOn: string;
+  rewatch: boolean;
+};
 
-// Diary entries: one per show the user has marked 'completed', dated by
-// that show's most recently watched episode (its finishing date). Marked
-// as a rewatch when that representative episode has more than one
-// episode_watches row (i.e. it's been watched more than once).
+// Diary entries: one per show the user has marked 'completed'. Dated by
+// max(watched_on) across every one of the show's episode_watches rows, not
+// by a single representative episode — so a dated watch on any episode can
+// move the date, and marked as a rewatch when *any* episode in the show
+// (not one specific one) has more than one row. Only dated rows count
+// (`watched_on is not null`): the import deliberately nulls 2,240 watch
+// dates, so a finished show whose only watched_on values live on nulled
+// rows won't produce a max() and drops out of the diary entirely — expected
+// fallout of that nulling, not a bug here.
+//
+// Paged: finished_shows is a set-returning RPC, and PostgREST's row cap
+// applies to those the same as it does table reads — see fetchAllPages.
 export async function getFinishedShowsForUser(
   userId: string
 ): Promise<FinishedShowRow[]> {
   const supabase = await createClient();
 
-  const { data: completedShows, error: completedError } = await supabase
-    .from('show_tracking')
-    .select('tmdb_show_id')
-    .eq('user_id', userId)
-    .eq('status', statusToCode('completed'));
-
-  if (completedError) {
-    throw new ServiceError(completedError.message, completedError.code);
-  }
-
-  const completedIds = (completedShows ?? []).map((row) => row.tmdb_show_id);
-  if (completedIds.length === 0) return [];
-
-  const { data, error } = await supabase
-    .from('episode_watches')
-    .select('id, tmdb_show_id, season_number, episode_number, watched_on')
-    .eq('user_id', userId)
-    .in('tmdb_show_id', completedIds)
-    .not('watched_on', 'is', null)
-    .order('watched_on', { ascending: false })
-    .order('id', { ascending: false });
-
-  if (error) throw new ServiceError(error.message, error.code);
-
-  const episodeKey = (showId: number, season: number, episode: number) =>
-    `${showId}-${season}-${episode}`;
-
-  const watchCounts = new Map<string, number>();
-  for (const row of data ?? []) {
-    if (row.watched_on === null) continue;
-    const key = episodeKey(
-      row.tmdb_show_id,
-      row.season_number,
-      row.episode_number
-    );
-    watchCounts.set(key, (watchCounts.get(key) ?? 0) + 1);
-  }
-
-  const seenShows = new Set<number>();
-  const deduped: FinishedShowRow[] = [];
-
-  for (const row of data ?? []) {
-    if (row.watched_on === null) continue;
-    if (seenShows.has(row.tmdb_show_id)) continue;
-    seenShows.add(row.tmdb_show_id);
-
-    const key = episodeKey(
-      row.tmdb_show_id,
-      row.season_number,
-      row.episode_number
-    );
-    deduped.push({
-      id: row.id,
-      tmdbShowId: row.tmdb_show_id,
-      seasonNumber: row.season_number,
-      episodeNumber: row.episode_number,
-      watchedOn: row.watched_on,
-      rewatch: (watchCounts.get(key) ?? 0) > 1,
+  const rows = await fetchAllPages(async (limit, offset) => {
+    const { data, error } = await supabase.rpc('finished_shows', {
+      p_user_id: userId,
+      p_limit: limit,
+      p_offset: offset,
     });
-  }
+    if (error) throw new ServiceError(error.message, error.code);
+    return data ?? [];
+  });
 
-  return deduped;
+  return rows.map((row) => ({
+    tmdbShowId: row.tmdb_show_id,
+    watchedOn: row.finished_on,
+    rewatch: row.rewatch,
+  }));
 }
 
 type FinishedSeasonRow = {
@@ -350,90 +375,104 @@ type FinishedSeasonRow = {
 
 // Diary entries: one per regular season the user has fully watched,
 // regardless of the show's overall tracking status (an ongoing show can
-// still have individually finished seasons), dated by the first time that
-// season's last episode was watched.
+// still have individually finished seasons). Dated by max(watched_on)
+// across every episode in that season, not by the season's last episode
+// specifically, and marked as a rewatch when *any* episode in the season
+// has more than one episode_watches row. Only dated rows count
+// (`watched_on is not null`), same caveat as getFinishedShowsForUser above:
+// the import nulls 2,240 watch dates, so a season whose coverage depends on
+// one of those nulled rows produces no max() and silently drops out of the
+// diary — deliberate, not a bug.
+//
+// Paged: finished_seasons is a set-returning RPC and subject to the same
+// PostgREST row cap as table reads — see fetchAllPages. The user's export
+// has 1,167 finished (show, season) pairs, comfortably past the 1,000-row
+// cap on its own.
 export async function getFinishedSeasonsForUser(
   userId: string
 ): Promise<FinishedSeasonRow[]> {
   const supabase = await createClient();
 
-  const { data: watchRows, error: watchesError } = await supabase
-    .from('episode_watches')
-    .select('tmdb_show_id, season_number, episode_number, watched_on')
-    .eq('user_id', userId)
-    .gt('season_number', 0);
-
-  if (watchesError) {
-    throw new ServiceError(watchesError.message, watchesError.code);
-  }
-
-  const showIds = Array.from(
-    new Set((watchRows ?? []).map((row) => row.tmdb_show_id))
-  );
-  if (showIds.length === 0) return [];
-
-  const summaries = await resolveShowSummaries(showIds);
-
-  const seasonKey = (showId: number, seasonNumber: number) =>
-    `${showId}-${seasonNumber}`;
-
-  const seasons = new Map<
-    string,
-    { tmdbShowId: number; seasonNumber: number; lastEpisodeNumber: number }
-  >();
-
-  showIds.forEach((showId) => {
-    const summary = summaries.get(showId);
-    if (!summary) return;
-    for (const season of summary.seasons) {
-      if (!season.episodeCount) continue;
-      seasons.set(seasonKey(showId, season.seasonNumber), {
-        tmdbShowId: showId,
-        seasonNumber: season.seasonNumber,
-        lastEpisodeNumber: season.episodeCount,
-      });
-    }
+  const rows = await fetchAllPages(async (limit, offset) => {
+    const { data, error } = await supabase.rpc('finished_seasons', {
+      p_user_id: userId,
+      p_limit: limit,
+      p_offset: offset,
+    });
+    if (error) throw new ServiceError(error.message, error.code);
+    return data ?? [];
   });
 
-  const watchedCounts = new Map<string, Set<number>>();
-  const lastEpisodeDates = new Map<string, string[]>();
-
-  for (const row of watchRows ?? []) {
-    const key = seasonKey(row.tmdb_show_id, row.season_number);
-    const season = seasons.get(key);
-    if (!season) continue;
-
-    const watched = watchedCounts.get(key) ?? new Set<number>();
-    watched.add(row.episode_number);
-    watchedCounts.set(key, watched);
-
-    if (row.episode_number === season.lastEpisodeNumber && row.watched_on) {
-      const dates = lastEpisodeDates.get(key) ?? [];
-      dates.push(row.watched_on);
-      lastEpisodeDates.set(key, dates);
-    }
-  }
-
-  const result: FinishedSeasonRow[] = [];
-
-  for (const [key, season] of seasons) {
-    const watchedCount = watchedCounts.get(key)?.size ?? 0;
-    if (watchedCount < season.lastEpisodeNumber) continue;
-
-    const dates = lastEpisodeDates.get(key);
-    if (!dates || dates.length === 0) continue;
-
-    result.push({
-      tmdbShowId: season.tmdbShowId,
-      seasonNumber: season.seasonNumber,
-      watchedOn: dates.sort()[0],
-      rewatch: dates.length > 1,
-    });
-  }
-
-  return result;
+  return rows.map((row) => ({
+    tmdbShowId: row.tmdb_show_id,
+    seasonNumber: row.season_number,
+    watchedOn: row.finished_on,
+    rewatch: row.rewatch,
+  }));
 }
 
+export type TrackingRow = {
+  tmdbShowId: number;
+  name: string;
+  posterUrl: string | null;
+  network: string | null;
+  nextSeasonNumber: number;
+  nextEpisodeNumber: number;
+  backlogCount: number;
+  estimatedMinutes: number;
+  lastWatchedOn: string | null;
+};
+
+// One Postgres function decides everything structural (backlog, next
+// unwatched episode) for every tracked show at once, expanding aired-episode
+// slots from season_catalogue server-side — see the tracking_rows migration
+// for why that has to happen in SQL rather than by fetching per-episode rows
+// here. Returns one row per show *with* a backlog; a caught-up show is
+// absent entirely, not a zero-backlog row.
+//
+// "Next episode" is the furthest-watched-episode-plus-one, matching
+// getWatchNextEpisode's "resume where you left off" semantics — the same
+// meaning the rest of the app uses — not the lowest unwatched episode. A
+// show the user hasn't watched anything of has no furthest-watched episode,
+// so it resolves to that show's very first aired episode; that's a
+// deliberate "start here" affordance, not a regression from the old
+// zero-backlog "latest episode" display.
+//
+// Paged: tracking_rows is a set-returning RPC and subject to PostgREST's
+// row cap exactly like table reads — see fetchAllPages.
+export async function getTrackingRows(userId: string): Promise<TrackingRow[]> {
+  const supabase = await createClient();
+
+  const rows = await fetchAllPages(async (limit, offset) => {
+    const { data, error } = await supabase.rpc('tracking_rows', {
+      p_user_id: userId,
+      p_limit: limit,
+      p_offset: offset,
+    });
+    if (error) throw new ServiceError(error.message, error.code);
+    return data ?? [];
+  });
+
+  return rows.map((row) => ({
+    tmdbShowId: row.tmdb_show_id,
+    name: row.name,
+    posterUrl: row.poster_path
+      ? `${TMDB_POSTER_LARGE_BASE_URL}${row.poster_path}`
+      : null,
+    network: row.network,
+    nextSeasonNumber: row.next_season,
+    nextEpisodeNumber: row.next_episode,
+    backlogCount: row.backlog_count,
+    estimatedMinutes: row.estimated_minutes,
+    lastWatchedOn: row.last_watched_on,
+  }));
+}
+
+// Not paged: show_tracking has a (user_id, tmdb_show_id) primary key, so a
+// user can have at most one row per show — row count here is bounded by
+// distinct shows tracked, not by watch history. Post-import that's ~455
+// shows, far under the 1,000-row PostgREST cap. Unlike episode_watches,
+// nothing about this table lets a single row multiply.
 export async function getShowsForUser(
   userId: string,
   status?: ShowStatus
@@ -470,6 +509,8 @@ export async function getMyShows(status?: ShowStatus): Promise<ShowTracking[]> {
   return getShowsForUser(userId, status);
 }
 
+// Not paged: same reasoning as getShowsForUser above — bounded by the
+// (user_id, tmdb_show_id) primary key, not by watch history.
 export async function getFavouriteShowsForUser(
   userId: string
 ): Promise<ShowTracking[]> {
@@ -499,6 +540,12 @@ export async function getFavouriteShowsForUser(
 // Per-show watched-episode count for a batch of shows, deduped by
 // season+episode so rewatches don't inflate the count — matches the
 // "markable episodes watched" semantics used by the progress bars.
+//
+// Paged: watched_episode_counts returns one row per show the user has ever
+// watched anything of, not just the requested showIds (filtered client-side
+// below), so its row count grows with the whole library and is subject to
+// PostgREST's row cap like every other set-returning RPC here — see
+// fetchAllPages.
 export async function getWatchedEpisodeCountsForUser(
   userId: string,
   showIds: number[]
@@ -507,22 +554,20 @@ export async function getWatchedEpisodeCountsForUser(
   if (showIds.length === 0) return counts;
 
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from('episode_watches')
-    .select('tmdb_show_id, season_number, episode_number')
-    .eq('user_id', userId)
-    .in('tmdb_show_id', showIds);
+  const rows = await fetchAllPages(async (limit, offset) => {
+    const { data, error } = await supabase.rpc('watched_episode_counts', {
+      p_user_id: userId,
+      p_limit: limit,
+      p_offset: offset,
+    });
+    if (error) throw new ServiceError(error.message, error.code);
+    return data ?? [];
+  });
 
-  if (error) throw new ServiceError(error.message, error.code);
-
-  const seenByShow = new Map<number, Set<string>>();
-  for (const row of data ?? []) {
-    const seen = seenByShow.get(row.tmdb_show_id) ?? new Set<string>();
-    seen.add(`${row.season_number}-${row.episode_number}`);
-    seenByShow.set(row.tmdb_show_id, seen);
-  }
-  for (const [showId, seen] of seenByShow) {
-    counts.set(showId, seen.size);
+  const showIdSet = new Set(showIds);
+  for (const row of rows) {
+    if (!showIdSet.has(row.tmdb_show_id)) continue;
+    counts.set(row.tmdb_show_id, row.watched_count);
   }
 
   return counts;
@@ -536,60 +581,21 @@ export async function getWatchStatsForUser(userId: string): Promise<{
 }> {
   const supabase = await createClient();
 
-  const { count: totalEpisodes, error: totalEpisodesError } = await supabase
-    .from('episode_watches')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId);
-  if (totalEpisodesError) {
-    throw new ServiceError(totalEpisodesError.message, totalEpisodesError.code);
-  }
-
   const currentYear = new Date().getFullYear();
-  const { data: thisYearRows, error: thisYearError } = await supabase
-    .from('episode_watches')
-    .select('tmdb_show_id')
-    .eq('user_id', userId)
-    .gte('watched_on', `${currentYear}-01-01`)
-    .lte('watched_on', `${currentYear}-12-31`);
-  if (thisYearError) {
-    throw new ServiceError(thisYearError.message, thisYearError.code);
-  }
+  const { data, error } = await supabase.rpc('watch_stats', {
+    p_user_id: userId,
+    p_year: currentYear,
+  });
 
-  const { count: finishedShowsCount, error: finishedShowsError } =
-    await supabase
-      .from('show_tracking')
-      .select('tmdb_show_id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('status', statusToCode('completed'));
-  if (finishedShowsError) {
-    throw new ServiceError(finishedShowsError.message, finishedShowsError.code);
-  }
+  if (error) throw new ServiceError(error.message, error.code);
 
-  const { data: watchRows, error: watchRowsError } = await supabase
-    .from('episode_watches')
-    .select('tmdb_show_id, season_number, episode_number')
-    .eq('user_id', userId);
-  if (watchRowsError) {
-    throw new ServiceError(watchRowsError.message, watchRowsError.code);
-  }
-
-  const distinctShowIds = Array.from(
-    new Set((watchRows ?? []).map((row) => row.tmdb_show_id))
-  );
-  // Approximation: per-show average runtime × watched-episode count, instead
-  // of fetching every episode's exact runtime via the full-details fan-out.
-  const summaries = await resolveShowSummaries(distinctShowIds);
-
-  const totalWatchMinutes = (watchRows ?? []).reduce((sum, row) => {
-    const runtime = summaries.get(row.tmdb_show_id)?.averageRuntime;
-    return sum + (runtime ?? 0);
-  }, 0);
+  const row = data?.[0];
 
   return {
-    totalWatchMinutes,
-    totalEpisodes: totalEpisodes ?? 0,
-    episodesThisYear: thisYearRows?.length ?? 0,
-    finishedShowsCount: finishedShowsCount ?? 0,
+    totalWatchMinutes: row?.total_minutes ?? 0,
+    totalEpisodes: row?.total_episodes ?? 0,
+    episodesThisYear: row?.episodes_this_year ?? 0,
+    finishedShowsCount: row?.finished_shows_count ?? 0,
   };
 }
 
@@ -693,7 +699,7 @@ export async function markEpisodeWatched(
   season: number,
   episode: number,
   watchedOn?: string
-): Promise<void> {
+): Promise<LatestEpisode | null> {
   const supabase = await createClient();
   const userId = await requireUserId();
 
@@ -714,7 +720,7 @@ export async function markEpisodeWatched(
   const { error } = await supabase.from('episode_watches').insert(insertRow);
   if (error) throw new ServiceError(error.message, error.code);
 
-  await autoUpdateStatus(supabase, userId, showId);
+  return autoUpdateStatus(supabase, userId, showId);
 }
 
 export async function updateEpisodeWatchDate(
@@ -757,11 +763,17 @@ export async function updateEpisodeWatchDate(
   if (error) throw new ServiceError(error.message, error.code);
 }
 
+// Returns the show's next unwatched episode (or null if there isn't one, or
+// the TMDB fetch failed) so callers on the mark-watched path — where the
+// client no longer holds the show's full season tree — can update instantly
+// without a second round trip. getTmdbShowFullDetails below is already
+// fetched for the regularEpisodeCount/completion check that follows; reusing
+// its `meta.seasons` here costs nothing extra.
 async function autoUpdateStatus(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   showId: number
-): Promise<void> {
+): Promise<LatestEpisode | null> {
   const { data: tracking, error: trackingError } = await supabase
     .from('show_tracking')
     .select('status')
@@ -792,7 +804,14 @@ async function autoUpdateStatus(
   }
 
   const full = await getTmdbShowFullDetails(showId);
-  if (!full) return;
+  if (!full) return null;
+
+  // Fetched once and reused for both the completion check below and the
+  // next-episode lookup — replaces what used to be a second, near-identical
+  // paged read scoped to season_number > 0.
+  const watched = await getWatchedEpisodesForUser(userId, showId);
+  const watchedDates = buildWatchedDatesMap(watched);
+  const nextEpisode = getWatchNextEpisode(full.meta.seasons, watchedDates);
 
   const regularEpisodeCount = full.meta.seasons
     .filter((season) => season.seasonNumber > 0)
@@ -802,24 +821,13 @@ async function autoUpdateStatus(
       0
     );
 
-  if (regularEpisodeCount === 0) return;
+  if (regularEpisodeCount === 0) return nextEpisode;
 
-  const { data: watchedRows, error: watchedError } = await supabase
-    .from('episode_watches')
-    .select('season_number, episode_number')
-    .eq('user_id', userId)
-    .eq('tmdb_show_id', showId)
-    .gt('season_number', 0);
-
-  if (watchedError) {
-    throw new ServiceError(watchedError.message, watchedError.code);
+  const distinctWatched = new Set<string>();
+  for (const entry of watched) {
+    if (entry.seasonNumber <= 0) continue;
+    distinctWatched.add(`${entry.seasonNumber}-${entry.episodeNumber}`);
   }
-
-  const distinctWatched = new Set(
-    (watchedRows ?? []).map(
-      (row) => `${row.season_number}-${row.episode_number}`
-    )
-  );
 
   if (
     distinctWatched.size >= regularEpisodeCount &&
@@ -833,6 +841,8 @@ async function autoUpdateStatus(
 
     if (error) throw new ServiceError(error.message, error.code);
   }
+
+  return nextEpisode;
 }
 
 async function pruneIfUntracked(
@@ -926,6 +936,13 @@ export async function markSeasonWatched(
   const supabase = await createClient();
   const userId = await requireUserId();
 
+  // Not paged: unlike the show-wide reads above, this is scoped to a single
+  // season, so row count is bounded by that season's episode count times
+  // however many times the user has rewatched it — realistically nowhere
+  // near the 1,000-row PostgREST cap (even Big Brother Brazil's ~1,200
+  // show-wide watches are spread across many seasons/years, not one). A
+  // truncated read here would only under-count `alreadyWatched`, causing an
+  // extra rewatch-equivalent row on retry rather than any data loss.
   const { data: existingRows, error: existingError } = await supabase
     .from('episode_watches')
     .select('episode_number')
@@ -989,6 +1006,10 @@ export async function removeLastSeasonRewatch(
   const supabase = await createClient();
   const userId = await requireUserId();
 
+  // Not paged: scoped to one season and further filtered to the specific
+  // episode numbers being un-rewatched (at most one season's worth), so row
+  // count is bounded the same way as markSeasonWatched above — nowhere near
+  // the 1,000-row PostgREST cap in practice.
   const { data: rows, error: selectError } = await supabase
     .from('episode_watches')
     .select('id, episode_number')

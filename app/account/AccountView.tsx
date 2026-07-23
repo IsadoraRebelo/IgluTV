@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
@@ -20,13 +21,19 @@ export function AccountView({ email }: { email: string }) {
   }, [searchParams]);
 
   return (
-    <div className="mx-auto flex w-full mt-5 max-w-md flex-col gap-5 md:gap-10 px-4 pb-5 md:mt-10">
+    <div className="mx-auto mt-5 flex w-full max-w-md flex-col gap-5 px-4 pb-5 md:mt-10 md:gap-10">
       <h1 className="text-foreground text-xl font-semibold tracking-tight">
         Account
       </h1>
 
       <ChangeEmailForm currentEmail={email} />
       <ChangePasswordForm />
+      <Link
+        href="/import"
+        className="text-foreground w-fit text-sm underline underline-offset-4"
+      >
+        Import from TV Time
+      </Link>
       <LogOutButton className="w-fit" />
       <DeleteAccountSection />
     </div>

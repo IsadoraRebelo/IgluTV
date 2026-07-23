@@ -122,6 +122,18 @@ export type ShowSummary = {
   seasons: ShowSummarySeason[];
 };
 
+// What the list pages actually render. Deliberately narrower than
+// ShowSummary: these are the fields show_catalogue holds, so a list page can
+// be served entirely from Postgres with no TMDB request.
+export type CatalogueShow = {
+  id: number;
+  name: string;
+  year: string | null;
+  genres: string[];
+  posterUrl: string | null;
+  markableEpisodeCount: number;
+};
+
 export type ShowBackdropImage = {
   filePath: string;
   thumbnailUrl: string;
