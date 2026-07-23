@@ -119,21 +119,50 @@ export function ShowTrackingProvider({
   const [seasonsLoading, setSeasonsLoading] = useState(false);
   const [tmdbStatus, setTmdbStatusState] = useState(initialTmdbStatus);
 
-  async function handleLoadSeasons(): Promise<Season[] | null> {
-    if (seasons !== null || seasonsLoading) return seasons;
+  // Guards against two concurrent loads with a ref (set synchronously,
+  // unlike the `seasonsLoading` state above which lags behind by a render)
+  // rather than the render-time `seasonsLoading` closure value alone —
+  // e.g. handleToggleEpisode's catch-up lookup calling this the instant the
+  // modal's own onLoadSeasons already kicked one off. A caller that arrives
+  // while a load is in flight awaits the very same promise instead of
+  // starting a second request or seeing a stale `[]`. Read only from event
+  // handlers/callbacks below, never during render.
+  const seasonsLoadPromiseRef = useRef<Promise<Season[] | null> | null>(null);
+
+  function handleLoadSeasons(): Promise<Season[] | null> {
+    if (seasons !== null) return Promise.resolve(seasons);
+    if (seasonsLoadPromiseRef.current) return seasonsLoadPromiseRef.current;
+
     setSeasonsLoading(true);
-    try {
-      const result = await loadShowSeasonsAction(showId);
-      if (result) {
+    // loadShowSeasonsAction already guards its own body, but the server
+    // action round trip itself can still reject (offline, a 5xx, deploy
+    // skew) — caught here so this promise always resolves. Otherwise a bare
+    // `onLoadSeasons()` call in a row's click handler becomes an unhandled
+    // rejection, and — worse — a rejection reaching handleToggleEpisode's
+    // `await handleLoadSeasons()` would propagate out through
+    // handleMarkEpisode, leaving WatchListRow's skipExitOnMarkRef stuck at
+    // true (no exit animation, no refresh) even though the mark itself
+    // already succeeded on the server.
+    const promise = loadShowSeasonsAction(showId)
+      .then((result) => {
+        if (!result) return null;
         setSeasons(result.seasons);
         setCast(result.cast);
         setTmdbStatusState(result.tmdbStatus);
         return result.seasons;
-      }
-      return null;
-    } finally {
-      setSeasonsLoading(false);
-    }
+      })
+      .catch((err) => {
+        console.warn('[ShowTrackingContext] failed to load seasons', err);
+        toast.error('Could not load episodes. Please try again.');
+        return null;
+      })
+      .finally(() => {
+        setSeasonsLoading(false);
+        seasonsLoadPromiseRef.current = null;
+      });
+
+    seasonsLoadPromiseRef.current = promise;
+    return promise;
   }
 
   const regularMarkableSeasons = getRegularMarkableSeasons(seasons ?? []);

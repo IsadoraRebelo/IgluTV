@@ -13,6 +13,7 @@ import type {
 } from '@/types';
 
 import { getCustomShowImages } from './custom-show-images';
+import { fetchAllPages } from './tracking';
 import { deriveMarkableEpisodeCount, resolveShowSummaries } from './tv-shows';
 import { getViewerId } from './viewer';
 
@@ -357,20 +358,32 @@ export async function getCatalogueShows(
   // table holds one row per season, so a page's worth of shows (each with
   // several seasons) can comfortably exceed PostgREST's 1000-row cap.
   // season_totals groups server-side into one row per show, so the result
-  // is bounded by uniqueIds.length regardless of how many seasons exist.
+  // is bounded by uniqueIds.length regardless of how many seasons exist —
+  // but that bound can itself exceed PostgREST's 1000-row cap on a large
+  // enough batch, and the cap applies to set-returning RPCs exactly like it
+  // does table reads, so this pages through fetchAllPages the same way.
   //
   // Queried before the fallback below (not after) because the fallback set
   // itself depends on which ids this returns: a show with a show_catalogue
   // row but no season_totals entry is as much a cache miss as a show with
   // no catalogue row at all — see selectShowsNeedingRefetch.
-  const { data: totals, error: totalsError } = await supabase.rpc(
-    'season_totals',
-    { p_show_ids: uniqueIds }
-  );
-  if (totalsError) {
+  let totalsErrorMessage: string | null = null;
+  const totals = await fetchAllPages(async (limit, offset) => {
+    const { data, error } = await supabase.rpc('season_totals', {
+      p_show_ids: uniqueIds,
+      p_limit: limit,
+      p_offset: offset,
+    });
+    if (error) {
+      totalsErrorMessage = error.message;
+      return [];
+    }
+    return data ?? [];
+  });
+  if (totalsErrorMessage) {
     console.warn(
       '[show-catalogue] season totals read failed',
-      totalsError.message
+      totalsErrorMessage
     );
   }
   // On a totals-read failure, degrade the same way the catalogue-read
@@ -378,7 +391,7 @@ export async function getCatalogueShows(
   // fallback below covers everything, rather than trusting a partial or
   // absent result and freezing every show's count at 0.
   const idsWithSeasonTotals = new Set(
-    totalsError ? [] : (totals ?? []).map((row) => row.tmdb_show_id)
+    totalsErrorMessage ? [] : totals.map((row) => row.tmdb_show_id)
   );
 
   const needsRefetch = selectShowsNeedingRefetch(
@@ -393,9 +406,9 @@ export async function getCatalogueShows(
     }
   }
 
-  if (!totalsError) {
+  if (!totalsErrorMessage) {
     const airedTotalById = new Map(
-      (totals ?? []).map((row) => [row.tmdb_show_id, row.aired_total])
+      totals.map((row) => [row.tmdb_show_id, row.aired_total])
     );
     for (const [id, show] of result) {
       // A show with no season_catalogue rows (nothing imported yet, or a

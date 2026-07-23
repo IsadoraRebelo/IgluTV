@@ -63,19 +63,30 @@ export async function markEpisodeWatchedAction(
 // that only ever fetched a single next-episode (see getTrackingRows) has no
 // season data of its own, so it fetches one show's full details on open,
 // exactly like the show page does eagerly.
+//
+// getTmdbShowFullDetails already swallows its own fetch/parse errors and
+// degrades to null, but the server action round trip itself (the RSC
+// request/response, not the TMDB call inside it) can still reject — offline,
+// a 5xx, deploy skew. Caught here so ShowTrackingContext's caller always gets
+// a value back, never a rejected promise.
 export async function loadShowSeasonsAction(showId: number): Promise<{
   seasons: Season[];
   cast: CastMember[];
   tmdbStatus: string | null;
 } | null> {
-  const full = await getTmdbShowFullDetails(showId);
-  if (!full) return null;
+  try {
+    const full = await getTmdbShowFullDetails(showId);
+    if (!full) return null;
 
-  return {
-    seasons: full.meta.seasons,
-    cast: full.details.cast,
-    tmdbStatus: full.details.status,
-  };
+    return {
+      seasons: full.meta.seasons,
+      cast: full.details.cast,
+      tmdbStatus: full.details.status,
+    };
+  } catch (err) {
+    console.warn('[actions] loadShowSeasonsAction failed', err);
+    return null;
+  }
 }
 
 export async function unmarkEpisodeWatchedAction(

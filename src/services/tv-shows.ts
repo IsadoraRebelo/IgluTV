@@ -296,12 +296,26 @@ export async function getTmdbEpisode(
   }
 }
 
+export type ShowMetaLightSimilarShow = {
+  id: number;
+  name: string;
+  posterUrl: string | null;
+  matchPercentage: number | null;
+};
+
 export type ShowMetaLight = {
   name: string;
   posterUrl: string | null;
   network: string | null;
   status: string | null;
   nextEpisode: LatestEpisode | null;
+  genres: string[];
+  // TMDB's recommendations list, same shape/cap as ShowMeta.similar below —
+  // included via append_to_response so this stays one request. Added for
+  // the recommendations fan-out (getRecommendedShowIdsForUser), which used
+  // to reach for the full-details tier (and its per-show season expansion)
+  // just to read this one field.
+  similar: ShowMetaLightSimilarShow[];
 };
 
 // One TMDB request per show (/tv/{id} only, no season expansion) — the
@@ -325,7 +339,7 @@ async function fetchTmdbShowMeta(id: number): Promise<ShowMetaLight | null> {
   // fallback for hours. Throwing instead means nothing gets cached, and the
   // uncached caller (getTmdbShowMeta) is responsible for degrading to null.
   const res = await fetch(
-    `${TMDB_API_BASE_URL}/tv/${id}?api_key=${apiKey}&language=en-US`
+    `${TMDB_API_BASE_URL}/tv/${id}?api_key=${apiKey}&language=en-US&append_to_response=recommendations`
   );
 
   if (!res.ok) {
@@ -359,6 +373,22 @@ async function fetchTmdbShowMeta(id: number): Promise<ShowMetaLight | null> {
               : null,
           }
         : null,
+    genres: (json.genres ?? []).map((genre) => genre.name),
+    // Same mapping/cap (12) as ShowMeta.similar in
+    // fetchShowFullDetailsFromTmdb — deliberately duplicated rather than
+    // shared, matching how this file already duplicates the status/episode
+    // mapping across tiers rather than factoring it out.
+    similar: (json.recommendations?.results ?? []).slice(0, 12).map((s) => ({
+      id: s.id,
+      name: s.name,
+      posterUrl: s.poster_path
+        ? `${TMDB_POSTER_LARGE_BASE_URL}${s.poster_path}`
+        : null,
+      matchPercentage:
+        typeof s.vote_average === 'number'
+          ? Math.round(s.vote_average * 10)
+          : null,
+    })),
   };
 }
 
@@ -618,28 +648,29 @@ async function fetchShowFullDetailsFromTmdb(
     return null;
   }
 
-  let json: TMDBSeriesDetailsRaw;
-  try {
-    const res = await fetch(
-      `${TMDB_API_BASE_URL}/tv/${id}?api_key=${apiKey}&language=en-US&append_to_response=credits,content_ratings,recommendations`
-    );
+  // Deliberately not wrapped in try/catch: this function is 'use cache', so
+  // returning a fallback value here (as an earlier revision did) caches
+  // that fallback for hours. Throwing instead means nothing gets cached,
+  // and the uncached caller (getTmdbShowFullDetails) is responsible for
+  // catching, retrying once, and degrading to null. Same reasoning as
+  // getTmdbSeasonEpisodes, fetchTmdbEpisode, fetchTmdbShowMeta and
+  // fetchShowSummaryFromTmdb above — this is the one main-fetch call in the
+  // file that didn't yet follow it, which meant a 429 here returned null
+  // (not a throw) and got cached for hours with no retry ever firing.
+  const res = await fetch(
+    `${TMDB_API_BASE_URL}/tv/${id}?api_key=${apiKey}&language=en-US&append_to_response=credits,content_ratings,recommendations`
+  );
 
-    if (!res.ok) {
-      console.warn(`[tv-shows] TMDB details ${res.status}: ${res.statusText}`);
-      return null;
-    }
-
-    json = await res.json();
-  } catch (err) {
-    console.warn('[tv-shows] details fetch failed', err);
-    return null;
+  if (!res.ok) {
+    throw new Error(`[tv-shows] TMDB details ${res.status}: ${res.statusText}`);
   }
 
-  // Deliberately outside the try/catch above: a throw from
-  // getTmdbSeasonEpisodes (via mapWithConcurrency below) must propagate out
-  // of this cached function uncaught, so nothing gets cached when TMDB
-  // refuses a season request. getTmdbShowFullDetails (uncached) is
-  // responsible for catching it and degrading to null.
+  const json: TMDBSeriesDetailsRaw = await res.json();
+
+  // A throw from getTmdbSeasonEpisodes (via mapWithConcurrency below) also
+  // propagates out of this cached function uncaught, so nothing gets
+  // cached when TMDB refuses a season request either. getTmdbShowFullDetails
+  // (uncached) is responsible for catching it and degrading to null.
   const showIsAnime = isAnime(
     (json.genres ?? []).map((genre) => genre.id),
     json.origin_country ?? []

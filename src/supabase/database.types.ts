@@ -203,7 +203,7 @@ export type Database = {
     }
     Functions: {
       finished_seasons: {
-        Args: { p_user_id: string }
+        Args: { p_limit?: number; p_offset?: number; p_user_id: string }
         Returns: {
           finished_on: string
           rewatch: boolean
@@ -212,7 +212,7 @@ export type Database = {
         }[]
       }
       finished_shows: {
-        Args: { p_user_id: string }
+        Args: { p_limit?: number; p_offset?: number; p_user_id: string }
         Returns: {
           finished_on: string
           rewatch: boolean
@@ -231,14 +231,14 @@ export type Database = {
       }
       redeem_invite_code: { Args: { p_code: string }; Returns: boolean }
       season_totals: {
-        Args: { p_show_ids: number[] }
+        Args: { p_limit?: number; p_offset?: number; p_show_ids: number[] }
         Returns: {
           aired_total: number
           tmdb_show_id: number
         }[]
       }
       tracking_rows: {
-        Args: { p_user_id: string }
+        Args: { p_limit?: number; p_offset?: number; p_user_id: string }
         Returns: {
           backlog_count: number
           estimated_minutes: number
@@ -263,7 +263,7 @@ export type Database = {
         }[]
       }
       watched_episode_counts: {
-        Args: { p_user_id: string }
+        Args: { p_limit?: number; p_offset?: number; p_user_id: string }
         Returns: {
           tmdb_show_id: number
           watched_count: number

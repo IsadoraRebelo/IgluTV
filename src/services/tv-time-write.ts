@@ -24,6 +24,13 @@ const INSERT_BATCH_SIZE = 500;
 // "Max rows" setting, and one show in a real export has 1,206 watch rows.
 // A truncated read would make the merge think rows are missing and insert
 // duplicates that every later run would compound.
+//
+// `.order('id')` is required, not cosmetic: Postgres gives no ordering
+// guarantee across separate LIMIT/OFFSET calls without one, so two pages
+// here could overlap or leave a gap. An overlap makes the merge under-count
+// and insert a duplicate watch; a gap makes it over-count and silently drop
+// real watches from the import — the merge below drives writes, so either
+// failure mode reaches the database.
 async function readExistingWatches(
   supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
@@ -37,6 +44,7 @@ async function readExistingWatches(
       .select('season_number, episode_number')
       .eq('user_id', userId)
       .eq('tmdb_show_id', tmdbShowId)
+      .order('id')
       .range(from, from + EXISTING_PAGE_SIZE - 1);
 
     if (error) throw new ServiceError(error.message, error.code);

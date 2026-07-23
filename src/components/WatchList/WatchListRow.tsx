@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
+import { toast } from 'sonner';
 
 import {
   EpisodeModal,
@@ -187,22 +188,36 @@ function WatchListRowContent({
   // by the context; both fall through to today's behaviour unchanged.
   async function handleMarkEpisode() {
     skipExitOnMarkRef.current = true;
-    const nextEpisode = await onToggleEpisode(
-      displayEpisode.seasonNumber,
-      displayEpisode.episodeNumber
-    );
+    try {
+      const nextEpisode = await onToggleEpisode(
+        displayEpisode.seasonNumber,
+        displayEpisode.episodeNumber
+      );
 
-    if (nextEpisode === undefined || nextEpisode === null) {
+      if (nextEpisode === undefined || nextEpisode === null) {
+        skipExitOnMarkRef.current = false;
+        return;
+      }
+
+      setDisplayEpisode(nextEpisode);
+      // The badge and backlog count described the episode we just marked,
+      // not the one taking its place — clear/decrement rather than show
+      // stale values until the next full refresh.
+      setDisplayBadge(null);
+      setDisplayBacklogCount((prev) => Math.max(0, prev - 1));
+    } catch (err) {
+      // onToggleEpisode (via handleLoadSeasons' catch-up lookup) shouldn't
+      // reject anymore, but this is called un-awaited from
+      // WatchedToggleButton's onMark, so a rejection here would otherwise
+      // become an unhandled one — and, more importantly, would leave
+      // skipExitOnMarkRef stuck at true, wedging this row: the pendingKeys
+      // effect would skip both the exit animation and router.refresh(),
+      // even though the mark itself may already have succeeded on the
+      // server.
       skipExitOnMarkRef.current = false;
-      return;
+      console.warn('[WatchListRow] failed to mark episode', err);
+      toast.error('Could not update episode. Please try again.');
     }
-
-    setDisplayEpisode(nextEpisode);
-    // The badge and backlog count described the episode we just marked,
-    // not the one taking its place — clear/decrement rather than show
-    // stale values until the next full refresh.
-    setDisplayBadge(null);
-    setDisplayBacklogCount((prev) => Math.max(0, prev - 1));
   }
 
   const episodeKeyValue = episodeKey(

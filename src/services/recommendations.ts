@@ -4,15 +4,38 @@ import { TMDB_TV_GENRE_IDS_BY_NAME } from '@/consts';
 import { mapWithConcurrency } from '@/utils';
 
 import { getShowsForUser } from './tracking';
-import { getDiscoverTvIdsByGenre, getTmdbShowFullDetails } from './tv-shows';
+import { getDiscoverTvIdsByGenre, getTmdbShowMeta } from './tv-shows';
 
 const MIN_AGGREGATED_RESULTS = 6;
 const MAX_RESULTS = 20;
+
+// Bounds the TMDB fan-out below, not just its per-show cost. Aggregating
+// over every watching/completed show to pick ~12 recommendations is
+// wasteful past a handful of seeds regardless of how cheap each seed's
+// fetch is — 409 of 463 imported shows land as watching/completed, so
+// without a cap this is still 409 requests even at one request per seed.
+const MAX_SEED_SHOWS = 20;
 
 type AggregatedCandidate = {
   count: number;
   bestMatch: number;
 };
+
+// Exported for testing: picks the most recently tracked `limit` rows.
+// `createdAt` is the only per-show recency signal show_tracking carries —
+// it's set once on insert and untouched by later status changes — so this
+// approximates "shows the user has been engaged with lately" without an
+// extra query against episode_watches just to rank seeds.
+export function selectRecentSeeds<T extends { createdAt: string }>(
+  tracked: T[],
+  limit: number
+): T[] {
+  return [...tracked]
+    .sort((a, b) =>
+      a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0
+    )
+    .slice(0, limit);
+}
 
 export async function getRecommendedShowIdsForUser(
   userId: string
@@ -23,26 +46,33 @@ export async function getRecommendedShowIdsForUser(
     getShowsForUser(userId),
   ]);
 
-  const seeds = [...watching, ...completed];
+  const seeds = selectRecentSeeds([...watching, ...completed], MAX_SEED_SHOWS);
   if (seeds.length === 0) return [];
 
   const excludedIds = new Set(allTracked.map((tracked) => tracked.tmdbShowId));
 
+  // getTmdbShowMeta (light tier: one /tv/{id} request, no season
+  // expansion) rather than getTmdbShowFullDetails — this fan-out only ever
+  // reads a seed's genres and its similar-shows list, neither of which
+  // needs the season tree the full-details tier fetches per show. That
+  // tier previously turned a signed-in home render into ~409 main-fetch
+  // calls plus up to ~6 season calls each; this is capped at
+  // MAX_SEED_SHOWS main-fetch calls and nothing else.
   const rawSeedDetails = await mapWithConcurrency(seeds, 10, (tracked) =>
-    getTmdbShowFullDetails(tracked.tmdbShowId)
+    getTmdbShowMeta(tracked.tmdbShowId)
   );
   const seedDetails = rawSeedDetails.filter(
-    (full): full is NonNullable<(typeof rawSeedDetails)[number]> =>
-      full !== null
+    (meta): meta is NonNullable<(typeof rawSeedDetails)[number]> =>
+      meta !== null
   );
 
-  // meta.similar is TMDB's recommendations list already capped to 12 by
-  // getTmdbShowFullDetails, so this tallies each seed's top 12, not its
-  // full recommendation set — a deliberate reuse of that cached fetch
-  // rather than an extra round trip.
+  // .similar is TMDB's recommendations list already capped to 12 by
+  // getTmdbShowMeta, so this tallies each seed's top 12, not its full
+  // recommendation set — a deliberate reuse of that cached fetch rather
+  // than an extra round trip.
   const candidates = new Map<number, AggregatedCandidate>();
   for (const seed of seedDetails) {
-    for (const similar of seed.meta.similar) {
+    for (const similar of seed.similar) {
       if (excludedIds.has(similar.id)) continue;
       const matchPercentage = similar.matchPercentage ?? 0;
       const existing = candidates.get(similar.id);
@@ -65,7 +95,7 @@ export async function getRecommendedShowIdsForUser(
 
   const genreCounts = new Map<string, number>();
   for (const seed of seedDetails) {
-    for (const genre of seed.details.genres) {
+    for (const genre of seed.genres) {
       genreCounts.set(genre, (genreCounts.get(genre) ?? 0) + 1);
     }
   }
